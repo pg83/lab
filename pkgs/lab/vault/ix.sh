@@ -5,10 +5,7 @@ ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDZvPrN52SQSe5Xh4lqatDvx0yUftwtY0NZZ5FdAfnY
 {% endblock %}
 
 {% block run_deps %}
-bin/python
-bin/git/unwrap
-etc/user/{{user}}
+lab/vault/scripts
 etc/user/0(hash=x,pubkey={{self.pubkey().strip()}},user=pg)
-lab/autoupdate/scripts
-etc/services/runit(srv_dir=autoupdate_{{user}},srv_user={{user}},srv_command=exec autoupdate_cycle)
+etc/services/runit(srv_dir=vault,srv_command=exec vault_cycle)
 {% endblock %}

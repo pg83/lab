@@ -1,6 +1,7 @@
 {% extends '//die/hub.sh' %}
 
 {% block run_deps %}
+lab/vault
 set/stalix
 bin/kernel/6/7
 bin/kernel/6/6
