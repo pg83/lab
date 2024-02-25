@@ -2,5 +2,4 @@
 
 {% block run_deps %}
 bin/mc
-bin/coreutils
 {% endblock %}
