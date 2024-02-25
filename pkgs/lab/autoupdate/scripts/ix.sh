@@ -12,7 +12,8 @@ cd /var/tmp/
 cd ix
 export IX_ROOT=/ix
 export IX_EXEC_KIND=system
-./ix mut system lab/ix.sh
+./ix mut system
+./ix mut \$(./ix list)
 EOF
 
 chmod +x *
