@@ -6,6 +6,6 @@ ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDZvPrN52SQSe5Xh4lqatDvx0yUftwtY0NZZ5FdAfnY
 
 {% block run_deps %}
 lab/vault/scripts
-etc/user/0(hash=x,pubkey={{self.pubkey().strip()}},user=pg)
+etc/user(hash=x,pubkey={{self.pubkey().strip()}},user=pg,login_shell=/bin/sh,userid=10000)
 etc/services/runit(srv_dir=vault,srv_command=exec vault_cycle)
 {% endblock %}
