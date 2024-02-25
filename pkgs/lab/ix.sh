@@ -1,6 +1,7 @@
 {% extends '//die/hub.sh' %}
 
 {% block run_deps %}
+lab/etc
 lab/vault
 bin/ix/ci
 set/stalix
