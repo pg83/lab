@@ -9,6 +9,7 @@ ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCuKaiTEbzhjmgRUlg3DwyrSNRAD6NgW1UAEkrQbe0B
 {% endblock %}
 
 {% block run_deps %}
+bin/dropbear/runit
 lab/services/vault/scripts
 etc/services/runit(srv_dir=vault,srv_command=exec vault_cycle)
 etc/user(hash=x,pubkey={{self.pubkey1().strip()}},user=pg,login_shell=/bin/sh,userid=10000)

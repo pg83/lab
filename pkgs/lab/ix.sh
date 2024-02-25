@@ -1,16 +1,8 @@
 {% extends '//die/hub.sh' %}
 
 {% block run_deps %}
-bin/mc
 lab/etc
-set/stalix
-bin/kernel/6/7
-bin/kernel/6/6
-bin/kernel/gengrub
-bin/dropbear/runit
-{% if hostname %}
+lab/common
 lab/hosts/{{hostname}}
-{% endif %}
-lab/services/vault
 lab/services/autoupdate(user=ix)
 {% endblock %}
