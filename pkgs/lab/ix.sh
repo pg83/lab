@@ -3,7 +3,6 @@
 {% block run_deps %}
 bin/mc
 lab/etc
-lab/vault
 set/stalix
 bin/kernel/6/7
 bin/kernel/6/6
@@ -12,5 +11,6 @@ bin/dropbear/runit
 {% if hostname %}
 lab/hosts/{{hostname}}
 {% endif %}
-lab/autoupdate(user=ix)
+lab/services/vault
+lab/services/autoupdate(user=ix)
 {% endblock %}
