@@ -19,7 +19,7 @@ export IX_EXEC_KIND=local
 
 mv \${IX_ROOT}/build/* \${IX_ROOT}/trash/ || true
 
-./ix build set/ci bld/all
+./ix build bld/all {{ci_targets}}
 EOF
 
 chmod +x *
