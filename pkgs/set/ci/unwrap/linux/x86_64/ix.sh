@@ -33,21 +33,21 @@
 #bin/colord
 #bin/tex/studio
 #bin/rr
+#bin/gendesk
 #}
 
 {% block run_deps %}
-#bin/zellij
-#bin/gendesk
+bin/avahi/dns
+bin/patch/darwin
+bin/mdns/responder
+bin/file/roller
+bin/darktable
+bin/ptyxis
+bin/avahi
 bin/mdadm
-bin/i3/status/rust
-bin/shadowsocks/rust
-bin/delta
-bin/cproxy
 bin/clx
-bin/bore
 bin/corsixth
 bin/dns/x
-bin/binocle
 bin/miller
 bin/u/root
 bin/pspy
@@ -65,7 +65,6 @@ bin/copyq
 bin/keepass/xc
 bin/code/lite
 bin/psensor
-bin/rio
 bin/mplayer
 bin/wx/maxima
 bin/maxima
@@ -77,15 +76,9 @@ bin/tvedit
 bin/app/image/tool
 bin/cage/break
 bin/dialog
-bin/jj
-bin/eza
-bin/git/ui
-bin/coreutils/uutils
-bin/mini/serve
 bin/niri
 bin/bcachefs/tools
 bin/cargo/whatfeatures
-bin/resvg
 bin/alacritty
 bin/bat
 bin/wl/maker
@@ -715,7 +708,6 @@ bin/dmidecode
 bin/qrencode
 bin/fswatch
 bin/xarchiver
-bin/darktable
 bin/jasper
 bin/earlyoom
 bin/chrony

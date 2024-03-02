@@ -1,8 +1,8 @@
 {% extends '//die/c/autorehell.sh' %}
 
 {% block fetch %}
-https://github.com/adah1972/libunibreak/archive/refs/tags/libunibreak_5_1.tar.gz
-sha:d59878d82c84a60b592940a8e1a264f0a9714f0a9a8868b099846f780d9dc167
+https://github.com/adah1972/libunibreak/archive/refs/tags/libunibreak_6_1.tar.gz
+sha:890674996168ef5ba143d80d49ab8b61594a4eb70198dcac76caf6e1bd264a41
 {% endblock %}
 
 {% block lib_deps %}

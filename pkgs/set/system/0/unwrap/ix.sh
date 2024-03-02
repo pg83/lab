@@ -17,13 +17,17 @@ bin/openresolv/runit
 {% if unbound %}
 bin/unbound/runit
 {% else %}
+bin/avahi/runit
+bin/avahi/dns/runit
 bin/dnsmasq/runit
 {% endif %}
 
 {% if mingetty %}
 bin/dm(getty=mingetty)
-{% else %}
+{% elif emptty %}
 bin/dm(getty=emptty)
+{% else %}
+bin/dm(getty=mingetty)
 {% endif %}
 
 bin/sched/fstrim(delay=1000)
