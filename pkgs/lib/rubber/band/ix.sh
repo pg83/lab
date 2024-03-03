@@ -1,1 +1,0 @@
-{% extends 't/ix.sh' %}

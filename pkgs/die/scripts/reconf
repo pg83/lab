@@ -1,6 +1,0 @@
-#!/usr/bin/env sh
-
-set -xue
-
-cp "${1}" .config
-exec "${IX_BINARY}" run set/menuconfig -- "make HOSTCC=cc menuconfig; cp .config ${1}"

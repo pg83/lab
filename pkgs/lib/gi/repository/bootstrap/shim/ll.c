@@ -1,1 +1,0 @@
-int logged_levels;

@@ -1,1 +1,0 @@
-{% extends 'py.py' %}
