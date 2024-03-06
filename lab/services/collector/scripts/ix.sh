@@ -5,7 +5,8 @@ mkdir ${out}/bin ${out}/etc
 
 cat << EOF > ${out}/bin/collectd
 #!/usr/bin/env sh
-cd /share
+set -xue
+cd /ix/realm/system/share
 exec prometheus --config.file=/etc/prometheus.conf --storage.tsdb.path=/var/run/collector/
 EOF
 
