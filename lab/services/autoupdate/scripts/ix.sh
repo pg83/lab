@@ -11,12 +11,6 @@ sleep 100
 cd ix
 export IX_ROOT=/ix
 export IX_EXEC_KIND=system
-{% if hostname == 'host1' %}
-./ix mut system --hostname=lab1
-{% endif %}
-{% if hostname == 'host2' %}
-./ix mut system --hostname=lab2
-{% endif %}
 ./ix mut system
 ./ix mut \$(./ix list)
 EOF
