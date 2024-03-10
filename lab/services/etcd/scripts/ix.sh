@@ -18,9 +18,9 @@
 --listen-peer-urls http://{{my_ip}}:2380
 --listen-client-urls http://{{my_ip}}:2379,http://127.0.0.1:2379
 --advertise-client-urls http://{{my_ip}}:2379
---initial-cluster-token etcd-cluster-1
---initial-cluster {{','.join(ix.parse_list(self.all_etcd()))}}
---initial-cluster-state new
+#--initial-cluster-token etcd-cluster-1
+#--initial-cluster {{','.join(ix.parse_list(self.all_etcd()))}}
+#--initial-cluster-state new
 {% endblock %}
 
 {% block install %}
