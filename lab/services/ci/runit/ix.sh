@@ -1,10 +1,6 @@
-{% extends '//die/proxy.sh' %}
+{% extends '//lab/services/persist/ix.sh' %}
 
-{% block install %}
-cd ${out}; mkdir bin; cd bin
-
-cat << EOF > ci_cycle
-#!/usr/bin/env sh
+{% block srv_command %}
 set -xue
 
 sleep 200
@@ -12,15 +8,10 @@ sleep 200
 (cd ix; git pull) || (rm -rf ix; git clone https://github.com/pg83/ix)
 cd ix
 
-mkdir -p {{wd}}
-
 export IX_ROOT={{wd}}/ix_root
 export IX_EXEC_KIND=local
 
 mv \${IX_ROOT}/build/* \${IX_ROOT}/trash/ || true
 
 ./ix build bld/all {{ci_targets}}
-EOF
-
-chmod +x *
 {% endblock %}

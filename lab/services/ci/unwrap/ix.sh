@@ -3,8 +3,7 @@
 {% block run_deps %}
 bin/python
 bin/git/unwrap
-lab/services/ci/cycle
 etc/user/nologin(userid=104)
 bin/sched/purge(delay=100,trash_dir={{wd}}/ix_root/trash)
-etc/services/runit(srv_dir=ci_cycle_{{user}},srv_user={{user}},srv_command=exec ci_cycle)
+lab/services/ci/runit(srv_dir=ci_cycle_{{user}},srv_user={{user}})
 {% endblock %}
