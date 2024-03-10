@@ -1,5 +1,5 @@
 {% extends '//die/hub.sh' %}
 
 {% block run_deps %}
-# TODO
+lab/services/mirror
 {% endblock %}
