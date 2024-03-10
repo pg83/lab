@@ -9,7 +9,6 @@ ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCuKaiTEbzhjmgRUlg3DwyrSNRAD6NgW1UAEkrQbe0B
 {% endblock %}
 
 {% block run_deps %}
-bin/dropbear/runit
 etc/sudoer(pubkey_name=1,pubkey_value={{self.pubkey1().strip()}})
 etc/sudoer(pubkey_name=2,pubkey_value={{self.pubkey2().strip()}})
 {% endblock %}
