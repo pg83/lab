@@ -4,15 +4,7 @@
 {{cluster_map | b64d}}
 {% endblock %}
 
-{% block my_ip %}
-{% for x in self.cluster_map() | jl %}
-{% if x["hostname"] == hostname %}
-{{x["ip"]}}
-{% endif %}
-{% endfor %}
-{% endblock %}
-
-{% set my_ip %}{{self.my_ip().strip()}}{% endset %}
+{% set my_ip %}{{(self.cluster_map() | jl | group_by("hostname"))[hostname][0]["ip"]}}{% endset %}
 
 {% block all_etcd %}
 {% for x in self.cluster_map() | jl %}
