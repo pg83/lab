@@ -20,5 +20,5 @@
 {% endblock %}
 
 {% block run_deps %}
-lab/map(cluster_map={{self.cluster_map() | b64e}})
+lab/map(cluster_map={{self.cluster_map() | jl | ser}})
 {% endblock %}

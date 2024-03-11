@@ -1,6 +1,6 @@
 {% extends '//lab/services/persist/ix.sh' %}
 
-{% set hosts = (cluster_map | b64d | jl).hosts %}
+{% set hosts = (cluster_map | des).hosts %}
 {% set my_ip = (hosts | group_by("hostname"))[hostname][0]["ip"] %}
 
 {% block all_etcd %}
