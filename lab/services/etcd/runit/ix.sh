@@ -10,7 +10,7 @@
 {% endblock %}
 
 {% block srv_command %}
-cd /home/etcd/
+cd /home/{{srv_user}}/
 
 exec etcd \
     --name {{hostname}} \
