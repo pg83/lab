@@ -10,5 +10,6 @@ lab/services/etcd
 bin/dropbear/runit
 bin/kernel/gengrub
 lab/services/collector
+lab/services/node/exporter
 lab/services/autoupdate(user=ix)
 {% endblock %}
