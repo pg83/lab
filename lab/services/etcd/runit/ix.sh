@@ -1,14 +1,11 @@
 {% extends '//lab/services/persist/ix.sh' %}
 
-{% block cluster_map %}
-{{cluster_map | b64d}}
-{% endblock %}
-
-{% set my_ip %}{{(self.cluster_map() | jl | group_by("hostname"))[hostname][0]["ip"]}}{% endset %}
+{% set hosts = (cluster_map | b64d | jl).hosts %}
+{% set my_ip = (hosts | group_by("hostname"))[hostname][0]["ip"] %}
 
 {% block all_etcd %}
-{% for x in self.cluster_map() | jl %}
-{{x["hostname"]}}=http://{{x["ip"]}}:2380
+{% for x in hosts %}
+{{x.hostname}}=http://{{x.ip}}:2380
 {% endfor %}
 {% endblock %}
 
