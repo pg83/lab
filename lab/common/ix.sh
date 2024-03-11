@@ -2,7 +2,11 @@
 
 {% block run_deps %}
 lab/etc
+
+{% if hostname in (cluster_map | des).etcd %}
 lab/services/etcd
+{% endif %}
+
 lab/services/collector
 lab/services/node/exporter
 lab/services/autoupdate(user=ix)

@@ -1,6 +1,6 @@
 {% extends '//die/hub.sh' %}
 
-{% block cluster_map %}
+{% set cluster_map | jl %}
 {
     "hosts": [
         {
@@ -15,10 +15,15 @@
             "ip": "10.0.0.98",
             "hostname": "lab3"
         }
+    ],
+    "etcd": [
+        "lab1",
+        "lab2",
+        "lab3"
     ]
 }
-{% endblock %}
+{% endset %}
 
 {% block run_deps %}
-lab/map(cluster_map={{self.cluster_map() | jl | ser}})
+lab/map(cluster_map={{cluster_map | ser}})
 {% endblock %}
