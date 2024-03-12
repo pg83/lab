@@ -19,6 +19,6 @@ exec etcd \
     --listen-client-urls http://0.0.0.0:2379 \
     --advertise-client-urls http://{{hostname}}:2379 \
     --initial-cluster-token {{etcid}}\
-    --initial-cluster {{','.join(ix.parse_list(self.all_etcd()))}} \
+    --initial-cluster {{self.all_etcd() | lines | join(",")}} \
     --initial-cluster-state new
 {% endblock %}
