@@ -2,4 +2,5 @@
 
 {% block run_deps %}
 lab/services/mirror
+lab/services/torrent
 {% endblock %}
