@@ -1,24 +1,25 @@
 {% extends '//lab/services/persist/ix.sh' %}
 
-{% set hosts = (cluster_map | des).hosts %}
-{% set my_ip = (hosts | group_by("hostname"))[hostname][0]["ip"] %}
+{% set hosts = (cluster_map | des).etcd %}
+{% set etcid = "etcd-cluster-2" %}
 
 {% block all_etcd %}
 {% for x in hosts %}
-{{x.hostname}}=http://{{x.ip}}:2380
+{{x}}=http://{{x}}:2380
 {% endfor %}
 {% endblock %}
 
 {% block srv_command %}
-cd /home/{{srv_user}}/
+mkdir -p /home/{{srv_user}}/{{etcid}}
 
 exec etcd \
     --name {{hostname}} \
-    --initial-advertise-peer-urls http://{{my_ip}}:2380 \
-    --listen-peer-urls http://{{my_ip}}:2380 \
-    --listen-client-urls http://{{my_ip}}:2379,http://127.0.0.1:2379 \
-    --advertise-client-urls http://{{my_ip}}:2379 \
-    --initial-cluster-token etcd-cluster-2 \
+    --data-dir /home/{{srv_user}}/{{etcid}} \
+    --initial-advertise-peer-urls http://{{hostname}}:2380 \
+    --listen-peer-urls http://0.0.0.0:2380 \
+    --listen-client-urls http://0.0.0.0:2379 \
+    --advertise-client-urls http://{{hostname}}:2379 \
+    --initial-cluster-token {{etcid}}\
     --initial-cluster {{','.join(ix.parse_list(self.all_etcd()))}} \
     --initial-cluster-state new
 {% endblock %}
