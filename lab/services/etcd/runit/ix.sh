@@ -1,10 +1,9 @@
 {% extends '//lab/services/persist/ix.sh' %}
 
-{% set hosts = (cluster_map | des).etcd %}
 {% set etcid = "etcd-cluster-2" %}
 
 {% block all_etcd %}
-{% for x in hosts %}
+{% for x in (cluster_map | des).etcd %}
 {{x}}=http://{{x}}:2380
 {% endfor %}
 {% endblock %}
