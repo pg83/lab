@@ -9,7 +9,7 @@ mkdir -p data
 export QBT_NO_SPLASH=1
 
 qbittorrent-nox \
-    --profile=${PWD}/profiles \
-    --save-path=${PWD}/data \
+    --profile=\${PWD}/profiles \
+    --save-path=\${PWD}/data \
     --webui-port=8000
 {% endblock %}
