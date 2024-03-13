@@ -3,6 +3,8 @@
 {% block srv_command %}
 set -xue
 
+export PATH=/bin:/ix/realm/boot/bin
+
 env
 
 sleep 200
