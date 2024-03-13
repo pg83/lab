@@ -5,6 +5,7 @@ set -xue
 
 mkdir -p /home/root/.ssh
 chmod 0700 /home/root/.ssh
+
 cp /etc/sudo/authorized_keys /home/root/.ssh/
 
 exec /bin/dropbear \
