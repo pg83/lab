@@ -16,7 +16,6 @@ bin/htop
 bin/kernel/6/7
 bin/kernel/6/6
 bin/kernel/gengrub
-bin/sud/scripts
 bin/dropbear/runit
 
 set/stalix/server
