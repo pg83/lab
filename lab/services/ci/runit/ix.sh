@@ -3,6 +3,8 @@
 {% block srv_command %}
 set -xue
 
+env
+
 sleep 200
 
 (cd ix; git pull) || (rm -rf ix; git clone https://github.com/pg83/ix)
