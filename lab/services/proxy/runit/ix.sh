@@ -1,10 +1,17 @@
 {% extends '//etc/services/runit/script/ix.sh' %}
 
+{% block ht_passwd %}
+admin:$2a$10$NgUSMYcjjrxZNNRIUbFCM.2/2BhhWzHoVis0qsKV7i0yI8T.JnFHO
+{% endblock %}
+
 {% block su_command %}
 set -xue
 mkdir -p /home/proxy/{{proxy_port}}
 chown proxy /home/proxy /home/proxy/{{proxy_port}}
 cd /home/proxy/{{proxy_port}}/
+base64 -d << EOF > htpasswd
+{{self.ht_passwd() | b64e}}
+EOF
 export ETCDCTL_ENDPOINTS=localhost:2379
 export IFACE=$(ip -o addr show | grep 10.0.0 | head -n1 | awk '{print $2}')
 ip addr del {{proxy_ip}} dev ${IFACE} || true
@@ -24,6 +31,7 @@ exec reproxy \
     --logger.enabled \
     --logger.stdout \
 {% if proxy_https %}
+    --basic-htpasswd=htpasswd \
     --ssl.type=auto \
     --ssl.http-port=8100 \
     --static.rule=torrents.homelab.cam,/,http://lab3:8000/
