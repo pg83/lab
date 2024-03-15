@@ -26,7 +26,6 @@ exec reproxy \
     --ssl.type=auto \
     --static.rule=torrents.homelab.cam,/,http://lab3:8000/ \
 {% else %}
-    --static.rule=torrents.homelab.cam,/,http://10.0.0.33:8090/ \
     --static.rule=ix.samokhvalov.xyz,/,http://lab3:8080/ \
     --static.rule=ix.homelab.cam,/,http://lab3:8080/ \
 {% endif %}
