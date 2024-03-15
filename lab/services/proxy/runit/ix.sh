@@ -21,6 +21,7 @@ exec reproxy \
     --logger.enabled \
     --logger.stdout \
 {% if proxy_https %}
+    --ssl.type=auto \
     --static.rule=torrents.homelab.cam,/,http://lab3:8000/ \
 {% else %}
     --static.rule=ix.samokhvalov.xyz,/,http://lab3:8080/ \
