@@ -23,8 +23,8 @@
             "lab3"
         ],
         "ports": {
-            "client": 2380,
-            "peer": 2379
+            "client": 2379,
+            "peer": 2380
         }
     }
 }
