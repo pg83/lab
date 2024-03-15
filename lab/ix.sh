@@ -28,6 +28,7 @@
         }
     },
     "ports": {
+        "torrent_webui": 8000,
         "ftpd": 8001,
         "sftpd": 8002,
         "proxy_http": 8080,

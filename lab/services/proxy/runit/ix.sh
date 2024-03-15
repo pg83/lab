@@ -30,7 +30,7 @@ exec reproxy \
     --basic-htpasswd=htpasswd \
     --ssl.type=auto \
     --ssl.http-port=8100 \
-    --static.rule=torrents.homelab.cam,/,http://lab3:8000/
+    --static.rule=torrents.homelab.cam,/,http://lab3:{{cm.ports.torrent_webui}}/
 {% else %}
     --static.rule=ix.samokhvalov.xyz,/,http://lab3:{{cm.ports.mirror_http}}/ \
     --static.rule=ix.homelab.cam,/,http://lab3:{{cm.ports.mirror_http}}/
