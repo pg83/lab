@@ -23,11 +23,13 @@
             "lab3"
         ],
         "ports": {
-            "client": 2379,
-            "peer": 2380
+            "client": {{self.etcd_client_port()}},
+            "peer": {{self.etcd_peer_port()}}
         }
     },
     "ports": {
+        "etcd_client": {% block etcd_client_port %}2379{% endblock %},
+        "etcd_peer": {% block etcd_peer_port %}2380{% endblock %},
         "torrent_webui": 8000,
         "ftpd": 8001,
         "sftpd": 8002,
