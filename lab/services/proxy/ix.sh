@@ -4,6 +4,6 @@
 bin/bash
 bin/reproxy
 bin/etcd/ctl
-lab/services/proxy/runit(srv_dir=proxy)
+lab/services/proxy/runit(srv_dir=proxy_{{proxy_port}})
 etc/user/nologin(userid=1006,user=proxy)
 {% endblock %}

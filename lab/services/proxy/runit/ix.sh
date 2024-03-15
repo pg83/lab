@@ -4,23 +4,27 @@
 set -xue
 export ETCDCTL_ENDPOINTS=localhost:2379
 export IFACE=$(ip -o addr show | grep 10.0.0 | head -n1 | awk '{print $2}')
-ip addr del 10.0.0.32/24 dev ${IFACE} || true
-exec etcdctl lock proxy -- /bin/bash -c 'source <(echo {{self.us_command() | b64e}} | base64 -d)'
+ip addr del {{proxy_ip}}/24 dev ${IFACE} || true
+exec etcdctl lock proxy_{{proxy_port}} -- /bin/bash -c 'source <(echo {{self.us_command() | b64e}} | base64 -d)'
 {% endblock %}
 
 {% block us_command %}
 set -xue
-ip addr add 10.0.0.32/24 dev ${IFACE}
+ip addr add {{proxy_ip}}/24 dev ${IFACE}
 exec su -s /bin/bash proxy -c 'source <(echo {{self.pr_command() | b64e}} | base64 -d)'
 {% endblock %}
 
 {% block pr_command %}
 exec reproxy \
-    --listen=10.0.0.32:8080 \
+    --listen={{proxy_ip}}:{{proxy_port}} \
     --static.enabled \
+{% if proxy_https %}
+    --static.rule=torrents.homelab.cam,/,http://lab3:8000/ \
+{% else %}
     --static.rule=ix.samokhvalov.xyz,/,http://lab3:8080/ \
     --static.rule=ix.homelab.cam,/,http://lab3:8080/ \
-    --static.rule=torrents.homelab.cam,/,http://lab3:8000/
+{% endif %}
+    --static.rule=a,b,c
 {% endblock %}
 
 {% block srv_command %}
