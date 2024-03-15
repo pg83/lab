@@ -18,6 +18,8 @@ exec su -s /bin/bash proxy -c 'source <(echo {{self.pr_command() | b64e}} | base
 exec reproxy \
     --listen={{proxy_ip}}:{{proxy_port}} \
     --static.enabled \
+    --logger.enabled \
+    --logger.stdout \
 {% if proxy_https %}
     --static.rule=torrents.homelab.cam,/,http://lab3:8000/ \
 {% else %}
