@@ -31,11 +31,11 @@
         "torrent_webui": 8000,
         "ftpd": 8001,
         "sftpd": 8002,
+        "mirror_http": 8003,
         "proxy_http": 8080,
         "proxy_https": 8090,
         "prometheus": 9090,
-        "node_exporter": 9100,
-        "mirror_http": 10001
+        "node_exporter": 9100
     }
 }
 {% endset %}
