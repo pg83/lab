@@ -28,6 +28,8 @@
         }
     },
     "ports": {
+        "proxy_http": 8080,
+        "proxy_https": 8090,
         "mirror_http": 10001
     }
 }
