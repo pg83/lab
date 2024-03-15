@@ -1,6 +1,20 @@
 {% extends '//etc/services/runit/script/ix.sh' %}
 
-{% block srv_command %}
+{% block su_command %}
+set -xue
 export ETCDCTL_ENDPOINTS=localhost:2379
-etcdctl lock proxy -- reproxy --static.enabled
+export IFACE=$(ip -o addr show | grep 10.0.0 | awk '{print $2}')
+ip addr del 10.0.0.32/24 dev ${IFACE}
+etcdctl lock proxy -- /bin/sh -c 'echo {{self.us_command() | b64e}} | base64 -d | /bin/sh'
+{% endblock %}
+
+{% block us_command %}
+set -xue
+ip addr add 10.0.0.32/24 dev ${IFACE}
+su -s /bin/sh proxy reproxy --static.enabled
+ip addr del 10.0.0.32/24 dev ${IFACE}
+{% endblock %}
+
+{% block srv_command %}
+exec /bin/sh -c 'echo {{self.su_command()}} | base64 -d | /bin/sh'
 {% endblock %}
