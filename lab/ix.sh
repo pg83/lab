@@ -26,6 +26,9 @@
             "client": 2379,
             "peer": 2380
         }
+    },
+    "ports": {
+        "mirror_http": 10001
     }
 }
 {% endset %}
