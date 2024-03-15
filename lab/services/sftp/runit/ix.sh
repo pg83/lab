@@ -1,5 +1,7 @@
 {% extends '//etc/services/runit/script/ix.sh' %}
 
+{% set cm = cluster_map | des %}
+
 {% block srv_user_prepare %}
 {{super()}}
 cp /etc/keys/ssh_rsa /var/run/{{srv_dir}}/id_rsa
@@ -11,8 +13,8 @@ chown {{srv_user}} /var/run/{{srv_dir}}/id_*
 {% block srv_command %}
 exec sftpgo portable \
     --directory {{sftp_dir}} \
-    --ftpd-port 8001 \
+    --ftpd-port {{cm.ports.ftpd}} \
     --password qwerty123 \
     --username anon \
-    --sftpd-port 8002
+    --sftpd-port {{cm.ports.sftpd}}
 {% endblock %}

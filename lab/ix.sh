@@ -28,6 +28,8 @@
         }
     },
     "ports": {
+        "ftpd": 8001,
+        "sftpd": 8002,
         "proxy_http": 8080,
         "proxy_https": 8090,
         "prometheus": 9090,
