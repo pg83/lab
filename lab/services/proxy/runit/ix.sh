@@ -4,7 +4,7 @@
 set -xue
 export ETCDCTL_ENDPOINTS=localhost:2379
 export IFACE=$(ip -o addr show | grep 10.0.0 | awk '{print $2}')
-ip addr del 10.0.0.32/24 dev ${IFACE}
+ip addr del 10.0.0.32/24 dev ${IFACE} || true
 etcdctl lock proxy -- /bin/sh -c 'echo {{self.us_command() | b64e}} | base64 -d | /bin/sh'
 {% endblock %}
 
