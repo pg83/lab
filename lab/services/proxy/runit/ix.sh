@@ -2,6 +2,8 @@
 
 {% block su_command %}
 set -xue
+mkdir -p var
+chown proxy var
 export ETCDCTL_ENDPOINTS=localhost:2379
 export IFACE=$(ip -o addr show | grep 10.0.0 | head -n1 | awk '{print $2}')
 ip addr del {{proxy_ip}}/24 dev ${IFACE} || true
