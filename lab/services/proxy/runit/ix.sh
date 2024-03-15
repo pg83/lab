@@ -16,5 +16,5 @@ ip addr del 10.0.0.32/24 dev ${IFACE}
 {% endblock %}
 
 {% block srv_command %}
-exec /bin/sh -c 'echo {{self.su_command()}} | base64 -d | /bin/sh'
+exec /bin/sh -c 'echo {{self.su_command() | b64e}} | base64 -d | /bin/sh'
 {% endblock %}
