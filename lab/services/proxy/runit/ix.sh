@@ -19,6 +19,7 @@ exec su -s /bin/bash proxy -c 'source <(echo {{self.pr_command() | b64e}} | base
 {% block pr_command %}
 exec reproxy \
     --listen={{proxy_ip}}:{{proxy_port}} \
+    --listen=localhost:{{proxy_port}} \
     --static.enabled \
     --logger.enabled \
     --logger.stdout \
@@ -26,6 +27,7 @@ exec reproxy \
     --ssl.type=auto \
     --static.rule=torrents.homelab.cam,/,http://lab3:8000/ \
 {% else %}
+    --static.rule=torrents.homelab.cam,/,http://localhost:8090/ \
     --static.rule=ix.samokhvalov.xyz,/,http://lab3:8080/ \
     --static.rule=ix.homelab.cam,/,http://lab3:8080/ \
 {% endif %}
