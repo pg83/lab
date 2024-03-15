@@ -5,6 +5,7 @@ lab/etc
 
 {% if hostname in (cluster_map | des).etcd %}
 lab/services/etcd
+lab/services/proxy
 {% endif %}
 
 lab/services/collector
