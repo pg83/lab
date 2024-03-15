@@ -1,5 +1,7 @@
 {% extends '//die/proxy.sh' %}
 
+{% set cm = cluster_map | des %}
+
 {% block install %}
 mkdir ${out}/etc
 
