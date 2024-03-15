@@ -15,7 +15,10 @@ exec su -s /bin/bash proxy -c 'source <(echo {{self.pr_command() | b64e}} | base
 {% endblock %}
 
 {% block pr_command %}
-exec reproxy --listen=10.0.0.32:8080 --static.enabled
+exec reproxy \
+    --listen=10.0.0.32:8080 \
+    --static.enabled \
+    --static.rule=ix.samokhvalov.xyz,/,http://lab3:8080/
 {% endblock %}
 
 {% block srv_command %}
