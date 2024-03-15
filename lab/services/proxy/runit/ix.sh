@@ -12,9 +12,8 @@ etcdctl lock proxy -- /bin/sh -c 'echo {{self.us_command() | b64e}} | base64 -d 
 set -xue
 ip addr add 10.0.0.32/24 dev ${IFACE}
 cat << EOF | su -s /bin/sh proxy
-reproxy --listen=10.0.0.32:8080 --static.enabled
+exec reproxy --listen=10.0.0.32:8080 --static.enabled
 EOF
-ip addr del 10.0.0.32/24 dev ${IFACE}
 {% endblock %}
 
 {% block srv_command %}
