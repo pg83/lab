@@ -18,7 +18,9 @@ exec su -s /bin/bash proxy -c 'source <(echo {{self.pr_command() | b64e}} | base
 exec reproxy \
     --listen=10.0.0.32:8080 \
     --static.enabled \
-    --static.rule=ix.samokhvalov.xyz,/,http://lab3:8080/
+    --static.rule=ix.samokhvalov.xyz,/,http://lab3:8080/ \
+    --static.rule=ix.homelab.cam,/,http://lab3:8080/ \
+    --static.rule=torrents.homelab.cam,/,http://lab3:8000/
 {% endblock %}
 
 {% block srv_command %}
