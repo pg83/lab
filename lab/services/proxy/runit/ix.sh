@@ -17,5 +17,5 @@ EOF
 {% endblock %}
 
 {% block srv_command %}
-echo {{self.su_command() | b64e}} | base64 -d | /bin/sh
+exec /bin/bash -c 'source <(echo {{self.su_command() | b64e}} | base64 -d)'
 {% endblock %}
