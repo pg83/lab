@@ -30,6 +30,7 @@
     "ports": {
         "proxy_http": 8080,
         "proxy_https": 8090,
+        "prometheus": 9090,
         "node_exporter": 9100,
         "mirror_http": 10001
     }
