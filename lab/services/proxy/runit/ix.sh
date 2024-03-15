@@ -2,11 +2,12 @@
 
 {% block su_command %}
 set -xue
-mkdir -p var
-chown proxy var
+mkdir -p /home/proxy/{{proxy_port}}
+chown proxy /home/proxy /home/proxy/{{proxy_port}}
+cd /home/proxy/{{proxy_port}}/
 export ETCDCTL_ENDPOINTS=localhost:2379
 export IFACE=$(ip -o addr show | grep 10.0.0 | head -n1 | awk '{print $2}')
-ip addr del {{proxy_ip}}/24 dev ${IFACE} || true
+ip addr del {{proxy_ip}} dev ${IFACE} || true
 exec etcdctl lock proxy_{{proxy_port}} -- /bin/bash -c 'source <(echo {{self.us_command() | b64e}} | base64 -d)'
 {% endblock %}
 
@@ -25,12 +26,11 @@ exec reproxy \
 {% if proxy_https %}
     --ssl.type=auto \
     --ssl.http-port=8100 \
-    --static.rule=torrents.homelab.cam,/,http://lab3:8000/ \
+    --static.rule=torrents.homelab.cam,/,http://lab3:8000/
 {% else %}
     --static.rule=ix.samokhvalov.xyz,/,http://lab3:8080/ \
-    --static.rule=ix.homelab.cam,/,http://lab3:8080/ \
+    --static.rule=ix.homelab.cam,/,http://lab3:8080/
 {% endif %}
-    --static.rule=a,b,c
 {% endblock %}
 
 {% block srv_command %}
