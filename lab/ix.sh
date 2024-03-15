@@ -16,11 +16,17 @@
             "hostname": "lab3"
         }
     ],
-    "etcd": [
-        "lab1",
-        "lab2",
-        "lab3"
-    ]
+    "etcd": {
+        "hosts": [
+            "lab1",
+            "lab2",
+            "lab3"
+        ],
+        "ports": {
+            "client": 2380,
+            "peer": 2379
+        }
+    }
 }
 {% endset %}
 

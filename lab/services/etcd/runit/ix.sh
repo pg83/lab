@@ -3,7 +3,7 @@
 {% set etcid = "etcd-cluster-2" %}
 
 {% block all_etcd %}
-{% for x in (cluster_map | des).etcd %}
+{% for x in (cluster_map | des).etcd.hosts %}
 {{x}}=http://{{x}}:2380
 {% endfor %}
 {% endblock %}

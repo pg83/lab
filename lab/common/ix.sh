@@ -3,7 +3,7 @@
 {% block run_deps %}
 lab/etc
 
-{% if hostname in (cluster_map | des).etcd %}
+{% if hostname in (cluster_map | des).etcd.hosts %}
 lab/services/etcd
 lab/services/proxy(proxy_ip=10.0.0.32,proxy_port=8080)
 lab/services/proxy(proxy_ip=10.0.0.33,proxy_port=8090,proxy_https=1)
