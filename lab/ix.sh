@@ -1,6 +1,19 @@
 {% extends '//die/hub.sh' %}
 
-{% set cluster_map | jl %}
+{% set cluster_gen %}
+def do(v):
+    v['etcd'] = {
+        'hosts': [x['hostname'] for x in v['hosts']][:3],
+        'ports': {
+            'client': v['ports']['etcd_client'],
+            'peer': v['ports']['etcd_peer'],
+        },
+    }
+
+    return v
+{% endset %}
+
+{% set cluster_map | jl | eval(cluster_gen) %}
 {
     "hosts": [
         {
@@ -16,20 +29,9 @@
             "hostname": "lab3"
         }
     ],
-    "etcd": {
-        "hosts": [
-            "lab1",
-            "lab2",
-            "lab3"
-        ],
-        "ports": {
-            "client": {{self.etcd_client_port()}},
-            "peer": {{self.etcd_peer_port()}}
-        }
-    },
     "ports": {
-        "etcd_client": {% block etcd_client_port %}2379{% endblock %},
-        "etcd_peer": {% block etcd_peer_port %}2380{% endblock %},
+        "etcd_client": 2379,
+        "etcd_peer": 2380,
         "torrent_webui": 8000,
         "ftpd": 8001,
         "sftpd": 8002,
