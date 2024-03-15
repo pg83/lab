@@ -1,4 +1,4 @@
-4#!/usr/bin/env sh
+#!/usr/bin/env sh
 
 D=$(dirname ${0})
 
