@@ -6,7 +6,7 @@ lab/etc
 {% if hostname in (cluster_map | des).etcd %}
 lab/services/etcd
 lab/services/proxy(proxy_ip=10.0.0.32,proxy_port=8080)
-lab/services/proxy(proxy_ip=10.0.0.33,proxy_port=8090,proxy_https=1)
+#lab/services/proxy(proxy_ip=10.0.0.33,proxy_port=8090,proxy_https=1)
 {% endif %}
 
 lab/services/collector
