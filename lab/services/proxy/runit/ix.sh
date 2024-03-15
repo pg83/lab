@@ -17,5 +17,5 @@ EOF
 {% endblock %}
 
 {% block srv_command %}
-exec /bin/sh -c 'eval $(echo {{self.su_command() | b64e}} | base64 -d)'
+echo {{self.su_command() | b64e}} | base64 -d | /bin/sh
 {% endblock %}
