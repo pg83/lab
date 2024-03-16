@@ -41,6 +41,9 @@ def do(v):
         "proxy_https": 8090,
         "prometheus": 9090,
         "node_exporter": 9100
+    },
+    "users": {
+        "etcd": 1002
     }
 }
 {% endset %}
