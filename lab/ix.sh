@@ -43,7 +43,8 @@ def do(v):
         "node_exporter": 9100
     },
     "users": {
-        "etcd": 1002
+        "etcd": 1002,
+        "mirror": 103
     }
 }
 {% endset %}
