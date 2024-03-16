@@ -5,7 +5,7 @@ cd ${out}; mkdir bin; cd bin
 
 cat << EOF > ix
 #!/usr/bin/env sh
-exec /var/run/autoupdate_ix/ix "\${@}"
+exec /var/run/autoupdate_ix/ix/ix "\${@}"
 EOF
 
 cat << EOF > autoupdate_cycle
