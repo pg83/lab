@@ -3,6 +3,11 @@
 {% block install %}
 cd ${out}; mkdir bin; cd bin
 
+cat << EOF > ix
+#!/usr/bin/env sh
+exec /var/run/autoupdate_ix/ix "\${@}"
+EOF
+
 cat << EOF > autoupdate_cycle
 #!/usr/bin/env sh
 set -xue
