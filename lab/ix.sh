@@ -36,6 +36,7 @@ def do(v):
         "ftpd": 8001,
         "sftpd": 8002,
         "mirror_http": 8003,
+        "mirror_rsyncd": 8004,
         "proxy_http": 8080,
         "proxy_https": 8090,
         "prometheus": 9090,
