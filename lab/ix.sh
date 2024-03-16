@@ -43,14 +43,14 @@ def do(v):
         "node_exporter": 9100
     },
     "users": {
-        "etcd": 1002,
         "mirror": 103,
         "ci": 104,
         "collector": 1001,
-        "proxy": 1006,
-        "sftp": 1005,
+        "etcd": 1002,
+        "node_exporter": 1003,
         "torrent": 1004,
-        "node_exporter": 1003
+        "sftp": 1005,
+        "proxy": 1006
     }
 }
 {% endset %}
