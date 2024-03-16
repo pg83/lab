@@ -47,7 +47,8 @@ def do(v):
         "mirror": 103,
         "ci": 104,
         "collector": 1001,
-        "proxy": 1006
+        "proxy": 1006,
+        "sftp": 1005
     }
 }
 {% endset %}
