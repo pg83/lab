@@ -46,7 +46,8 @@ def do(v):
         "etcd": 1002,
         "mirror": 103,
         "ci": 104,
-        "collector": 1001
+        "collector": 1001,
+        "proxy": 1006
     }
 }
 {% endset %}
