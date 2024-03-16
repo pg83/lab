@@ -1,17 +1,7 @@
-{% extends '//die/go/base.sh' %}
+{% extends '//die/hub.sh' %}
 
-{% block step_unpack %}
-mkdir src; cd src
-base64 -d << EOF | sed -e 's|__port__|{{port}}|' -e 's|__from__|{{from}}|' > serve.go
-{% include 'serve.go/base64' %}
-EOF
-{% endblock %}
-
-{% block go_build_flags %}
-serve.go
-{% endblock %}
-
-{% block install %}
-mkdir ${out}/bin
-cp serve ${out}/bin/serve_ix_mirror
+{% block run_deps %}
+etc/user/nobody
+lab/services/mirror/serve/bin(from={{serve_from}})
+etc/services/runit(srv_dir={{'mirror_serve_' + port}},srv_user=nobody,srv_command=exec serve_ix_mirror)
 {% endblock %}
