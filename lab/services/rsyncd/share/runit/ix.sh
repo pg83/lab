@@ -4,6 +4,8 @@
 {{super()}}
 mkdir -p ${out}/etc
 cat << EOF > ${out}/etc/rsyncd.conf
+read only = true
+
 [{{rsyncd_share}}]
     path = {{rsyncd_path}}
 EOF
