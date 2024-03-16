@@ -45,7 +45,8 @@ def do(v):
     "users": {
         "etcd": 1002,
         "mirror": 103,
-        "ci": 104
+        "ci": 104,
+        "collector": 1001
     }
 }
 {% endset %}
