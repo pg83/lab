@@ -12,6 +12,6 @@ set -xue
 mkdir -p {{rsync_where}}
 chown {{rsync_user}} {{rsync_where}}
 cd {{rsync_where}}
-rsync -P -r {{rsync_share}} .
+rsync --ignore-existing -P -r {{rsync_share}} .
 EOF
 {% endblock %}
