@@ -49,7 +49,8 @@ def do(v):
         "collector": 1001,
         "proxy": 1006,
         "sftp": 1005,
-        "torrent": 1004
+        "torrent": 1004,
+        "node_exporter": 1003
     }
 }
 {% endset %}
