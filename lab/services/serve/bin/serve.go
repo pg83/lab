@@ -1,9 +1,12 @@
 package main
 
-import "net/http"
+import (
+	"os"
+	"net/http"
+)
 
 func main() {
-    port := ":__port__"
-    handler := http.FileServer(http.Dir("__from__"))
-    http.ListenAndServe(port, handler)
+	port := ":" + os.Args[1]
+	handler := http.FileServer(http.Dir(os.Args[2]))
+	http.ListenAndServe(port, handler)
 }

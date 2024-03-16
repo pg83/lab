@@ -1,8 +1,9 @@
 {% extends '//die/go/base.sh' %}
 
 {% block step_unpack %}
-mkdir src; cd src
-base64 -d << EOF | sed -e 's|__port__|{{port}}|' -e 's|__from__|{{from}}|' > serve.go
+mkdir src
+cd src
+base64 -d << EOF > serve.go
 {% include 'serve.go/base64' %}
 EOF
 {% endblock %}
@@ -13,5 +14,5 @@ serve.go
 
 {% block install %}
 mkdir ${out}/bin
-cp serve ${out}/bin/serve_ix_mirror
+cp serve ${out}/bin/http_serve
 {% endblock %}

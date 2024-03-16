@@ -1,7 +1,7 @@
 {% extends '//die/hub.sh' %}
 
 {% block run_deps %}
+lab/services/serve/bin
 lab/etc/user(user={{serve_user}})
-lab/services/serve/bin(from={{serve_from}})
-etc/services/runit(srv_dir={{'serve_' + port}},srv_user={{serve_user}},srv_command=exec serve_ix_mirror)
+etc/services/runit(srv_dir={{'serve_' + serve_port}},srv_user={{serve_user}},srv_command=exec http_serve {{serve_port}} {{serve_from}})
 {% endblock %}
