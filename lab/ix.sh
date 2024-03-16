@@ -48,7 +48,8 @@ def do(v):
         "ci": 104,
         "collector": 1001,
         "proxy": 1006,
-        "sftp": 1005
+        "sftp": 1005,
+        "torrent": 1004
     }
 }
 {% endset %}
