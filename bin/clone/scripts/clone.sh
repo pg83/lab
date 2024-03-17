@@ -2,11 +2,6 @@
 
 set -xue
 
-waitev() (
-    subreaper timeout "${1}" gosmee client --noReplay "${2}" qw 2>&1 | while read l; do
-        #exit 0
-        echo ${l}
-    done
-)
+(subreaper timeout -s KILL ${1} sh ./wait.sh "${2}") || sleep 30
 
-waitev "${1}" "${2}"
+(cd ${4}; git pull; git submodule update --init --recursive) || (rm -rf ${4}; git clone --recurse-submodules "${3}" ${4})

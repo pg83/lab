@@ -50,7 +50,9 @@ def do(v):
         "node_exporter": 1003,
         "torrent": 1004,
         "sftp": 1005,
-        "proxy": 1006
+        "proxy": 1006,
+        "git_lab": 1007,
+        "git_ci": 1008
     }
 }
 {% endset %}

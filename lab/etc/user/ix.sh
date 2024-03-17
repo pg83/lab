@@ -6,6 +6,6 @@
 {% if user in cm.users %}
 etc/user/nologin(userid={{cm.users[user]}})
 {% else %}
-etc/user/{{user}}
+etc/user/{{user or error()}}
 {% endif %}
 {% endblock %}
