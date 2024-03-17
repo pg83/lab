@@ -7,9 +7,8 @@ export PATH=/bin:/ix/realm/boot/bin
 
 env
 
-sleep 200
+gclone 200s /var/run/evlog_git_ci/events https://github.com/pg83/ix ix
 
-(cd ix; git pull) || (rm -rf ix; git clone https://github.com/pg83/ix)
 cd ix
 
 export IX_ROOT={{wd}}/ix_root

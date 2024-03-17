@@ -14,6 +14,7 @@ lab/services/proxy(proxy_ip=10.0.0.33,proxy_port={{cm.ports.proxy_https}},proxy_
 lab/services/collector
 lab/services/node/exporter
 lab/services/autoupdate(user=ix)
+lab/services/git/evlog(evlog_user=git_ci,evlog_url=https://smee.io/ytBWlUqSG8YIRzh)
 lab/services/git/evlog(evlog_user=git_lab,evlog_url=https://smee.io/ytBWlUqSG8YIRzh)
 
 bin/mc
