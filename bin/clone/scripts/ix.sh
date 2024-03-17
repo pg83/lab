@@ -8,7 +8,7 @@ base64 -d << EOF > ${out}/bin/gclone
 EOF
 
 base64 -d << EOF > ${out}/bin/gwait
-{% include 'clone.sh/base64' %}
+{% include 'wait.sh/base64' %}
 EOF
 
 chmod +x ${out}/bin/*
