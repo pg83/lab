@@ -9,9 +9,10 @@ set -xue
 mkdir -p {{wd}}
 cd {{wd}}
 mkdir -p data
-rm -rf ix
-git clone https://github.com/pg83/ix
-cd ix
+rm -rf ix-main main.zip
+wget https://github.com/pg83/ix/archive/refs/heads/main.zip
+unzip main.zip
+cd ix-main
 ./ix recache {{wd}}/data || true
 sleep 3600
 EOF
