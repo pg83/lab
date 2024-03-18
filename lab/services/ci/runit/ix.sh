@@ -15,6 +15,6 @@ cycle() (
 )
 
 tail -F -n 0 /var/run/evlog_git_ci/events | grep 'has been saved' | while read l; do
-    cycle() || sleep 10
+    cycle || sleep 10
 done
 {% endblock %}
