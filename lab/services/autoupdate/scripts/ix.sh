@@ -26,7 +26,7 @@ cycle() (
     ./ix mut \$(./ix list)
 )
 
-etcdctl watch --prefix /git/logs/ | gnugrep --line-buffered 'PUT' | while read l; do
+etcdctl watch --prefix /git/logs/git_lab | gnugrep --line-buffered 'PUT' | while read l; do
     cycle || sleep 10
 done
 EOF

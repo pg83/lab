@@ -4,6 +4,8 @@
 
 {% block srv_command %}
 export ETCDCTL_ENDPOINTS="{{cm.etcd.ep}}"
-sleep 150
-date | etcdctl put /git/logs/git_hz
+sleep 60
+date | etcdctl put /git/logs/git_ci
+sleep 60
+date | etcdctl put /git/logs/git_lab
 {% endblock %}
