@@ -17,7 +17,7 @@ cycle() (
     ./ix build bld/all {{ci_targets}}
 )
 
-etcdctl watch --prefix /git/logs/ | gnugrep --line-buffered 'OK' | while read l; do
+etcdctl watch --prefix /git/logs/ | gnugrep --line-buffered 'PUT' | while read l; do
     cycle || sleep 10
 done
 {% endblock %}
