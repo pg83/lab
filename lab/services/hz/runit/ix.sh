@@ -3,7 +3,7 @@
 {% block srv_command %}
 (
 while true; do
-    sleep 100
+    sleep 150
     echo 'hz has been saved'
     date
 done
