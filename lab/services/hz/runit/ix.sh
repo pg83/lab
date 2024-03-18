@@ -4,12 +4,6 @@
 
 {% block srv_command %}
 export ETCDCTL_ENDPOINTS=localhost:{{cm.etcd.ports.client}}
-
-(
-while true; do
-    sleep 150
-    echo 'hz has been saved'
-    date | etcdctl put /git/logs/git_hz
-done
-) > hz
+sleep 150
+date | etcdctl put /git/logs/git_hz
 {% endblock %}
