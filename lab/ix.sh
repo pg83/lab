@@ -52,7 +52,8 @@ def do(v):
         "sftp": 1005,
         "proxy": 1006,
         "git_lab": 1007,
-        "git_ci": 1008
+        "git_ci": 1008,
+        "hz": 1009
     }
 }
 {% endset %}
