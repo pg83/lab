@@ -3,7 +3,7 @@
 {% block srv_command %}
 set -xue
 
-export PATH=/bin:/ix/realm/boot/bin
+export PATH=/bin
 export IX_ROOT={{wd}}/ix_root
 export IX_EXEC_KIND=local
 
