@@ -24,7 +24,8 @@ cycle() (
 )
 
 tail -F -n 0 /var/run/evlog_git_lab/events /var/run/hz/hz | grep 'has been saved' | while read l; do
-    cycle || sleep 10
+    date
+    (cycle || sleep 10) || true
 done
 EOF
 
