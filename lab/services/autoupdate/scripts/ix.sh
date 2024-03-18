@@ -1,5 +1,7 @@
 {% extends '//die/proxy.sh' %}
 
+{% set cm = cluster_map | des %}
+
 {% block install %}
 cd ${out}; mkdir bin; cd bin
 
@@ -15,6 +17,7 @@ set -xue
 export PATH=/bin
 export IX_ROOT=/ix
 export IX_EXEC_KIND=system
+export ETCDCTL_ENDPOINTS=localhost:{{cm.etcd.ports.client}}
 
 cycle() (
     gpull https://github.com/pg83/lab ix
@@ -23,9 +26,8 @@ cycle() (
     ./ix mut \$(./ix list)
 )
 
-tail -F -n 0 /var/run/evlog_git_lab/events /var/run/hz/hz | gnugrep --line-buffered 'has been saved' | while read l; do
-    date
-    (cycle || sleep 10) || true
+etcdctl watch --prefix /git/logs/ | gnugrep --line-buffered 'PUT' | while read l; do
+    cycle || sleep 10
 done
 EOF
 
