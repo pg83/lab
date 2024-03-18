@@ -11,12 +11,21 @@ EOF
 cat << EOF > autoupdate_cycle
 #!/usr/bin/env sh
 set -xue
-gclone 100s /var/run/evlog_git_lab/events https://github.com/pg83/lab ix
-cd ix
+
+export PATH=/bin
 export IX_ROOT=/ix
 export IX_EXEC_KIND=system
-./ix mut system
-./ix mut \$(./ix list)
+
+cycle() (
+    gpull https://github.com/pg83/lab ix
+    cd ix
+    ./ix mut system
+    ./ix mut \$(./ix list)
+)
+
+tail -F -n 0 /var/run/evlog_git_lab/events /var/run/hz/hz | grep 'has been saved' | while read l; do
+    cycle || sleep 10
+done
 EOF
 
 chmod +x *
