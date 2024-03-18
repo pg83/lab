@@ -14,7 +14,7 @@ cycle() (
     ./ix build bld/all {{ci_targets}}
 )
 
-tail -F -n 0 /var/run/evlog_git_ci/events /var/run/hz/hz | grep 'has been saved' | while read l; do
+tail -F -n 0 /var/run/evlog_git_ci/events /var/run/hz/hz | gnugrep --line-buffered 'has been saved' | while read l; do
     cycle || sleep 10
 done
 {% endblock %}
