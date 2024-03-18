@@ -5,7 +5,7 @@
 {% block srv_command %}
 set -xue
 
-export ETCDCTL_ENDPOINTS=localhost:{{cm.etcd.ports.client}}
+export ETCDCTL_ENDPOINTS="{{cm.etcd.ep}}"
 
 gosmee client --saveDir \${PWD} --noReplay "{{evlog_url}}" qw 2>&1 | gnugrep --line-buffered 'has been saved' | while read l; do
     cat *.json | etcdctl put /git/logs/{{evlog_user}}

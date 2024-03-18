@@ -17,7 +17,7 @@ set -xue
 export PATH=/bin
 export IX_ROOT=/ix
 export IX_EXEC_KIND=system
-export ETCDCTL_ENDPOINTS=localhost:{{cm.etcd.ports.client}}
+export ETCDCTL_ENDPOINTS="{{cm.etcd.ep}}"
 
 cycle() (
     gpull https://github.com/pg83/lab ix

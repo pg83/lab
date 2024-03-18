@@ -8,7 +8,7 @@ set -xue
 export PATH=/bin
 export IX_ROOT={{wd}}/ix_root
 export IX_EXEC_KIND=local
-export ETCDCTL_ENDPOINTS=localhost:{{cm.etcd.ports.client}}
+export ETCDCTL_ENDPOINTS="{{cm.etcd.ep}}"
 
 cycle() (
     gpull https://github.com/pg83/ix ix
