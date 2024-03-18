@@ -2,13 +2,19 @@
 
 {% set cluster_gen %}
 def do(v):
-    v['etcd'] = {
+    ep = v['ports']['etcd_client']
+
+    etcd = {
         'hosts': [x['hostname'] for x in v['hosts']][:3],
         'ports': {
-            'client': v['ports']['etcd_client'],
+            'client': ep,
             'peer': v['ports']['etcd_peer'],
         },
     }
+
+    etcd['ep'] = ','.join(f'{x}:{ep}' for x in etcd['hosts'])
+
+    v['etcd'] = etcd
 
     return v
 {% endset %}
