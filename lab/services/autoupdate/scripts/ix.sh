@@ -23,7 +23,7 @@ cycle() (
     ./ix mut \$(./ix list)
 )
 
-tail -F -n 0 /var/run/evlog_git_lab/events /var/run/hz/hz | grep 'has been saved' | while read l; do
+tail -F -n 0 /var/run/evlog_git_lab/events /var/run/hz/hz | gnugrep --line-buffered 'has been saved' | while read l; do
     date
     (cycle || sleep 10) || true
 done
