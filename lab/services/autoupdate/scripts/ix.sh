@@ -9,7 +9,7 @@ exec /var/run/autoupdate_ix/ix/ix "\${@}"
 EOF
 
 cat << EOF > autoupdate_cycle
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 set -xue
 
 export PATH=/bin
