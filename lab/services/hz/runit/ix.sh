@@ -9,8 +9,7 @@ export ETCDCTL_ENDPOINTS=localhost:{{cm.etcd.ports.client}}
 while true; do
     sleep 150
     echo 'hz has been saved'
-    etcdctl put /git/logs/git_hz
-    date
+    date | etcdctl put /git/logs/git_hz
 done
 ) > hz
 {% endblock %}
