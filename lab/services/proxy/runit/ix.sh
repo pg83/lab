@@ -11,13 +11,13 @@ export ETCDCTL_ENDPOINTS="{{cm.etcd.ep}}"
 etcdctl get htpasswd | tail -n 1 > htpasswd
 export IFACE=$(ip -o addr show | grep 10.0.0 | head -n1 | awk '{print $2}')
 ip addr del {{proxy_ip}} dev ${IFACE} || true
-exec etcdctl lock proxy_{{proxy_port}} -- /bin/bash -c 'source <(echo {{self.us_command() | b64e}} | base64 -d)'
+exec etcdctl lock proxy_{{proxy_port}} -- /bin/sh ${1}/us_command ${1}
 {% endblock %}
 
 {% block us_command %}
 set -xue
 ip addr add {{proxy_ip}}/24 dev ${IFACE}
-exec su -s /bin/bash proxy -c 'source <(echo {{self.pr_command() | b64e}} | base64 -d)'
+exec su -s /bin/sh proxy ${1}/pr_command ${1}
 {% endblock %}
 
 {% block pr_command %}
@@ -39,5 +39,21 @@ exec reproxy \
 {% endblock %}
 
 {% block srv_command %}
-exec /bin/bash -c 'source <(echo {{self.su_command() | b64e}} | base64 -d)'
+exec /bin/sh ${PWD}/su_command ${PWD}
+{% endblock %}
+
+{% block install %}
+{{super()}}
+
+base64 -d << EOF > su_command
+{{self.su_command() | b64e}}
+EOF
+
+base64 -d << EOF > pr_command
+{{self.pr_command() | b64e}}
+EOF
+
+base64 -d << EOF > us_command
+{{self.us_command() | b64e}}
+EOF
 {% endblock %}

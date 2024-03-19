@@ -1,7 +1,6 @@
 {% extends '//die/hub.sh' %}
 
 {% block run_deps %}
-bin/bash
 bin/reproxy
 bin/etcd/ctl
 lab/etc/user(user=proxy)
