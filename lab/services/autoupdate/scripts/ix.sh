@@ -1,7 +1,5 @@
 {% extends '//die/proxy.sh' %}
 
-{% set cm = cluster_map | des %}
-
 {% block install %}
 cd ${out}; mkdir bin; cd bin
 
@@ -17,7 +15,6 @@ set -xue
 export PATH=/bin
 export IX_ROOT=/ix
 export IX_EXEC_KIND=system
-export ETCDCTL_ENDPOINTS="{{cm.etcd.ep}}"
 
 cycle() (
     gpull https://github.com/pg83/lab ix

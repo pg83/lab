@@ -7,7 +7,6 @@ set -xue
 mkdir -p /home/proxy/{{proxy_port}}
 chown proxy /home/proxy /home/proxy/{{proxy_port}}
 cd /home/proxy/{{proxy_port}}/
-export ETCDCTL_ENDPOINTS="{{cm.etcd.ep}}"
 etcdctl get htpasswd | tail -n 1 > htpasswd
 export IFACE=$(ip -o addr show | grep 10.0.0 | head -n1 | awk '{print $2}')
 ip addr del {{proxy_ip}} dev ${IFACE} || true
