@@ -12,10 +12,9 @@ EOF
 
 cat << EOF > ${out}/etc/hooks/{{evlog_topic}}.sh
 #!/usr/bin/env sh
-#((date; cat) | etcdctl put /git/logs/{{evlog_topic}}) 1>&2
 echo "Content-Type: text/plain"
 echo ""
-echo "Hello, world!"
+(date; cat) | etcdctl put /git/logs/{{evlog_topic}}
 EOF
 
 chmod +x ${out}/etc/hooks/*
