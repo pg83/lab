@@ -43,6 +43,7 @@ def do(v):
         "sftpd": 8002,
         "mirror_http": 8003,
         "mirror_rsyncd": 8004,
+        "webhook": 8005,
         "proxy_http": 8080,
         "proxy_https": 8090,
         "prometheus": 9090,
@@ -59,7 +60,8 @@ def do(v):
         "proxy": 1006,
         "git_lab": 1007,
         "git_ci": 1008,
-        "hz": 1009
+        "hz": 1009,
+        "webhook": 1010
     }
 }
 {% endset %}
