@@ -34,9 +34,9 @@ exec reproxy \
     --static.rule=ix.homelab.cam,/,http://lab1:{{cm.ports.mirror_http}}/ \
     --static.rule=ix.homelab.cam,/,http://lab2:{{cm.ports.mirror_http}}/ \
     --static.rule=ix.homelab.cam,/,http://lab3:{{cm.ports.mirror_http}}/ \
-    --static.rule=webhook.homelab.cam/,/,http://lab1:{{cm.ports.webhook}}/ \
-    --static.rule=webhook.homelab.cam/,/,http://lab2:{{cm.ports.webhook}}/ \
-    --static.rule=webhook.homelab.cam/,/,http://lab3:{{cm.ports.webhook}}/
+    --static.rule=webhook.homelab.cam,/,http://lab1:{{cm.ports.webhook}}/ \
+    --static.rule=webhook.homelab.cam,/,http://lab2:{{cm.ports.webhook}}/ \
+    --static.rule=webhook.homelab.cam,/,http://lab3:{{cm.ports.webhook}}/
 {% endif %}
 {% endblock %}
 
