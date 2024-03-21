@@ -16,7 +16,7 @@ lab/services/node/exporter
 lab/services/autoupdate(user=ix)
 
 lab/services/hz
-lab/services/git/evque(evlog_user=git_ci,evlog_url=https://smee.io/ytBWlUqSG8YIRzh)
+lab/services/git/cgi(evlog_topic=git_ci)
 lab/services/git/evque(evlog_user=git_lab,evlog_url=https://smee.io/ytBWlUqSG8YIRzh)
 
 bin/mc
