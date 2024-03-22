@@ -11,7 +11,7 @@ cycle() (
     gpull https://github.com/pg83/ix ix
     cd ix
     mv \${IX_ROOT}/build/* \${IX_ROOT}/trash/ || true
-    ./ix build bld/all {{ci_targets}}
+    exec ./ix build bld/all {{ci_targets}}
 )
 
 etcdctl watch --prefix /git/logs/git_ci | gnugrep --line-buffered 'PUT' | while read l; do
