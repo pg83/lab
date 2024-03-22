@@ -4,4 +4,4 @@ D=$(dirname ${0})
 
 export IX_PATH="${D}:${D}/ext/ix/pkgs"
 
-python3 ${D}/ext/ix/ix "${@}"
+exec python3 ${D}/ext/ix/ix "${@}"
