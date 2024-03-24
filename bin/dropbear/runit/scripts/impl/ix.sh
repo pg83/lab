@@ -9,7 +9,7 @@ chmod 0700 /home/root/.ssh
 cp /etc/sudo/authorized_keys /home/root/.ssh/
 
 exec /bin/dropbear \
-    -e -E -F -P pid   \
+    -s -e -E -F -P pid \
     -r /etc/keys/dss   \
     -r /etc/keys/rsa   \
     -r /etc/keys/ecdsa \
