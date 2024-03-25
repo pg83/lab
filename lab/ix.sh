@@ -16,6 +16,13 @@ def do(v):
 
     v['etcd'] = etcd
 
+    by_host = {}
+
+    for h in v['hosts']:
+        by_host[h['hostname']] = h
+
+    v['by_host'] = by_host
+
     return v
 {% endset %}
 
@@ -32,7 +39,8 @@ def do(v):
         },
         {
             "ip": "10.0.0.98",
-            "hostname": "lab3"
+            "hostname": "lab3",
+            "disabled": ["etcd", "torrent", "mirror_fetch"]
         }
     ],
     "ports": {
