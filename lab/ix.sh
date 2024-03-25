@@ -39,8 +39,7 @@ def do(v):
         },
         {
             "ip": "10.0.0.98",
-            "hostname": "lab3",
-            "disabled": ["etcd", "torrent", "mirror_fetch"]
+            "hostname": "lab3"
         }
     ],
     "ports": {
