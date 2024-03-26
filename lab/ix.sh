@@ -38,7 +38,7 @@ def do(v):
             "hostname": "lab2"
         },
         {
-            "ip": "10.0.0.98",
+            "ip": "10.0.0.160",
             "hostname": "lab3"
         }
     ],

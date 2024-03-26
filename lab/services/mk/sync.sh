@@ -7,7 +7,7 @@ mkdir -p /mnt
 umount ${1} || true
 umount /mnt || umount -l /mnt || true
 
-mkfs.ext4 -F ${1}
+mkfs.f2fs -f ${1}
 
 mount ${1} /mnt
 
