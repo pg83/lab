@@ -10,4 +10,4 @@ def gen_folders(p):
 where = sys.argv[1]
 dirs = list(sorted(frozenset(gen_folders(sys.argv[2:]))))
 
-subprocess.check_call(['rsync', '-a', '-r', '-R'] + dirs + [where + '/'])
+subprocess.check_call(['rsync', '--progress', '-a', '-r', '-R'] + dirs + [where + '/'])
