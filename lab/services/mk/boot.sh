@@ -4,10 +4,10 @@ set -xue
 
 mkdir -p /mnt
 
-umount ${2} || true
+umount ${1} || true
 umount /mnt || umount -l /mnt || true
-mkfs.fat -F32 ${2}
-mount ${2} /mnt
+mkfs.fat -F32 ${1}
+mount ${1} /mnt
 
 grub-install --verbose --target=x86_64-efi \
     --boot-directory=/mnt/boot \
@@ -15,6 +15,9 @@ grub-install --verbose --target=x86_64-efi \
     --removable \
     ${1}
 
+cat << EOF > /mnt/boot/grub/grub.conf
+set root=hd0,2
+configfile /etc/grub.cfg
 sync
 
 umount /mnt
