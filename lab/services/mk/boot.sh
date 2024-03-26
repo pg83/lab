@@ -15,7 +15,7 @@ grub-install --verbose --target=x86_64-efi \
     --removable \
     ${1}
 
-cat << EOF > /mnt/boot/grub/grub.conf
+cat << EOF > /mnt/boot/grub/grub.cfg
 set root=hd0,2
 configfile /etc/grub.cfg
 sync
