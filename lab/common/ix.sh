@@ -28,5 +28,6 @@ bin/dropbear/runit
 
 bin/fixits(delay=10)
 
+set/fs
 set/stalix/server
 {% endblock %}

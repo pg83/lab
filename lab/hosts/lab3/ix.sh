@@ -1,7 +1,6 @@
 {% extends '//die/hub.sh' %}
 
 {% block run_deps %}
-bin/btrfs/progs
 lab/services/mirror
 lab/services/torrent
 lab/hosts/lab3/mount
