@@ -18,6 +18,14 @@ grub-install --verbose --target=x86_64-efi \
 cat << EOF > /mnt/boot/grub/grub.cfg
 set root=hd0,2
 configfile /etc/grub.cfg
+set root=hd1,2
+configfile /etc/grub.cfg
+set root=hd2,2
+configfile /etc/grub.cfg
+set root=hd3,2
+configfile /etc/grub.cfg
+set root=hd4,2
+configfile /etc/grub.cfg
 sync
 
 umount /mnt

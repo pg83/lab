@@ -22,9 +22,15 @@ ln -s / usr
 mkdir -p home/root var sys proc dev
 
 mkdir -m 01777 ix/realm
+mkdir -m 01777 ix/trash
 
 cd ix/realm
+
 ln -s ${2} system
+ln -s ${2} boot
+chown -h ix:ix system boot
+
 cd /
+
 sync
 umount /mnt
