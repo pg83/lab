@@ -21,9 +21,9 @@ lab/services/git/cgi(evlog_topic=git_lab)
 
 bin/mc
 bin/htop
+bin/gengrub
 bin/kernel/6/7
 bin/kernel/6/6
-bin/kernel/gengrub
 bin/dropbear/runit
 
 set/stalix/server
