@@ -18,8 +18,11 @@ exec etcd \
     --initial-advertise-peer-urls http://{{hostname}}:{{cm.etcd.ports.peer}} \
     --listen-peer-urls http://0.0.0.0:{{cm.etcd.ports.peer}} \
     --listen-client-urls http://0.0.0.0:{{cm.etcd.ports.client}} \
-    --advertise-client-urls http://{{hostname}}:{{cm.etcd.ports.client}} \
+    --advertise-client-urls http://{{hostname}}:{{cm.etcd.ports.client}}
+
+{#
     --initial-cluster-token {{etcid}}\
     --initial-cluster {{self.all_etcd() | lines | join(",")}} \
     --initial-cluster-state new
+#}
 {% endblock %}
