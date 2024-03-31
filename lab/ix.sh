@@ -31,7 +31,8 @@ def do(v):
     "hosts": [
         {
             "ip": "10.0.0.85",
-            "hostname": "lab1"
+            "hostname": "lab1",
+            "disabled": ["etcd"]
         },
         {
             "ip": "10.0.0.251",
