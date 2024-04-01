@@ -52,6 +52,7 @@ def do(v):
         "mirror_http": 8003,
         "mirror_rsyncd": 8004,
         "webhook": 8005,
+        "iperf": 8006,
         "proxy_http": 8080,
         "proxy_https": 8090,
         "prometheus": 9090,
