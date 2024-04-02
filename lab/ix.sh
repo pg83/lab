@@ -39,7 +39,7 @@ def do(v):
             "disabled": ["ci"]
         },
         {
-            "ip": "10.0.0.160",
+            "ip": "10.0.0.146",
             "hostname": "lab3"
         }
     ],
