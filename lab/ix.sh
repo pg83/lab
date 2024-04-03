@@ -6,6 +6,9 @@ def do(v):
         if 'disabled' not in x:
             x['disabled'] = []
 
+        if 'ip' not in x:
+            x['ip'] = x['net'][0]['ip']
+
         if 'net' in x:
             x['disabled'].append('dhcpcd')
 
@@ -37,7 +40,6 @@ def do(v):
 {
     "hosts": [
         {
-            "ip": "10.0.0.64",
             "hostname": "lab1",
             "net": [
                 {"ip": "10.0.0.64", "gw": "10.0.0.1", "nm": 24, "if": "eth0"},
@@ -47,7 +49,6 @@ def do(v):
             ]
         },
         {
-            "ip": "10.0.0.68",
             "hostname": "lab2",
             "disabled": ["ci"],
             "net": [
@@ -58,7 +59,6 @@ def do(v):
             ]
         },
         {
-            "ip": "10.0.0.72",
             "hostname": "lab3",
             "net": [
                 {"ip": "10.0.0.72", "gw": "10.0.0.1", "nm": 24, "if": "eth0"},
