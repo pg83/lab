@@ -5,6 +5,10 @@
 {% block run_deps %}
 lab/etc
 
+{% for net in cm.by_host[hostname].net %}
+lab/services/ip(ip_addr={{net.ip}}/{{net.nm}},ip_gw={{net.gw}},ip_iface={{net.if}})
+{% endfor %}
+
 {% if hostname in cm.etcd.hosts %}
 lab/services/etcd
 lab/services/proxy(proxy_ip=10.0.0.32,proxy_port={{cm.ports.proxy_http}})

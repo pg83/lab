@@ -2,6 +2,13 @@
 
 {% set cluster_gen %}
 def do(v):
+    for x in v['hosts']:
+        if 'disabled' not in x:
+            x['disabled'] = []
+
+        if 'net' in x:
+            x['disabled'].append('dhcpcd')
+
     ep = v['ports']['etcd_client']
 
     etcd = {
@@ -32,7 +39,12 @@ def do(v):
         {
             "ip": "10.0.0.64",
             "hostname": "lab1",
-            "disabled": ["dhcpcd"]
+            "net": [
+                {"ip": "10.0.0.64", "gw": "10.0.0.1", "nm": 24, "if": "eth0"},
+                {"ip": "10.0.0.65", "gw": "10.0.0.1", "nm": 24, "if": "eth1"},
+                {"ip": "10.0.0.66", "gw": "10.0.0.1", "nm": 24, "if": "eth2"},
+                {"ip": "10.0.0.67", "gw": "10.0.0.1", "nm": 24, "if": "eth3"}
+            ]
         },
         {
             "ip": "10.0.0.251",
