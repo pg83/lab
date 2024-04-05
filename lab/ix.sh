@@ -50,7 +50,6 @@ def do(v):
         },
         {
             "hostname": "lab2",
-            "disabled": ["ci"],
             "net": [
                 {"ip": "10.0.0.68", "gw": "10.0.0.1", "nm": 24, "if": "eth0"},
                 {"ip": "10.0.0.69", "gw": "10.0.0.1", "nm": 24, "if": "eth1"},
@@ -59,7 +58,6 @@ def do(v):
             ]
         },
         {
-            "disabled": [],
             "hostname": "lab3",
             "net": [
                 {"ip": "10.0.0.72", "gw": "10.0.0.1", "nm": 24, "if": "eth0"},
