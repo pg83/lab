@@ -59,7 +59,7 @@ def do(v):
             ]
         },
         {
-            "disabled": ["etcd"],
+            "disabled": [],
             "hostname": "lab3",
             "net": [
                 {"ip": "10.0.0.72", "gw": "10.0.0.1", "nm": 24, "if": "eth0"},
