@@ -14,5 +14,6 @@ chmod 01777 /ix/trash
 chmod 01777 /ix/realm
 chown -h ix:ix /ix/realm/system
 chown -h ix:ix /ix/realm/boot
+resolvconf -u
 EOF
 {% endblock %}
