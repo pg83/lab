@@ -23,21 +23,27 @@ exec su -s /bin/sh proxy ${1}/pr_command ${1}
 exec reproxy \
     --listen={{proxy_ip}}:{{proxy_port}} \
     --static.enabled \
-    --logger.enabled \
-    --logger.stdout \
 {% if proxy_https %}
     --basic-htpasswd=htpasswd \
     --ssl.type=auto \
     --ssl.http-port=8100 \
-    --static.rule=torrents.homelab.cam,/,http://lab2:{{cm.ports.torrent_webui}}/
+ {% for n in cm.by_host.lab2.net %}
+    --static.rule=torrents.homelab.cam,/,http://{{n.ip}}:{{cm.ports.torrent_webui}}/ \
+ {% endfor %}
 {% else %}
-    --static.rule=ix.homelab.cam,/,http://lab1:{{cm.ports.mirror_http}}/ \
-    --static.rule=ix.homelab.cam,/,http://lab2:{{cm.ports.mirror_http}}/ \
-    --static.rule=ix.homelab.cam,/,http://lab3:{{cm.ports.mirror_http}}/ \
-    --static.rule=webhook.homelab.cam,/,http://lab1:{{cm.ports.webhook}}/ \
-    --static.rule=webhook.homelab.cam,/,http://lab2:{{cm.ports.webhook}}/ \
-    --static.rule=webhook.homelab.cam,/,http://lab3:{{cm.ports.webhook}}/
+ {% for h in ['lab1', 'lab2', 'lab3'] %}
+  {% for n in cm.by_host[h].net %}
+    --static.rule=ix.homelab.cam,/,http://{{n.ip}}:{{cm.ports.mirror_http}}/ \
+  {% endfor %}
+ {% endfor %}
+ {% for h in ['lab1', 'lab2', 'lab3'] %}
+  {% for n in cm.by_host[h].net %}
+    --static.rule=webhook.homelab.cam,/,http://{{n.ip}}:{{cm.ports.webhook}}/ \
+  {% endfor %}
+ {% endfor %}
 {% endif %}
+    --logger.enabled \
+    --logger.stdout
 {% endblock %}
 
 {% block srv_command %}
