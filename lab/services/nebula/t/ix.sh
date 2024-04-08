@@ -28,8 +28,8 @@ rm _
 
 cat << EOF > run_nebula
 etcdctl get --print-value-only /nebula/ca.crt > ca.crt
-etcdctl get --print-value-only /nebula/lighthouse1.crt > host.crt
-etcdctl get --print-value-only /nebula/lighthouse1.key > host.key
+etcdctl get --print-value-only /nebula/{{nebula_host}}.crt > host.crt
+etcdctl get --print-value-only /nebula/{{nebula_host}}.key > host.key
 exec nebula --config=${PWD}/config.yaml
 EOF
 {% endblock %}
