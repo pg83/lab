@@ -70,7 +70,8 @@ def do(v):
     "ports": {
         "etcd_client": 2379,
         "etcd_peer": 2380,
-        "nebula": 4242,
+        "nebula_lh": 4242,
+        "nebula_node": 4243,
         "torrent_webui": 8000,
         "ftpd": 8001,
         "sftpd": 8002,

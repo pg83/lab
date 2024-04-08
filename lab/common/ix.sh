@@ -5,7 +5,7 @@
 {% block run_deps %}
 lab/etc
 
-lab/services/nebula/node(nebula_host={{hostname}})
+lab/services/nebula/node(nebula_host={{hostname}},nebula_port={{cm.ports.nebula_node}},nebula_iface=nebula1)
 
 {% for net in cm.by_host[hostname].net %}
 lab/services/ip(ip_addr={{net.ip}}/{{net.nm}},ip_gw={{net.gw}},ip_iface={{net.if}})

@@ -23,8 +23,8 @@ base64 -d << EOF >> _
 EOF
 
 cat _ \
-    | sed -e 's|4242|{{cm.ports.nebula}}|' \
-    | sed -e 's|nebula_tun|nb{{nebula_host}}|' \
+    | sed -e 's|4242|{{nebula_port | defined('nebula_port')}}|' \
+    | sed -e 's|nebula_tun|{{nebula_iface | defined('nebula_port')}}|' \
     > config.yaml
 
 rm _
