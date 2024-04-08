@@ -31,13 +31,13 @@ tun:
 {% if nebula_iface %}
   disabled: false
   dev: {{nebula_iface}}
-{% else %}
-  disabled: true
-{% endif %}
   drop_local_broadcast: false
   drop_multicast: false
   tx_queue: 500
   mtu: 1300
+{% else %}
+  disabled: true
+{% endif %}
 {% endblock %}
 EOF
 
