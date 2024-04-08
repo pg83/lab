@@ -41,7 +41,7 @@ def do(v):
     "hosts": [
         {
             "hostname": "lab1",
-            "nebula1": {
+            "nebula": {
                 "lh": {
                     "name": "lh1",
                     "vip": "192.168.100.1",
