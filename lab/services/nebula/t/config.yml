@@ -1,6 +1,3 @@
-static_host_map:
-  "192.168.100.1": ["5.188.103.251:4242"]
-
 punchy:
   # Continues to punch inbound/outbound at a regular interval to avoid expiration of firewall nat mappings
   punch: true

@@ -11,6 +11,13 @@ exec /bin/sh ${PWD}/run_nebula
 
 cat << EOF > config.yaml
 {% block nebula_config %}
+static_host_map:
+{% for h in cm.hosts %}
+{% if h.nebula.lh %}
+  "{{h.nebula.lh.vip}}": ["{{h.nebula.lh.ip}}:{{h.nebula.lh.port}}"]
+{% endif %}
+{% endfor %}
+
 pki:
   ca: ./ca.crt
   cert: ./host.crt

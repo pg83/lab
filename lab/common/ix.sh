@@ -5,6 +5,12 @@
 {% block run_deps %}
 lab/etc
 
+{% set lh = cm.by_host[hostname].nebula.lh %}
+
+{% if lh %}
+lab/services/nebula/lh(nebula_host={{lh.name}},nebula_port={{cm.ports.nebula_lh}},nebula_iface=nebula0)
+{% endif %}
+
 lab/services/nebula/node(nebula_host={{hostname}},nebula_port={{cm.ports.nebula_node}},nebula_iface=nebula1)
 
 {% for net in cm.by_host[hostname].net %}
