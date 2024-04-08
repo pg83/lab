@@ -9,25 +9,30 @@ exec /bin/sh ${PWD}/run_nebula
 {% block install %}
 {{super()}}
 
-cat << EOF > _
+cat << EOF > config.yaml
 {% block nebula_config %}
 pki:
   ca: ./ca.crt
   cert: ./host.crt
   key: ./host.key
+
+listen:
+  host: 0.0.0.0
+  port: {{nebula_port | defined('nebula_port')}}
+
+tun:
+  disabled: false
+  dev: {{nebula_iface | defined('nebula_port')}}
+  drop_local_broadcast: false
+  drop_multicast: false
+  tx_queue: 500
+  mtu: 1300
 {% endblock %}
 EOF
 
-base64 -d << EOF >> _
+base64 -d << EOF >> config.yaml
 {% include 'config.yml/base64' %}
 EOF
-
-cat _ \
-    | sed -e 's|4242|{{nebula_port | defined('nebula_port')}}|' \
-    | sed -e 's|nebula_tun|{{nebula_iface | defined('nebula_port')}}|' \
-    > config.yaml
-
-rm _
 
 cat << EOF > run_nebula
 etcdctl get --print-value-only /nebula/ca.crt > ca.crt
