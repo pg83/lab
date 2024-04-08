@@ -1,17 +1,5 @@
 punchy:
-  # Continues to punch inbound/outbound at a regular interval to avoid expiration of firewall nat mappings
   punch: true
-
-  # respond means that a node you are trying to reach will connect back out to you if your hole punching fails
-  # this is extremely useful if one node is behind a difficult nat, such as a symmetric NAT
-  # Default is false
-  #respond: true
-
-  # delays a punch response for misbehaving NATs, default is 1 second.
-  #delay: 1s
-
-  # set the delay before attempting punchy.respond. Default is 5 seconds. respond must be true to take effect.
-  #respond_delay: 5s
 
 relay:
   am_relay: false
