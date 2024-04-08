@@ -1,13 +1,13 @@
 {% extends '//die/hub.sh' %}
 
 {% set cm = cluster_map | des %}
+{% set hm = cm.by_host[hostname] %}
 
 {% block run_deps %}
 lab/etc
 
-{% set lh = cm.by_host[hostname].nebula.lh %}
-
-{% if lh %}
+{% if 'nebula' in hm %}
+{% set lh = hm.nebula.lh %}
 lab/services/nebula/lh(nebula_host={{lh.name}},nebula_port={{cm.ports.nebula_lh}},nebula_iface=nebula0)
 {% endif %}
 

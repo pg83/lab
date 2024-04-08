@@ -9,7 +9,7 @@ lighthouse:
   interval: 60
   hosts:
 {% for h in cm.hosts %}
-{% if h.nebula.lh %}
+{% if 'nebula' in h %}
     - "{{h.nebula.lh.vip}}"
 {% endif %}
 {% endfor %}

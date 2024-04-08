@@ -13,7 +13,7 @@ cat << EOF > config.yaml
 {% block nebula_config %}
 static_host_map:
 {% for h in cm.hosts %}
-{% if h.nebula.lh %}
+{% if 'nebula' in h %}
   "{{h.nebula.lh.vip}}": ["{{h.nebula.lh.ip}}:{{h.nebula.lh.port}}"]
 {% endif %}
 {% endfor %}
