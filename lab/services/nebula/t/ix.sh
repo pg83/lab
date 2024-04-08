@@ -22,7 +22,10 @@ base64 -d << EOF >> _
 {% include 'config.yml/base64' %}
 EOF
 
-cat _ | sed -e 's|4242|{{cm.ports.nebula}}|' > config.yaml
+cat _ \
+    | sed -e 's|4242|{{cm.ports.nebula}}|' \
+    | sed -e 's|nebula_tun|nb{{nebula_host}}|' \
+    > config.yaml
 
 rm _
 

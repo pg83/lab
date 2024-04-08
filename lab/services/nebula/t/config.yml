@@ -26,7 +26,7 @@ relay:
 
 tun:
   disabled: false
-  dev: nebula1
+  dev: nebula_tun
   drop_local_broadcast: false
   drop_multicast: false
   tx_queue: 500
