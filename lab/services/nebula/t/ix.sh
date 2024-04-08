@@ -28,8 +28,12 @@ listen:
   port: {{nebula_port | defined('nebula_port')}}
 
 tun:
+{% if nebula_iface %}
   disabled: false
-  dev: {{nebula_iface | defined('nebula_port')}}
+  dev: {{nebula_iface}}
+{% else %}
+  disabled: true
+{% endif %}
   drop_local_broadcast: false
   drop_multicast: false
   tx_queue: 500
