@@ -20,14 +20,6 @@ relay:
   am_relay: false
   use_relays: false
 
-tun:
-  disabled: false
-  dev: nebula_tun
-  drop_local_broadcast: false
-  drop_multicast: false
-  tx_queue: 500
-  mtu: 1300
-
 logging:
   level: info
   format: text
