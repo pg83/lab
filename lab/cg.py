@@ -2,20 +2,31 @@ import sys
 import time
 import pickle
 import base64
+import subprocess
 import collections
 
 
-class Service:
+class Sleeper:
     def __init__(self, tout):
         self.tout = tout
-
-    def name(self):
-        return 'sleeper'
 
     def run(self):
         while True:
             print(self.tout)
             time.sleep(self.tout)
+
+
+class IPerf:
+    def __init__(self, port):
+        self.port = port
+
+    def ix_pkgs(self):
+        yield {
+            'pkg': 'bin/iperf',
+        }
+
+    def run(self):
+        subprocess.check_call(['iperf', '-s', '-p', str(self.port)])
 
 
 class ClusterMap:
@@ -24,10 +35,12 @@ class ClusterMap:
 
     def it_cluster(self):
         for h in self.conf['hosts']:
-            yield h['hostname'], Service(1)
+            yield h['hostname'], Sleeper(1)
+            yield h['hostname'], IPerf(self.conf['ports']['iperf'])
 
 
-sys.modules['builtins'].Service = Service
+sys.modules['builtins'].Sleeper = Sleeper
+sys.modules['builtins'].IPerf = IPerf
 
 
 RUN_PY = '''
@@ -42,16 +55,9 @@ getattr(ctx['obj'], ctx['meth'])(*ctx.get('args', []), **ctx.get('kwargs', {}))
 '''
 
 
-def to_srv(pkg='', **args):
-    if args:
-        return pkg + '(' + ','.join(f'{x}={y}' for x, y in args.items()) + ')'
-
-    return pkg
-
-
-def it_config(code, o):
+def gen_runner(code, srv, user):
     ctx = {
-        'obj': o,
+        'obj': srv.srv,
         'meth': 'run',
     }
 
@@ -64,15 +70,59 @@ def it_config(code, o):
     runpy = RUN_PY.replace('__CTX__', runpy)
     runpy = base64.b64encode(runpy.encode()).decode()
 
-    yield {
+    res = {
         'pkg': 'lab/services/py',
-        'srv_dir': o.name(),
+        'srv_dir': srv.name(),
         'runpy_script': runpy,
     }
 
+    if user != 'root':
+        res['srv_user'] = user
 
-def to_config(code, o):
-    return '\n'.join(to_srv(**x) for x in it_config(code, o)).strip() + '\n'
+    return res
+
+
+class Service:
+    def __init__(self, srv, code):
+        self.srv = srv
+        self.code = code
+
+    def name(self):
+        try:
+            return self.srv.name()
+        except AttributeError:
+            return self.srv.__class__.__name__.lower()
+
+    def user(self):
+        try:
+            return self.srv.user()
+        except AttributeError:
+            return self.name()
+
+    def it_users(self):
+        yield self.user()
+
+        try:
+            yield from self.srv.users()
+        except AttributeError:
+            pass
+
+    def users(self):
+        return list(sorted(frozenset(self.it_users())))
+
+    def serialize(self):
+        try:
+            yield from self.srv.pkgs()
+        except AttributeError:
+            pass
+
+        yield gen_runner(self.code, self, self.user())
+
+        for user in self.users():
+            yield {
+                'pkg': 'lab/etc/user',
+                'user': user,
+            }
 
 
 def gen_host(n):
@@ -98,6 +148,19 @@ def gen_host(n):
         },
         'net': [gen_net(j) for j in (0, 1, 2, 3)],
     }
+
+
+def to_srv(pkg='', **args):
+    if args:
+        return pkg + '(' + ','.join(f'{x}={y}' for x, y in args.items()) + ')'
+
+    return pkg
+
+
+def it_srvs(srvs):
+    for s in srvs:
+        for x in s.serialize():
+            yield to_srv(**x)
 
 
 def cluster_conf(code):
@@ -134,6 +197,8 @@ def cluster_conf(code):
         'git_ci': 1008,
         'hz': 1009,
         'webhook': 1010,
+        'iperf': 1011,
+        'sleeper': 1012,
     }
 
     cconf = {
@@ -145,10 +210,10 @@ def cluster_conf(code):
     by_host = collections.defaultdict(list)
 
     for host, service in ClusterMap(cconf).it_cluster():
-        by_host[host].append(service)
+        by_host[host].append(Service(service, code))
 
     for h in hosts:
-        h['extra'] = '\n'.join(to_config(code, srv) for srv in by_host[h['hostname']]) + '\n'
+        h['extra'] = '\n'.join(it_srvs(by_host[h['hostname']]))
 
     return cconf
 
