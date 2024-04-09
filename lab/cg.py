@@ -20,7 +20,7 @@ class IPerf:
     def __init__(self, port):
         self.port = port
 
-    def ix_pkgs(self):
+    def pkgs(self):
         yield {
             'pkg': 'bin/iperf',
         }
