@@ -1,5 +1,3 @@
-import json
-
 def gen_host(n):
     ip = 64 + (n - 1) * 4
 
@@ -24,9 +22,11 @@ def gen_host(n):
         'net': [gen_net(j) for j in (0, 1, 2, 3)],
     }
 
-cluster_conf = {
-    'hosts': [gen_host(h) for h in (1, 2, 3)],
-    'ports': {
+
+def cluster_conf():
+    hosts = [gen_host(h) for h in (1, 2, 3)]
+
+    ports = {
         'etcd_client': 2379,
         'etcd_peer': 2380,
         'nebula_lh': 4242,
@@ -42,8 +42,9 @@ cluster_conf = {
         'proxy_https': 8090,
         'prometheus': 9090,
         'node_exporter': 9100,
-    },
-    'users': {
+    }
+
+    users = {
         'mirror': 103,
         'ci': 104,
         'collector': 1001,
@@ -56,8 +57,13 @@ cluster_conf = {
         'git_ci': 1008,
         'hz': 1009,
         'webhook': 1010,
-    },
-}
+    }
+
+    return {
+        'hosts': hosts,
+        'ports': ports,
+        'users': users,
+    }
 
 
 def gen_cluster(v, extra):
@@ -96,4 +102,4 @@ def gen_cluster(v, extra):
 
 
 def do(v):
-    return gen_cluster(json.loads(json.dumps(cluster_conf)), v)
+    return gen_cluster(cluster_conf(), v)
