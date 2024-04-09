@@ -1,3 +1,4 @@
+import os
 import sys
 import time
 import pickle
@@ -26,7 +27,7 @@ class IPerf:
         }
 
     def run(self):
-        subprocess.check_call(['iperf', '-s', '-p', str(self.port)])
+        exec_into('iperf', '-s', '-p', self.port)
 
 
 class ClusterMap:
@@ -41,6 +42,16 @@ class ClusterMap:
 
 sys.modules['builtins'].Sleeper = Sleeper
 sys.modules['builtins'].IPerf = IPerf
+
+
+def exec_into(*args, **kwargs):
+    args = [str(x) for x in args]
+    env = os.environ.copy()
+
+    for k, v in kwargs.items():
+        env[str(k)] = str(v)
+
+    os.execvpe(args[0], args, env)
 
 
 RUN_PY = '''
