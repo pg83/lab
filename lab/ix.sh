@@ -5,6 +5,7 @@
 {% endset %}
 
 {% set cluster_map | eval(cluster_gen) %}
+{% include 'cg.py' %}
 {% endset %}
 
 {% block run_deps %}
