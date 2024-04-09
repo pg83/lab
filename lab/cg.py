@@ -10,7 +10,7 @@ class Sleeper:
     def __init__(self, tout):
         self.tout = tout
 
-    def run(self):
+    def run1(self):
         while True:
             print(self.tout)
             time.sleep(self.tout)
@@ -78,6 +78,22 @@ class Service:
         self.srv = srv
         self.code = code
 
+    def enabled(self):
+        return not self.disabled()
+
+    def disabled(self):
+        try:
+            self.srv.run
+        except AttributeError:
+            return True
+
+        try:
+            return self.srv.disabled()
+        except AttributeError:
+            pass
+
+        return False
+
     def name(self):
         try:
             return self.srv.name()
@@ -136,6 +152,7 @@ def gen_host(n):
         }
 
     return {
+        'disabled': [],
         'hostname': f'lab{n}',
         'nebula': {
             'lh': {
@@ -212,16 +229,19 @@ def cluster_conf(code):
         by_host[host].append(Service(service, code))
 
     for h in hosts:
-        h['extra'] = '\n'.join(it_srvs(by_host[h['hostname']]))
+        srvs = by_host[h['hostname']]
+
+        h['extra'] = '\n'.join(it_srvs(srvs))
+
+        for s in srvs:
+            if s.disabled():
+                 h['disabled'].append(s.name())
 
     return cconf
 
 
 def gen_cluster(v):
     for x in v['hosts']:
-        if 'disabled' not in x:
-            x['disabled'] = []
-
         if 'ip' not in x:
             x['ip'] = x['net'][0]['ip']
 
