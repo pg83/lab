@@ -27,7 +27,6 @@ lab/services/proxy(proxy_ip=10.0.0.33,proxy_port={{cm.ports.proxy_https}},proxy_
 {% endif %}
 
 lab/services/collector
-lab/services/node/exporter
 lab/services/autoupdate(user=ix)
 
 lab/services/hz

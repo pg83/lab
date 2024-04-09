@@ -45,6 +45,31 @@ class WebHooks:
         }
 
 
+class NodeExporter:
+    def __init__(self, port):
+        self.port = port
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/prometheus/node/exporter',
+        }
+
+    def prom_jobs(self):
+        yield {
+            'job_name': 'node',
+            'static_configs': [
+                {
+                    'targets': [
+                        f'localhost:{self.port}',
+                    ],
+                },
+            ],
+        }
+
+    def run(self):
+        exec_into('node_exporter', f'--web.listen-address=:{self.port}')
+
+
 class ClusterMap:
     def __init__(self, conf):
         self.conf = conf
@@ -65,9 +90,15 @@ class ClusterMap:
                 'serv': WebHooks(p['web_hooks'], '/etc/hooks/'),
             }
 
+            yield {
+                'host': hn,
+                'serv': NodeExporter(p['node_exporter']),
+            }
+
 
 sys.modules['builtins'].WebHooks = WebHooks
 sys.modules['builtins'].IPerf = IPerf
+sys.modules['builtins'].NodeExporter = NodeExporter
 
 
 def exec_into(*args, **kwargs):
@@ -253,10 +284,10 @@ def cluster_conf(code):
         'mirror_rsyncd': 8004,
         'web_hooks': 8005,
         'i_perf': 8006,
+        'node_exporter': 8007,
         'proxy_http': 8080,
         'proxy_https': 8090,
         'prometheus': 9090,
-        'node_exporter': 9100,
     }
 
     users = {
