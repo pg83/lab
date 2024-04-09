@@ -4,6 +4,9 @@
 {% set hm = cm.by_host[hostname] %}
 
 {% block run_deps %}
+# there will be dragons
+{{hm.extra}}
+
 lab/etc
 
 {% if 'nebula' in hm %}

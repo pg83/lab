@@ -10,6 +10,7 @@ def gen_host(n):
         }
 
     return {
+        'extra': '',
         'hostname': f'lab{n}',
         'nebula': {
             'lh': {
