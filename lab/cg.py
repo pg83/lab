@@ -55,9 +55,9 @@ getattr(ctx['obj'], ctx['meth'])(*ctx.get('args', []), **ctx.get('kwargs', {}))
 '''
 
 
-def gen_runner(code, srv, user):
+def gen_runner(code, srv):
     ctx = {
-        'obj': srv.srv,
+        'obj': srv,
         'meth': 'run',
     }
 
@@ -70,16 +70,7 @@ def gen_runner(code, srv, user):
     runpy = RUN_PY.replace('__CTX__', runpy)
     runpy = base64.b64encode(runpy.encode()).decode()
 
-    res = {
-        'pkg': 'lab/services/py',
-        'srv_dir': srv.name(),
-        'runpy_script': runpy,
-    }
-
-    if user != 'root':
-        res['srv_user'] = user
-
-    return res
+    return runpy
 
 
 class Service:
@@ -110,19 +101,27 @@ class Service:
     def users(self):
         return list(sorted(frozenset(self.it_users())))
 
+    def run_py(self):
+        return {
+            'pkg': 'lab/services/py',
+            'srv_dir': self.name(),
+            'runpy_script': gen_runner(self.code, self.srv),
+            'srv_user': self.user(),
+        }
+
     def serialize(self):
         try:
             yield from self.srv.pkgs()
         except AttributeError:
             pass
 
-        yield gen_runner(self.code, self, self.user())
-
         for user in self.users():
             yield {
                 'pkg': 'lab/etc/user',
                 'user': user,
             }
+
+        yield self.run_py()
 
 
 def gen_host(n):
