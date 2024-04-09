@@ -31,8 +31,6 @@ lab/services/node/exporter
 lab/services/autoupdate(user=ix)
 
 lab/services/hz
-lab/services/git/cgi(evlog_topic=git_ci)
-lab/services/git/cgi(evlog_topic=git_lab)
 
 bin/mc
 bin/htop

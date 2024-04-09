@@ -1,20 +1,11 @@
 import os
 import sys
+import zlib
 import time
 import pickle
 import base64
 import subprocess
 import collections
-
-
-class Sleeper:
-    def __init__(self, tout):
-        self.tout = tout
-
-    def run1(self):
-        while True:
-            print(self.tout)
-            time.sleep(self.tout)
 
 
 class IPerf:
@@ -30,17 +21,52 @@ class IPerf:
         exec_into('iperf', '-s', '-p', self.port)
 
 
+class WebHooks:
+    def __init__(self, port, where):
+        self.port = port
+        self.path = where
+
+    def run(self):
+        exec_into('cgi_server', f'0.0.0.0:{self.port}', self.path)
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/cgi/server'
+        }
+
+        yield {
+            'pkg': 'lab/services/git/hook',
+            'evlog_topic': 'git_ci',
+        }
+
+        yield {
+            'pkg': 'lab/services/git/hook',
+            'evlog_topic': 'git_lab',
+        }
+
+
 class ClusterMap:
     def __init__(self, conf):
         self.conf = conf
 
     def it_cluster(self):
+        p = self.conf['ports']
+
         for h in self.conf['hosts']:
-            yield h['hostname'], Sleeper(1)
-            yield h['hostname'], IPerf(self.conf['ports']['iperf'])
+            hn = h['hostname']
+
+            yield {
+                'host': hn,
+                'serv': IPerf(p['i_perf']),
+            }
+
+            yield {
+                'host': hn,
+                'serv': WebHooks(p['web_hooks'], '/etc/hooks/'),
+            }
 
 
-sys.modules['builtins'].Sleeper = Sleeper
+sys.modules['builtins'].WebHooks = WebHooks
 sys.modules['builtins'].IPerf = IPerf
 
 
@@ -55,10 +81,12 @@ def exec_into(*args, **kwargs):
 
 
 RUN_PY = '''
+import zlib
 import base64
 import pickle
 ctx = '__CTX__'
 ctx = base64.b64decode(ctx)
+ctx = zlib.decompress(ctx)
 ctx = pickle.loads(ctx)
 exec(ctx['code'])
 ctx = pickle.loads(ctx['data'])
@@ -77,11 +105,31 @@ def gen_runner(code, srv):
         'data': pickle.dumps(ctx)
     }
 
-    runpy = base64.b64encode(pickle.dumps(ctx)).decode()
+    runpy = pickle.dumps(ctx)
+    runpy = zlib.compress(runpy)
+    runpy = base64.b64encode(runpy).decode()
     runpy = RUN_PY.replace('__CTX__', runpy)
     runpy = base64.b64encode(runpy.encode()).decode()
 
     return runpy
+
+
+def it_norm(n):
+    for c in n:
+        if c == c.upper():
+            yield '_'
+            yield c.lower()
+        else:
+            yield c
+
+
+def norm(n):
+    res = ''.join(it_norm(n))
+
+    while res and res[0] == '_':
+        res = res[1:]
+
+    return res
 
 
 class Service:
@@ -109,7 +157,7 @@ class Service:
         try:
             return self.srv.name()
         except AttributeError:
-            return self.srv.__class__.__name__.lower()
+            return norm(self.srv.__class__.__name__)
 
     def user(self):
         try:
@@ -203,8 +251,8 @@ def cluster_conf(code):
         'sftpd': 8002,
         'mirror_http': 8003,
         'mirror_rsyncd': 8004,
-        'webhook': 8005,
-        'iperf': 8006,
+        'web_hooks': 8005,
+        'i_perf': 8006,
         'proxy_http': 8080,
         'proxy_https': 8090,
         'prometheus': 9090,
@@ -223,8 +271,8 @@ def cluster_conf(code):
         'git_lab': 1007,
         'git_ci': 1008,
         'hz': 1009,
-        'webhook': 1010,
-        'iperf': 1011,
+        'web_hooks': 1010,
+        'i_perf': 1011,
         'sleeper': 1012,
     }
 
@@ -236,8 +284,8 @@ def cluster_conf(code):
 
     by_host = collections.defaultdict(list)
 
-    for host, service in ClusterMap(cconf).it_cluster():
-        by_host[host].append(Service(service, code))
+    for rec in ClusterMap(cconf).it_cluster():
+        by_host[rec['host']].append(Service(rec['serv'], code))
 
     for h in hosts:
         srvs = by_host[h['hostname']]
