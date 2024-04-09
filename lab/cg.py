@@ -273,7 +273,6 @@ def cluster_conf(code):
         'hz': 1009,
         'web_hooks': 1010,
         'i_perf': 1011,
-        'sleeper': 1012,
     }
 
     cconf = {
@@ -294,7 +293,7 @@ def cluster_conf(code):
 
         for s in srvs:
             if s.disabled():
-                 h['disabled'].append(s.name())
+                h['disabled'].append(s.name())
 
     return cconf
 
