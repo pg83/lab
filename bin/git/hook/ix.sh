@@ -2,5 +2,5 @@
 
 {% block run_deps %}
 bin/etcd/ctl
-lab/services/git/hook/scripts
+bin/git/hook/scripts
 {% endblock %}

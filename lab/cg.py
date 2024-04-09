@@ -35,12 +35,12 @@ class WebHooks:
         }
 
         yield {
-            'pkg': 'lab/services/git/hook',
+            'pkg': 'big/git/hook',
             'evlog_topic': 'git_ci',
         }
 
         yield {
-            'pkg': 'lab/services/git/hook',
+            'pkg': 'big/git/hook',
             'evlog_topic': 'git_lab',
         }
 
