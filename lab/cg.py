@@ -1,5 +1,6 @@
 import json
 
+EXT_IP = "5.188.103.251"
 
 cluster_conf = {
     "hosts": [
@@ -9,7 +10,7 @@ cluster_conf = {
                 "lh": {
                     "name": "lh1",
                     "vip": "192.168.100.1",
-                    "ip": "5.188.103.251",
+                    "ip": EXT_IP,
                     "port": "4242",
                 },
             },
@@ -26,7 +27,7 @@ cluster_conf = {
                 "lh": {
                     "name": "lh2",
                     "vip": "192.168.100.2",
-                    "ip": "5.188.103.251",
+                    "ip": EXT_IP,
                     "port": "4243",
                 },
             },
@@ -43,7 +44,7 @@ cluster_conf = {
                 "lh": {
                     "name": "lh3",
                     "vip": "192.168.100.3",
-                    "ip": "5.188.103.251",
+                    "ip": EXT_IP,
                     "port": "4244",
                 },
             },
