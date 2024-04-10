@@ -256,8 +256,6 @@ class NebulaLh(Nebula):
     def config(self):
         cfg = json.loads(json.dumps(NEBULA))
 
-        cfg['host'] = self.host
-
         cfg['static_host_map'] = self.smap
 
         cfg['tun'] = {
