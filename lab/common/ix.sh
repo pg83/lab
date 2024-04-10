@@ -9,7 +9,7 @@
 
 lab/etc
 
-{% for net in cm.by_host[hostname].net %}
+{% for net in hm.net %}
 lab/services/ip(ip_addr={{net.ip}}/{{net.nm}},ip_gw={{net.gw}},ip_iface={{net.if}})
 {% endfor %}
 
