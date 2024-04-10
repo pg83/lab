@@ -12,10 +12,10 @@ import collections
 
 @contextlib.contextmanager
 def memfd(name):
-    fd = os.memfd_create(name)
+    fd = os.memfd_create(name, flags=0)
 
     try:
-        yield f'/proc/{os.getpid()}/fd/{fd}'
+        yield f'/proc/self/fd/{fd}'
     finally:
         os.close(fd)
 
