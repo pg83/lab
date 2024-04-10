@@ -70,6 +70,11 @@ class Collector:
     def prom_port(self):
         return self.port
 
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/prometheus',
+        }
+
     def config(self):
         return {
             'global': {
