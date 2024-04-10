@@ -117,32 +117,6 @@ class Collector:
 
 
 NEBULA = {
-    'static_host_map': {
-        '192.168.100.1': [
-            '5.188.103.251:4242',
-            '10.0.0.64:4242',
-            '10.0.0.65:4242',
-            '10.0.0.66:4242',
-            '10.0.0.67:4242',
-        ],
-        '192.168.100.2': [
-            '5.188.103.251:4243',
-            '10.0.0.68:4242',
-            '10.0.0.69:4242',
-            '10.0.0.70:4242',
-            '10.0.0.71:4242',
-        ],
-        '192.168.100.3': [
-            '5.188.103.251:4244',
-            '10.0.0.72:4242',
-            '10.0.0.73:4242',
-            '10.0.0.74:4242',
-            '10.0.0.75:4242',
-        ],
-    },
-    'listen': {
-        'host': '0.0.0.0',
-    },
     'punchy': {
         'punch': True,
     },
@@ -177,27 +151,6 @@ NEBULA = {
             },
         ],
     },
-}
-
-
-NEBULA_TUN = {
-    'disabled': False,
-    'dev': 'nebula0',
-    'drop_local_broadcast': False,
-    'drop_multicast': False,
-    'tx_queue': 500,
-    'mtu': 1300,
-}
-
-
-NEBULA_LH = {
-    'am_lighthouse': False,
-    'interval': 60,
-    'hosts': [
-        '192.168.100.1',
-        '192.168.100.2',
-        '192.168.100.3',
-    ],
 }
 
 
@@ -241,21 +194,59 @@ class Nebula:
 
 
 class NebulaNode(Nebula):
-    def __init__(self, host, port):
+    def __init__(self, host, port, smap):
         self.host = host
         self.port = port
+        self.smap = smap
 
     def user(self):
         return 'root'
 
     def config(self):
         cfg = json.loads(json.dumps(NEBULA))
+
         cfg['host'] = self.host
-        cfg['tun'] = NEBULA_TUN
-        cfg['lighthouse'] = NEBULA_LH
-        cfg['listen']['port'] = self.port
+
+        cfg['static_host_map'] = self.smap
+
+        cfg['tun'] = {
+            'disabled': False,
+            'dev': 'nebula0',
+            'drop_local_broadcast': False,
+            'drop_multicast': False,
+            'tx_queue': 500,
+            'mtu': 1300,
+        }
+
+        cfg['lighthouse'] = {
+            'am_lighthouse': False,
+            'interval': 60,
+            'hosts': list(self.smap.keys())
+        }
+
+        cfg['listen'] = {
+            'host': '0.0.0.0',
+            'port': self.port,
+        }
 
         return cfg
+
+
+def it_nebula_reals(lh, h, port):
+    yield lh['ip'], lh['port']
+
+    for n in h['net']:
+        yield n['ip'], port
+
+
+def nebula_smap(hosts, lh_port):
+    lhs = dict()
+
+    for h in hosts:
+        if lh := h.get('nebula', {}).get('lh', None):
+            lhs[lh['vip']] = list(f'{h}:{p}' for h, p in it_nebula_reals(lh, h, lh_port))
+
+    return lhs
 
 
 class ClusterMap:
@@ -264,6 +255,8 @@ class ClusterMap:
 
     def it_cluster(self):
         p = self.conf['ports']
+
+        neb_map = nebula_smap(self.conf['hosts'], p['nebula_lh'])
 
         for h in self.conf['hosts']:
             hn = h['hostname']
@@ -290,7 +283,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': NebulaNode(hn, p['nebula_node']),
+                'serv': NebulaNode(hn, p['nebula_node'], neb_map),
             }
 
 
