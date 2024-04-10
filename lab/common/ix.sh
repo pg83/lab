@@ -14,8 +14,6 @@ lab/etc
 lab/services/nebula/lh(nebula_host={{lh.name}},nebula_port={{cm.ports.nebula_lh}})
 {% endif %}
 
-lab/services/nebula/node(nebula_host={{hostname}},nebula_port={{cm.ports.nebula_node}},nebula_iface=nebula0)
-
 {% for net in cm.by_host[hostname].net %}
 lab/services/ip(ip_addr={{net.ip}}/{{net.nm}},ip_gw={{net.gw}},ip_iface={{net.if}})
 {% endfor %}

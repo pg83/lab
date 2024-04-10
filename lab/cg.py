@@ -20,6 +20,12 @@ def memfd(name):
         os.close(fd)
 
 
+@contextlib.contextmanager
+def multi(*args):
+    with contextlib.ExitStack() as es:
+        yield (es.enter_context(a) for a in args)
+
+
 class IPerf:
     def __init__(self, port):
         self.port = port
@@ -110,6 +116,132 @@ class Collector:
             exec_into(*args)
 
 
+NEBULA = {
+    'static_host_map': {
+        '192.168.100.1': [
+            '5.188.103.251:4242',
+            '10.0.0.64:4242',
+            '10.0.0.65:4242',
+            '10.0.0.66:4242',
+            '10.0.0.67:4242',
+        ],
+        '192.168.100.2': [
+            '5.188.103.251:4243',
+            '10.0.0.68:4242',
+            '10.0.0.69:4242',
+            '10.0.0.70:4242',
+            '10.0.0.71:4242',
+        ],
+        '192.168.100.3': [
+            '5.188.103.251:4244',
+            '10.0.0.72:4242',
+            '10.0.0.73:4242',
+            '10.0.0.74:4242',
+            '10.0.0.75:4242',
+        ],
+    },
+    'listen': {
+        'host': '0.0.0.0',
+        'port': 4243,
+    },
+    'tun': {
+        'disabled': False,
+        'dev': 'nebula0',
+        'drop_local_broadcast': False,
+        'drop_multicast': False,
+        'tx_queue': 500,
+        'mtu': 1300,
+    },
+    'lighthouse': {
+        'am_lighthouse': False,
+        'interval': 60,
+        'hosts': [
+            '192.168.100.1',
+            '192.168.100.2',
+            '192.168.100.3',
+        ],
+    },
+    'punchy': {
+        'punch': True,
+    },
+    'relay': {
+        'am_relay': False,
+        'use_relays': False,
+    },
+    'logging': {
+        'level': 'info',
+        'format': 'text',
+    },
+    'firewall': {
+        'outbound_action': 'drop',
+        'inbound_action': 'drop',
+        'conntrack': {
+            'tcp_timeout': '12m',
+            'udp_timeout': '3m',
+            'default_timeout': '10m',
+        },
+        'outbound': [
+            {
+                'port': 'any',
+                'proto': 'any',
+                'host': 'any',
+            },
+        ],
+        'inbound': [
+            {
+                'port': 'any',
+                'proto': 'any',
+                'host': 'any',
+            },
+        ],
+    },
+}
+
+
+def get_key(k):
+    cmd = ['etcdctl', 'get', '--print-value-only', k]
+
+    return subprocess.check_output(cmd)
+
+
+class NebulaNode:
+    def __init__(self, host):
+        self.cfg = NEBULA
+        self.host = host
+
+    def user(self):
+        return 'root'
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/nebula/daemon',
+        }
+
+    def run(self):
+        with multi(memfd("conf"), memfd("ca"), memfd("cert"), memfd("key")) as (conf, ca, cert, key):
+            cfg = self.cfg
+
+            cfg['pki'] = {
+                'ca': ca,
+                'cert': cert,
+                'key': key,
+            }
+
+            with open(conf, "w") as f:
+                f.write(json.dumps(cfg, indent=4, sort_keys=True))
+
+            with open(ca, 'wb') as f:
+                f.write(get_key('/nebula/ca.crt'))
+
+            with open(cert, 'wb') as f:
+                f.write(get_key(f'/nebula/{self.host}.crt'))
+
+            with open(key, 'wb') as f:
+                f.write(get_key(f'/nebula/{self.host}.key'))
+
+            exec_into('nebula', f'--config={conf}')
+
+
 class ClusterMap:
     def __init__(self, conf):
         self.conf = conf
@@ -140,11 +272,17 @@ class ClusterMap:
                 'serv': NodeExporter(p['node_exporter']),
             }
 
+            yield {
+                'host': hn,
+                'serv': NebulaNode(hn),
+            }
+
 
 sys.modules['builtins'].WebHooks = WebHooks
 sys.modules['builtins'].IPerf = IPerf
 sys.modules['builtins'].NodeExporter = NodeExporter
 sys.modules['builtins'].Collector = Collector
+sys.modules['builtins'].NebulaNode = NebulaNode
 
 
 def exec_into(*args, **kwargs):
