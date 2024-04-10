@@ -179,8 +179,6 @@ class Nebula:
         with multi(memfd("conf"), memfd("ca"), memfd("cert"), memfd("key")) as (conf, ca, cert, key):
             cfg = self.config()
 
-            host = cfg.pop('host')
-
             cfg['pki'] = {
                 'ca': ca,
                 'cert': cert,
@@ -196,10 +194,10 @@ class Nebula:
                 f.write(get_key('/nebula/ca.crt'))
 
             with open(cert, 'wb') as f:
-                f.write(get_key(f'/nebula/{host}.crt'))
+                f.write(get_key(f'/nebula/{self.host}.crt'))
 
             with open(key, 'wb') as f:
-                f.write(get_key(f'/nebula/{host}.key'))
+                f.write(get_key(f'/nebula/{self.host}.key'))
 
             exec_into('nebula', '--config', conf)
 
@@ -219,8 +217,6 @@ class NebulaNode(Nebula):
 
     def config(self):
         cfg = json.loads(json.dumps(NEBULA))
-
-        cfg['host'] = self.host
 
         cfg['static_host_map'] = self.smap
 
