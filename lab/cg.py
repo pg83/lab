@@ -151,6 +151,15 @@ NEBULA = {
             },
         ],
     },
+    'stats': {
+        'type': 'prometheus',
+        'path': '/metrics',
+        'namespace': 'nebula',
+        'subsystem': 'nebula',
+        'interval': '10s',
+        'message_metrics': True,
+        'lighthouse_metrics': True,
+    },
 }
 
 
@@ -178,6 +187,8 @@ class Nebula:
                 'key': key,
             }
 
+            cfg['stats']['listen'] = '127.0.0.1:' + str(self.prom_port())
+
             with open(conf, "w") as f:
                 f.write(json.dumps(cfg, indent=4, sort_keys=True))
 
@@ -194,10 +205,14 @@ class Nebula:
 
 
 class NebulaNode(Nebula):
-    def __init__(self, host, port, smap):
+    def __init__(self, host, port, smap, prom):
         self.host = host
         self.port = port
         self.smap = smap
+        self.prom = prom
+
+    def prom_port(self):
+        return self.prom
 
     def user(self):
         return 'root'
@@ -233,10 +248,14 @@ class NebulaNode(Nebula):
 
 
 class NebulaLh(Nebula):
-    def __init__(self, host, port, smap):
+    def __init__(self, host, port, smap, prom):
         self.host = host
         self.port = port
         self.smap = smap
+        self.prom = prom
+
+    def prom_port(self):
+        return self.prom;
 
     def config(self):
         cfg = json.loads(json.dumps(NEBULA))
@@ -312,13 +331,13 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': NebulaNode(hn, p['nebula_node'], neb_map),
+                'serv': NebulaNode(hn, p['nebula_node'], neb_map, p['nebula_node_prom']),
             }
 
             if lh := h.get('nebula', {}).get('lh', None):
                 yield {
                     'host': hn,
-                    'serv': NebulaLh(lh['name'], p['nebula_lh'], neb_map),
+                    'serv': NebulaLh(lh['name'], p['nebula_lh'], neb_map, p['nebula_lh_prom']),
                 }
 
 
@@ -544,6 +563,8 @@ def cluster_conf(code):
         'i_perf': 8006,
         'node_exporter': 8007,
         'collector': 8008,
+        'nebula_node_prom': 8009,
+        'nebula_lh_prom': 8010,
         'proxy_http': 8080,
         'proxy_https': 8090,
     }
