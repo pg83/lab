@@ -92,7 +92,7 @@ class Collector:
             'prometheus',
             '--config.file=./prometheus.conf',
             '--storage.tsdb.path=/home/collector/',
-            '--web.listen-address=0.0.0.0:{self.port}',
+            f'--web.listen-address=0.0.0.0:{self.port}',
         ]
 
         exec_into(*args)
