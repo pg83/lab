@@ -190,7 +190,7 @@ class Nebula:
             with open(key, 'wb') as f:
                 f.write(get_key(f'/nebula/{host}.key'))
 
-            exec_into('nebula', f'--config={conf}')
+            exec_into('nebula', '--config', conf)
 
 
 class NebulaNode(Nebula):
