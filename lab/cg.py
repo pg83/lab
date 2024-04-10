@@ -232,6 +232,35 @@ class NebulaNode(Nebula):
         return cfg
 
 
+class NebulaLh(Nebula):
+    def __init__(self, host, port, smap):
+        self.host = host
+        self.port = port
+        self.smap = smap
+
+    def config(self):
+        cfg = json.loads(json.dumps(NEBULA))
+
+        cfg['host'] = self.host
+
+        cfg['static_host_map'] = self.smap
+
+        cfg['tun'] = {
+            'disabled': True,
+        }
+
+        cfg['lighthouse'] = {
+            'am_lighthouse': True,
+        }
+
+        cfg['listen'] = {
+            'host': '0.0.0.0',
+            'port': self.port,
+        }
+
+        return cfg
+
+
 def it_nebula_reals(lh, h, port):
     yield lh['ip'], lh['port']
 
@@ -286,12 +315,19 @@ class ClusterMap:
                 'serv': NebulaNode(hn, p['nebula_node'], neb_map),
             }
 
+            if lh := h.get('nebula', {}).get('lh', None):
+                yield {
+                    'host': hn,
+                    'serv': NebulaLh(lh['name'], p['nebula_lh'], neb_map),
+                }
+
 
 sys.modules['builtins'].WebHooks = WebHooks
 sys.modules['builtins'].IPerf = IPerf
 sys.modules['builtins'].NodeExporter = NodeExporter
 sys.modules['builtins'].Collector = Collector
 sys.modules['builtins'].NebulaNode = NebulaNode
+sys.modules['builtins'].NebulaLh = NebulaLh
 
 
 def exec_into(*args, **kwargs):
@@ -526,6 +562,7 @@ def cluster_conf(code):
         'hz': 1009,
         'web_hooks': 1010,
         'i_perf': 1011,
+        'nebula_lh': 1012,
     }
 
     cconf = {
