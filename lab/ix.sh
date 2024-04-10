@@ -1,11 +1,11 @@
 {% extends '//die/hub.sh' %}
 
-{% set cluster_gen %}
+{% block cluster_gen %}
 {% include 'cg.py' %}
-{% endset %}
+{% endblock %}
 
-{% set cluster_map | eval(cluster_gen) %}
-{% include 'cg.py' %}
+{% set cluster_map | eval(self.cluster_gen()) %}
+{{self.cluster_gen()}}
 {% endset %}
 
 {% block run_deps %}
