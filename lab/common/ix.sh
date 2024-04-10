@@ -26,8 +26,8 @@ lab/services/hz
 bin/mc
 bin/htop
 bin/gengrub
+bin/kernel/6/8
 bin/kernel/6/7
-bin/kernel/6/6
 bin/dropbear/runit
 
 bin/fixits(delay=10)
