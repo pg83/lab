@@ -5,8 +5,19 @@ import time
 import json
 import pickle
 import base64
+import contextlib
 import subprocess
 import collections
+
+
+@contextlib.contextmanager
+def memfd(name):
+    fd = os.memfd(name)
+
+    try:
+        yield f'/proc/{os.getpid()}/fd/{fd}'
+    finally:
+        os.close(fd)
 
 
 class IPerf:
@@ -85,17 +96,18 @@ class Collector:
         }
 
     def run(self):
-        with open('prometheus.conf', 'w') as f:
-            f.write(json.dumps(self.config(), sort_keys=True, indent=4))
+        with memfd('prometheus.conf') as fn:
+            with open(fn, "w") as f:
+                f.write(json.dumps(self.config(), sort_keys=True, indent=4))
 
-        args = [
-            'prometheus',
-            '--config.file=./prometheus.conf',
-            '--storage.tsdb.path=/home/collector/',
-            f'--web.listen-address=0.0.0.0:{self.port}',
-        ]
+            args = [
+                'prometheus',
+                f'--config.file={fn}',
+                '--storage.tsdb.path=/home/collector/',
+                f'--web.listen-address=0.0.0.0:{self.port}',
+            ]
 
-        exec_into(*args)
+            exec_into(*args)
 
 
 class ClusterMap:
