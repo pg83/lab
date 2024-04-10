@@ -142,24 +142,6 @@ NEBULA = {
     },
     'listen': {
         'host': '0.0.0.0',
-        'port': 4243,
-    },
-    'tun': {
-        'disabled': False,
-        'dev': 'nebula0',
-        'drop_local_broadcast': False,
-        'drop_multicast': False,
-        'tx_queue': 500,
-        'mtu': 1300,
-    },
-    'lighthouse': {
-        'am_lighthouse': False,
-        'interval': 60,
-        'hosts': [
-            '192.168.100.1',
-            '192.168.100.2',
-            '192.168.100.3',
-        ],
     },
     'punchy': {
         'punch': True,
@@ -198,20 +180,34 @@ NEBULA = {
 }
 
 
+NEBULA_TUN = {
+    'disabled': False,
+    'dev': 'nebula0',
+    'drop_local_broadcast': False,
+    'drop_multicast': False,
+    'tx_queue': 500,
+    'mtu': 1300,
+}
+
+
+NEBULA_LH = {
+    'am_lighthouse': False,
+    'interval': 60,
+    'hosts': [
+        '192.168.100.1',
+        '192.168.100.2',
+        '192.168.100.3',
+    ],
+}
+
+
 def get_key(k):
     cmd = ['etcdctl', 'get', '--print-value-only', k]
 
     return subprocess.check_output(cmd)
 
 
-class NebulaNode:
-    def __init__(self, host):
-        self.cfg = NEBULA
-        self.host = host
-
-    def user(self):
-        return 'root'
-
+class Nebula:
     def pkgs(self):
         yield {
             'pkg': 'bin/nebula/daemon',
@@ -219,7 +215,9 @@ class NebulaNode:
 
     def run(self):
         with multi(memfd("conf"), memfd("ca"), memfd("cert"), memfd("key")) as (conf, ca, cert, key):
-            cfg = self.cfg
+            cfg = self.config()
+
+            host = cfg.pop('host')
 
             cfg['pki'] = {
                 'ca': ca,
@@ -234,12 +232,30 @@ class NebulaNode:
                 f.write(get_key('/nebula/ca.crt'))
 
             with open(cert, 'wb') as f:
-                f.write(get_key(f'/nebula/{self.host}.crt'))
+                f.write(get_key(f'/nebula/{host}.crt'))
 
             with open(key, 'wb') as f:
-                f.write(get_key(f'/nebula/{self.host}.key'))
+                f.write(get_key(f'/nebula/{host}.key'))
 
             exec_into('nebula', f'--config={conf}')
+
+
+class NebulaNode(Nebula):
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port
+
+    def user(self):
+        return 'root'
+
+    def config(self):
+        cfg = json.loads(json.dumps(NEBULA))
+        cfg['host'] = self.host
+        cfg['tun'] = NEBULA_TUN
+        cfg['lighthouse'] = NEBULA_LH
+        cfg['listen']['port'] = self.port
+
+        return cfg
 
 
 class ClusterMap:
@@ -274,7 +290,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': NebulaNode(hn),
+                'serv': NebulaNode(hn, p['nebula_node']),
             }
 
 
