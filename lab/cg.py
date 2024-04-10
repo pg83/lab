@@ -54,20 +54,42 @@ class NodeExporter:
             'pkg': 'bin/prometheus/node/exporter',
         }
 
-    def prom_jobs(self):
-        yield {
-            'job_name': 'node',
-            'static_configs': [
-                {
-                    'targets': [
-                        f'localhost:{self.port}',
-                    ],
-                },
-            ],
-        }
+    def prom_port(self):
+        return self.port
 
     def run(self):
         exec_into('node_exporter', f'--web.listen-address=:{self.port}')
+
+
+class Collector:
+    def __init__(self, port):
+        self.port = port
+        self.jobs = []
+
+    def prom_port(self):
+        return self.port
+
+    def config(self):
+        return {
+            'global': {
+                'scrape_interval': '15s',
+                'evaluation_interval': '15s',
+            },
+            'scrape_configs': self.jobs,
+        }
+
+    def run(self):
+        with open('prometheus.conf', 'w') as f:
+            f.write(json.dumps(self.config(), sort_keys=True, indent=4))
+
+        args = [
+            'prometheus',
+            '--config.file=./prometheus.conf',
+            '--storage.tsdb.path=/home/collector/',
+            '--web.listen-address=0.0.0.0:{self.port}',
+        ]
+
+        exec_into(*args)
 
 
 class ClusterMap:
@@ -79,6 +101,11 @@ class ClusterMap:
 
         for h in self.conf['hosts']:
             hn = h['hostname']
+
+            yield {
+                'host': hn,
+                'serv': Collector(p['collector']),
+            }
 
             yield {
                 'host': hn,
@@ -99,6 +126,7 @@ class ClusterMap:
 sys.modules['builtins'].WebHooks = WebHooks
 sys.modules['builtins'].IPerf = IPerf
 sys.modules['builtins'].NodeExporter = NodeExporter
+sys.modules['builtins'].Collector = Collector
 
 
 def exec_into(*args, **kwargs):
@@ -167,6 +195,35 @@ class Service:
     def __init__(self, srv, code):
         self.srv = srv
         self.code = code
+
+    def prom_ports(self):
+        try:
+            yield self.srv.prom_port()
+        except AttributeError:
+            pass
+
+        try:
+            yield from self.srv.prom_ports()
+        except AttributeError:
+            pass
+
+    def prom_jobs(self):
+        try:
+            yield from self.srv.prom_jobs()
+        except AttributeError:
+            pass
+
+        ports = list(self.prom_ports())
+
+        if ports:
+            yield {
+                'job_name': self.name(),
+                'static_configs': [
+                    {
+                        'targets': [f'localhost:{p}' for p in ports],
+                    },
+                ],
+            }
 
     def enabled(self):
         return not self.disabled()
@@ -285,9 +342,9 @@ def cluster_conf(code):
         'web_hooks': 8005,
         'i_perf': 8006,
         'node_exporter': 8007,
+        'collector': 8008,
         'proxy_http': 8080,
         'proxy_https': 8090,
-        'prometheus': 9090,
     }
 
     users = {
@@ -313,9 +370,18 @@ def cluster_conf(code):
     }
 
     by_host = collections.defaultdict(list)
+    by_addr = dict()
 
     for rec in ClusterMap(cconf).it_cluster():
-        by_host[rec['host']].append(Service(rec['serv'], code))
+        hndl = Service(rec['serv'], code)
+        host = rec['host']
+        addr = host + ':' + hndl.name()
+
+        by_host[host].append(hndl)
+        by_addr[addr] = hndl
+
+        for job in hndl.prom_jobs():
+            by_addr[f'{host}:collector'].srv.jobs.append(job)
 
     for h in hosts:
         srvs = by_host[h['hostname']]
