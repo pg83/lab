@@ -274,6 +274,11 @@ class NebulaLh(Nebula):
         return cfg
 
 
+class Ssh3:
+    def __init__(self, port):
+        self.port = port
+
+
 def it_nebula_reals(lh, h, port):
     yield lh['ip'], lh['port']
 
