@@ -278,6 +278,24 @@ class Ssh3:
     def __init__(self, port):
         self.port = port
 
+    def user(self):
+        return 'root'
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/ssh/3',
+        }
+
+    def run(self):
+        args = [
+            'ssh3-server',
+            '-bind', f'0.0.0.0:{self.port}',
+            '-cert', '/etc/keys/ssh3_cert.pem',
+            '-key', '/etc/keys/ssh3_priv.key',
+        ]
+
+        exec_into(*args)
+
 
 def it_nebula_reals(lh, h, port):
     yield lh['ip'], lh['port']
@@ -315,6 +333,11 @@ class ClusterMap:
 
             yield {
                 'host': hn,
+                'serv': Ssh3(p['ssh_3']),
+            }
+
+            yield {
+                'host': hn,
                 'serv': IPerf(p['i_perf']),
             }
 
@@ -346,6 +369,7 @@ sys.modules['builtins'].NodeExporter = NodeExporter
 sys.modules['builtins'].Collector = Collector
 sys.modules['builtins'].NebulaNode = NebulaNode
 sys.modules['builtins'].NebulaLh = NebulaLh
+sys.modules['builtins'].Ssh3 = Ssh3
 
 
 def exec_into(*args, **kwargs):
@@ -564,6 +588,7 @@ def cluster_conf(code):
         'collector': 8008,
         'nebula_node_prom': 8009,
         'nebula_lh_prom': 8010,
+        'ssh_3': 8011,
         'proxy_http': 8080,
         'proxy_https': 8090,
     }
