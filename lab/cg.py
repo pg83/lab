@@ -295,9 +295,7 @@ class Ssh3:
             '-url-path', '/',
         ]
 
-        log = os.getcwd() + '/ssh3.log'
-
-        exec_into(*args, SSH3_LOG_FILE=log)
+        exec_into(*args, SSH3_LOG_FILE='/dev/stdout')
 
 
 def it_nebula_reals(lh, h, port):
