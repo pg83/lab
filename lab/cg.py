@@ -292,6 +292,7 @@ class Ssh3:
             '-bind', f'0.0.0.0:{self.port}',
             '-cert', '/etc/keys/ssh3_cert.pem',
             '-key', '/etc/keys/ssh3_priv.key',
+            '-url-path', '/',
         ]
 
         exec_into(*args)
