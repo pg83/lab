@@ -179,6 +179,13 @@ class Nebula:
         with multi(memfd("conf"), memfd("ca"), memfd("cert"), memfd("key")) as (conf, ca, cert, key):
             cfg = self.config()
 
+            cfg['static_host_map'] = self.smap
+
+            cfg['listen'] = {
+                'host': '0.0.0.0',
+                'port': self.port,
+            }
+
             cfg['pki'] = {
                 'ca': ca,
                 'cert': cert,
@@ -218,8 +225,6 @@ class NebulaNode(Nebula):
     def config(self):
         cfg = json.loads(json.dumps(NEBULA))
 
-        cfg['static_host_map'] = self.smap
-
         cfg['tun'] = {
             'disabled': False,
             'dev': 'nebula0',
@@ -233,11 +238,6 @@ class NebulaNode(Nebula):
             'am_lighthouse': False,
             'interval': 60,
             'hosts': list(self.smap.keys())
-        }
-
-        cfg['listen'] = {
-            'host': '0.0.0.0',
-            'port': self.port,
         }
 
         return cfg
@@ -256,19 +256,12 @@ class NebulaLh(Nebula):
     def config(self):
         cfg = json.loads(json.dumps(NEBULA))
 
-        cfg['static_host_map'] = self.smap
-
         cfg['tun'] = {
             'disabled': True,
         }
 
         cfg['lighthouse'] = {
             'am_lighthouse': True,
-        }
-
-        cfg['listen'] = {
-            'host': '0.0.0.0',
-            'port': self.port,
         }
 
         return cfg
