@@ -329,7 +329,7 @@ class SftpD:
                 '--config-file', conf,
                 '--directory', self.path,
                 '--password', 'qwerty123',
-                '--usernme', 'anon',
+                '--username', 'anon',
                 '--sftpd-port', self.port,
             ]
 
