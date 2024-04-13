@@ -400,12 +400,11 @@ class ClusterMap:
             }
 
             for i in [1, 2, 3]:
-                addr = f'{hn}.eth{i}.min:' + str(p['minio'])
                 cmap = 'http://lab{1...3}.eth{1...3}.min/mnt/minio'
 
                 yield {
                     'host': hn,
-                    'serv': MinIO(i, h['net'][i]['ip'], addr, cmap),
+                    'serv': MinIO(i, h['net'][i]['ip'], p['minio'], cmap),
                 }
 
             yield {
