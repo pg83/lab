@@ -417,9 +417,9 @@ class ClusterMap:
 
 HZ_SCRIPT = '''
 sleep 60
-date | etcdctl put /git/logs/git_ci
+date | /etc/hooks/git_ci.sh
 sleep 60
-date | etcdctl put /git/logs/git_lab
+date | /etc/hooks/git_lab.sh
 '''
 
 
