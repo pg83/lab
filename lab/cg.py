@@ -337,11 +337,15 @@ class SftpD:
 
 
 class MinIO:
-    def __init__(self, uniq, ipv4, addr, cmap):
+    def __init__(self, uniq, ipv4, port, cmap):
         self.ipv4 = ipv4
+        self.port = port
         self.uniq = uniq
-        self.addr = addr
         self.cmap = cmap
+
+    @property
+    def addr(self):
+        return f'{self.ipv4}:{self.port}'
 
     def name(self):
         return f'minio_{self.uniq}'
