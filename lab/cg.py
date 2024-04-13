@@ -347,7 +347,7 @@ class MinIO:
 
     def pkgs(self):
         yield {
-            'pkg': 'bin/minio/daemon',
+            'pkg': 'bin/minio/patched',
         }
 
     def run(self):
