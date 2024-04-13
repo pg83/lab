@@ -326,7 +326,6 @@ class SftpD:
 
             args = [
                 'sftpgo', 'portable',
-                '--log-file-path', '/dev/stdout',
                 '--config-file', 'sftpgo.json',
                 '--directory', self.path,
                 '--password', 'qwerty123',
