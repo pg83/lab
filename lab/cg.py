@@ -377,7 +377,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': HZ2(),
+                'serv': HZ(),
             }
 
             yield {
@@ -423,7 +423,7 @@ date | etcdctl put /git/logs/git_lab
 '''
 
 
-class HZ2:
+class HZ:
     def run(self):
         with memfd('script') as ss:
             with open(ss, 'w') as f:
@@ -440,7 +440,7 @@ sys.modules['builtins'].NebulaNode = NebulaNode
 sys.modules['builtins'].NebulaLh = NebulaLh
 sys.modules['builtins'].Ssh3 = Ssh3
 sys.modules['builtins'].SftpD = SftpD
-sys.modules['builtins'].HZ2 = HZ2
+sys.modules['builtins'].HZ = HZ
 
 
 def exec_into(*args, user=None, **kwargs):
@@ -684,11 +684,10 @@ def cluster_conf(code):
         'proxy': 1006,
         'git_lab': 1007,
         'git_ci': 1008,
-        'hz': 1009,
+        'h_z': 1009,
         'web_hooks': 1010,
         'i_perf': 1011,
         'nebula_lh': 1012,
-        'h_z_2': 1013,
     }
 
     cconf = {
