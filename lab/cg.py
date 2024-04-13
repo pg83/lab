@@ -291,6 +291,50 @@ class Ssh3:
         exec_into(*args, SSH3_LOG_FILE='/dev/stdout')
 
 
+class SftpD:
+    def __init__(self, port, path):
+        self.port = port
+        self.path = path
+
+    def users(self):
+        return ['root', 'sftp_d']
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/sftp/go',
+        }
+
+    def run(self):
+        with multi(memfd("conf"), memfd("rsa"), memfd("ecdsa"), memfd("ed")) as (conf, rsa, ecdsa, ed):
+            cfg = {
+                'sftpd': {
+                    'host_keys': [rsa, ecdsa, ed],
+                },
+            }
+
+            with open(conf, 'w') as f:
+                f.write(json.dumps(cfg, indent=4,sort_keys=True))
+
+            with open(rsa, 'w') as f:
+                f.write(open('/etc/keys/ssh_rsa').read())
+
+            with open(ecdsa, 'w') as f:
+                f.write(open('/etc/keys/ssh_ecdsa').read())
+
+            with open(ed, 'w') as f:
+                f.write(open('/etc/keys/ssh_ed25519').read())
+
+            args = [
+                'sftpgo', 'portable',
+                '--directory', self.path,
+                '--password', 'qwerty123',
+                '--usernme', 'anon',
+                '--sftpd-port', self.port,
+            ]
+
+            exec_into(*args, user=self.users[1])
+
+
 def it_nebula_reals(lh, h, port):
     yield lh['ip'], lh['port']
 
@@ -323,6 +367,11 @@ class ClusterMap:
             yield {
                 'host': hn,
                 'serv': Collector(p['collector']),
+            }
+
+            yield {
+                'host': hn,
+                'serv': SftpD(p['sftp_d'], '/var/log')
             }
 
             yield {
@@ -364,10 +413,15 @@ sys.modules['builtins'].Collector = Collector
 sys.modules['builtins'].NebulaNode = NebulaNode
 sys.modules['builtins'].NebulaLh = NebulaLh
 sys.modules['builtins'].Ssh3 = Ssh3
+sys.modules['builtins'].SftpD = SftpD
 
 
-def exec_into(*args, **kwargs):
+def exec_into(*args, user=None, **kwargs):
     args = [str(x) for x in args]
+
+    if user:
+        args = ['su-exec', user] + args
+
     env = os.environ.copy()
 
     for k, v in kwargs.items():
@@ -488,7 +542,12 @@ class Service:
         try:
             return self.srv.user()
         except AttributeError:
-            return self.name()
+            try:
+                return self.srv.users()[0]
+            except AttributeError:
+                pass
+
+        return self.name()
 
     def it_users(self):
         yield self.user()
@@ -583,6 +642,7 @@ def cluster_conf(code):
         'nebula_node_prom': 8009,
         'nebula_lh_prom': 8010,
         'ssh_3': 8011,
+        'sftp_d': 8012,
         'proxy_http': 8080,
         'proxy_https': 8090,
     }
@@ -602,6 +662,7 @@ def cluster_conf(code):
         'web_hooks': 1010,
         'i_perf': 1011,
         'nebula_lh': 1012,
+        'sftp_d': 1013,
     }
 
     cconf = {
