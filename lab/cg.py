@@ -336,6 +336,24 @@ class SftpD:
             exec_into(*args, user=self.users()[1])
 
 
+class MinIO:
+    def __init__(self, uniq, addr, cmap):
+        self.uniq = uniq
+        self.addr = addr
+        self.cmap = cmap
+
+    def name(self):
+        return f'minio_{self.uniq}'
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/minio/daemon',
+        }
+
+    def run(self):
+        exec_into('minio', 'server', '--address', self.addr, self.cmap)
+
+
 def it_nebula_reals(lh, h, port):
     yield lh['ip'], lh['port']
 
@@ -369,6 +387,15 @@ class ClusterMap:
                 'host': hn,
                 'serv': Collector(p['collector']),
             }
+
+            for i in [1, 2, 3]:
+                addr = f'eth{i}.{hn}:' + str(p['minio'])
+                cmap = 'http://eth{1..3}.lab{1..3}/mnt/minio'
+
+                yield {
+                    'host': hn,
+                    'serv': MinIO(i, addr, cmap),
+                }
 
             yield {
                 'host': hn,
@@ -441,6 +468,7 @@ sys.modules['builtins'].NebulaLh = NebulaLh
 sys.modules['builtins'].Ssh3 = Ssh3
 sys.modules['builtins'].SftpD = SftpD
 sys.modules['builtins'].HZ = HZ
+sys.modules['builtins'].MinIO = MinIO
 
 
 def exec_into(*args, user=None, **kwargs):
@@ -669,6 +697,7 @@ def cluster_conf(code):
         'nebula_node_prom': 8009,
         'nebula_lh_prom': 8010,
         'ssh_3': 8011,
+        'minio': 8012,
         'proxy_http': 8080,
         'proxy_https': 8090,
     }
@@ -688,6 +717,9 @@ def cluster_conf(code):
         'web_hooks': 1010,
         'i_perf': 1011,
         'nebula_lh': 1012,
+        'minio_1': 1013,
+        'minio_2': 1014,
+        'minio_3': 1015,
     }
 
     cconf = {
