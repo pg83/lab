@@ -372,11 +372,6 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': SftpD(p['sftp_d'], '/var/log')
-            }
-
-            yield {
-                'host': hn,
                 'serv': Ssh3(p['ssh_3']),
             }
 
@@ -406,6 +401,13 @@ class ClusterMap:
                     'serv': NebulaLh(lh['name'], p['nebula_lh'], neb_map, p['nebula_lh_prom']),
                 }
 
+        tp = '/home/torrent/profiles/qBittorrent/downloads'
+
+        for hn in ['lab2']:
+            yield {
+                'host': hn,
+                'serv': SftpD(p['sftp_d'], tp)
+            }
 
 sys.modules['builtins'].WebHooks = WebHooks
 sys.modules['builtins'].IPerf = IPerf
@@ -633,7 +635,7 @@ def cluster_conf(code):
         'nebula_node': 4243,
         'torrent_webui': 8000,
         'ftpd': 8001,
-        'sftpd': 8002,
+        'sftp_d': 8002,
         'mirror_http': 8003,
         'mirror_rsyncd': 8004,
         'web_hooks': 8005,
@@ -643,7 +645,6 @@ def cluster_conf(code):
         'nebula_node_prom': 8009,
         'nebula_lh_prom': 8010,
         'ssh_3': 8011,
-        'sftp_d': 8012,
         'proxy_http': 8080,
         'proxy_https': 8090,
     }
@@ -655,7 +656,7 @@ def cluster_conf(code):
         'etcd': 1002,
         'node_exporter': 1003,
         'torrent': 1004,
-        'sftp': 1005,
+        'sftp_d': 1005,
         'proxy': 1006,
         'git_lab': 1007,
         'git_ci': 1008,
@@ -663,7 +664,6 @@ def cluster_conf(code):
         'web_hooks': 1010,
         'i_perf': 1011,
         'nebula_lh': 1012,
-        'sftp_d': 1013,
     }
 
     cconf = {
