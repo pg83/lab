@@ -337,7 +337,8 @@ class SftpD:
 
 
 class MinIO:
-    def __init__(self, uniq, addr, cmap):
+    def __init__(self, uniq, ipv4, addr, cmap):
+        self.ipv4 = ipv4
         self.uniq = uniq
         self.addr = addr
         self.cmap = cmap
@@ -351,7 +352,13 @@ class MinIO:
         }
 
     def run(self):
-        exec_into('minio', 'server', '--address', self.addr, self.cmap)
+        args = [
+            'minio', 'server',
+            '--address', self.addr,
+            self.cmap,
+        ]
+
+        exec_into(*args, MINIO_LOCAL_IP=self.ipv4)
 
 
 def it_nebula_reals(lh, h, port):
@@ -394,7 +401,7 @@ class ClusterMap:
 
                 yield {
                     'host': hn,
-                    'serv': MinIO(i, addr, cmap),
+                    'serv': MinIO(i, h['net'][i]['ip'], addr, cmap),
                 }
 
             yield {
