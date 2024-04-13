@@ -312,7 +312,7 @@ class SftpD:
                 },
             }
 
-            with open(conf, 'w') as f:
+            with open('sftpgo.json', 'w') as f:
                 f.write(json.dumps(cfg, indent=4,sort_keys=True))
 
             with open(rsa, 'w') as f:
@@ -326,7 +326,8 @@ class SftpD:
 
             args = [
                 'sftpgo', 'portable',
-                '--config-file', conf,
+                '--log-file-path', '/dev/stdout',
+                '--config-file', 'sftpgo.json',
                 '--directory', self.path,
                 '--password', 'qwerty123',
                 '--username', 'anon',
