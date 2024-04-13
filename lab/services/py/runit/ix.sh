@@ -1,7 +1,7 @@
 {% extends '//etc/services/runit/script/ix.sh' %}
 
 {% block srv_command %}
-exec python3 ${PWD}/run_py
+exec python3 ${PWD}/run_py run
 {% endblock %}
 
 {% block install %}

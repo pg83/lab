@@ -458,6 +458,7 @@ def exec_into(*args, user=None, **kwargs):
 
 
 RUN_PY = '''
+import sys
 import zlib
 import base64
 import pickle
@@ -467,14 +468,13 @@ ctx = zlib.decompress(ctx)
 ctx = pickle.loads(ctx)
 exec(ctx['code'])
 ctx = pickle.loads(ctx['data'])
-getattr(ctx['obj'], ctx['meth'])(*ctx.get('args', []), **ctx.get('kwargs', {}))
+getattr(ctx['obj'], sys.argv[1], lambda: None)()
 '''
 
 
 def gen_runner(code, srv):
     ctx = {
         'obj': srv,
-        'meth': 'run',
     }
 
     ctx = {
