@@ -332,7 +332,7 @@ class SftpD:
                 '--sftpd-port', self.port,
             ]
 
-            exec_into(*args, user=self.users[1])
+            exec_into(*args, user=self.users()[1])
 
 
 def it_nebula_reals(lh, h, port):
