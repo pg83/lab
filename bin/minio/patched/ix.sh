@@ -7,7 +7,7 @@ sed -e 's|func mustGetLocalIPs|func mustGetLocalIPsXXX|' \
     -i cmd/net.go
 cat << EOF >> cmd/net.go
 func mustGetLocalIPs() (ipList []net.IP) {
-    res := os.Getenv("MINIO_LOCAL_IP")
+    res := os.Getenv("LAB_LOCAL_IP")
     if len(res) > 0 {
         return []net.IP{net.ParseIP(res)}
     }

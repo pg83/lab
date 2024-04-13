@@ -362,7 +362,7 @@ class MinIO:
             self.cmap,
         ]
 
-        exec_into(*args, MINIO_LOCAL_IP=self.ipv4)
+        exec_into(*args, LAB_LOCAL_IP=self.ipv4)
 
 
 def it_nebula_reals(lh, h, port):
