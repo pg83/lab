@@ -10,7 +10,7 @@ cat << EOF > ${out}/etc/hosts.d/01-locals
 {{x.ip}} {{x.hostname}}
 {% for h in x.net %}
 {{h.ip}} {{h.if}}.{{x.hostname}}
-{{h.ip}} {{x.hostname}}.{{h.if}}
+{{h.ip}} {{x.hostname}}.{{h.if}}.min
 {% endfor %}
 {% endfor %}
 EOF

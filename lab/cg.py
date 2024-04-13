@@ -389,8 +389,8 @@ class ClusterMap:
             }
 
             for i in [1, 2, 3]:
-                addr = f'{hn}.eth{i}:' + str(p['minio'])
-                cmap = 'http://lab{1...3}.eth{1...3}/mnt/minio'
+                addr = f'{hn}.eth{i}.min:' + str(p['minio'])
+                cmap = 'http://lab{1...3}.eth{1...3}.min/mnt/minio'
 
                 yield {
                     'host': hn,
