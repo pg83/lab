@@ -1,5 +1,10 @@
 {% extends '//etc/services/runit/script/ix.sh' %}
 
+{% block srv_user_prepare %}
+{{super()}}
+python3 ${PWD}/run_py prepare
+{% endblock %}
+
 {% block srv_command %}
 exec python3 ${PWD}/run_py run
 {% endblock %}
