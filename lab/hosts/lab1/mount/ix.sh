@@ -1,8 +1,7 @@
 {% extends '//lab/etc/mount/ix.sh' %}
 
 {% block mount %}
-set -x
-btrfs device scan
+btrfs device scan -d
 mount /dev/sda /home
 mkdir -p /var/mnt/minio/1
 mkdir -p /var/mnt/minio/2
