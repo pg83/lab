@@ -487,7 +487,7 @@ class ClusterMap:
                     'serv': NebulaLh(lh['name'], p['nebula_lh'], neb_map, p['nebula_lh_prom']),
                 }
 
-        tp = '/home/torrent/profiles/qBittorrent/downloads'
+        tp = '/big/torrent/profiles/qBittorrent/downloads'
 
         for hn in ['lab2']:
             yield {
