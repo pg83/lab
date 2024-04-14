@@ -20,6 +20,7 @@ lab/services/proxy(proxy_ip=10.0.0.33,proxy_port={{cm.ports.proxy_https}},proxy_
 bin/mc
 bin/htop
 bin/gengrub
+etc/host/keys
 bin/kernel/6/8
 bin/kernel/6/7
 bin/dropbear/runit

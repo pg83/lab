@@ -301,7 +301,7 @@ class SftpD:
 
     def pkgs(self):
         yield {
-            'pkg': 'bin/sftp/go',
+            'pkg': 'bin/sftp/go/patched',
         }
 
     def run(self):
@@ -312,7 +312,7 @@ class SftpD:
                 },
             }
 
-            with open('sftpgo.json', 'w') as f:
+            with open(conf, 'w') as f:
                 f.write(json.dumps(cfg, indent=4,sort_keys=True))
 
             with open(rsa, 'w') as f:
@@ -326,7 +326,7 @@ class SftpD:
 
             args = [
                 'sftpgo', 'portable',
-                '--config-file', 'sftpgo.json',
+                '--config-file', conf,
                 '--directory', self.path,
                 '--password', 'qwerty123',
                 '--username', 'anon',
