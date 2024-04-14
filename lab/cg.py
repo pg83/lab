@@ -399,7 +399,7 @@ class ClusterMap:
                 'serv': Collector(p['collector']),
             }
 
-            for i in [1, 2, 3]:
+            for i in []:
                 cmap = 'http://lab{1...3}.eth{1...3}.min/mnt/minio'
 
                 yield {
