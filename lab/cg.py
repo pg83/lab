@@ -837,7 +837,7 @@ def gen_cluster(v):
     for h in v['hosts']:
         by_host[h['hostname']] = h
 
-    by_host['lab1']['disabled'].append('etcd')
+    # by_host['lab1']['disabled'].append('etcd')
 
     v['by_host'] = by_host
 
