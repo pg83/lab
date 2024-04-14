@@ -389,17 +389,19 @@ class DropBear:
     def run(self):
         subprocess.run(['/bin/sh'], input=DB_PREPARE.encode())
 
-        args = [
-            'dropbear',
-            '-p', f'{self.host}:{self.port}',
-            '-s', '-e', '-E', '-F', '-P', '/dev/stdout',
-            '-r', '/etc/keys/dss',
-            '-r', '/etc/keys/rsa',
-            '-r', '/etc/keys/ecdsa',
-            '-r', '/etc/keys/ed25519',
-        ]
+        with memfd('pid') as pid:
+            args = [
+                'dropbear',
+                '-p', f'{self.host}:{self.port}',
+                '-s', '-e', '-E', '-F',
+                '-P', pid,
+                '-r', '/etc/keys/dss',
+                '-r', '/etc/keys/rsa',
+                '-r', '/etc/keys/ecdsa',
+                '-r', '/etc/keys/ed25519',
+            ]
 
-        exec_into(*args)
+            exec_into(*args)
 
 
 def it_nebula_reals(lh, h, port):
