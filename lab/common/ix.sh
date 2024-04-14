@@ -23,7 +23,6 @@ bin/gengrub
 etc/host/keys
 bin/kernel/6/8
 bin/kernel/6/7
-bin/dropbear/runit
 bin/fixits(delay=10)
 
 set/fs

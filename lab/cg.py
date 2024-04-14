@@ -438,7 +438,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': DropBear(h['nebula']['ip'], 23),
+                'serv': DropBear(h['nebula']['ip'], 22),
             }
 
             for i in []:
