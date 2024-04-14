@@ -1,6 +1,8 @@
 {% extends '//lab/etc/mount/ix.sh' %}
 
 {% block mount %}
+rm -rf /home
+mkdir /home
 mount /dev/sda1 /home
 mkdir -p /var/mnt/minio/1
 mkdir -p /var/mnt/minio/2
