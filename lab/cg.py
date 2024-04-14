@@ -365,6 +365,43 @@ class MinIO:
         exec_into(*args, LAB_LOCAL_IP=self.ipv4)
 
 
+DB_PREPARE = '''
+set -xue
+mkdir -p /home/root/.ssh
+chmod 0700 /home/root/.ssh
+cp /etc/sudo/authorized_keys /home/root/.ssh/
+'''
+
+
+class DropBear:
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port
+
+    def user(self):
+        return 'root'
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/dropbear',
+        }
+
+    def run(self):
+        subprocess.run(['/bin/sh'], input=DB_PREPARE.encode())
+
+        args = [
+            'dropbear',
+            '-p', f'{self.host}:{self.port}',
+            '-s', '-e', '-E', '-F', '-P', '/dev/stdout',
+            '-r', '/etc/keys/dss',
+            '-r', '/etc/keys/rsa',
+            '-r', '/etc/keys/ecdsa',
+            '-r', '/etc/keys/ed25519',
+        ]
+
+        exec_into(*args)
+
+
 def it_nebula_reals(lh, h, port):
     yield lh['ip'], lh['port']
 
@@ -397,6 +434,11 @@ class ClusterMap:
             yield {
                 'host': hn,
                 'serv': Collector(p['collector']),
+            }
+
+            yield {
+                'host': hn,
+                'serv': DropBear(h['nebula']['ip'], 23),
             }
 
             for i in []:
@@ -479,6 +521,7 @@ sys.modules['builtins'].Ssh3 = Ssh3
 sys.modules['builtins'].SftpD = SftpD
 sys.modules['builtins'].HZ = HZ
 sys.modules['builtins'].MinIO = MinIO
+sys.modules['builtins'].DropBear = DropBear
 
 
 def exec_into(*args, user=None, **kwargs):
@@ -663,6 +706,7 @@ def gen_host(n):
         'disabled': [],
         'hostname': f'lab{n}',
         'nebula': {
+            'ip': '192.168.100.' + str(15 + n),
             'lh': {
                 'name': f'lh{n}',
                 'vip': f'192.168.100.{n}',
