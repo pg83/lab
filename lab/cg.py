@@ -428,7 +428,7 @@ class BalancerHttp:
         yield '--logger.stdout'
 
         for x in self.real:
-            yield '--static.rule={x["vhost"]},/,{x["real"]}'
+            yield f'--static.rule={x["vhost"]},/,{x["real"]}'
 
     def run(self):
         exec_into(*list(self.it_args()))
