@@ -44,6 +44,12 @@ class WebHooks:
         self.port = port
         self.path = where
 
+    def l7_balancer(self):
+        yield {
+            'vhost': 'http://webhook.homelab.cam',
+            'port': self.port,
+        }
+
     def run(self):
         exec_into('cgi_server', f'0.0.0.0:{self.port}', self.path)
 
@@ -404,6 +410,30 @@ class DropBear:
             exec_into(*args)
 
 
+class BalancerHttp:
+    def __init__(self, port, real):
+        self.port = port
+        self.real = real
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/reproxy',
+        }
+
+    def run(self):
+        args = [
+            'reproxy',
+            f'--listen=0.0.0.0:{self.port}',
+            '--static.enabled',
+            '--logger.enabled',
+            '--logger.stdout',
+        ]
+
+        args = args + list(f'--static.rule={x["vhost"]},/,{x["real"]}' for x in self.real)
+
+        exec_into(*args)
+
+
 def it_nebula_reals(lh, h, port):
     yield lh['ip'], lh['port']
 
@@ -429,6 +459,7 @@ class ClusterMap:
         p = self.conf['ports']
 
         neb_map = nebula_smap(self.conf['hosts'], p['nebula_lh'])
+        bal_map = list()
 
         for h in self.conf['hosts']:
             hn = h['hostname']
@@ -436,6 +467,11 @@ class ClusterMap:
             yield {
                 'host': hn,
                 'serv': Collector(p['collector']),
+            }
+
+            yield {
+                'host': hn,
+                'serv': BalancerHttp(p['proxy_http'], bal_map),
             }
 
             yield {
@@ -524,6 +560,7 @@ sys.modules['builtins'].SftpD = SftpD
 sys.modules['builtins'].HZ = HZ
 sys.modules['builtins'].MinIO = MinIO
 sys.modules['builtins'].DropBear = DropBear
+sys.modules['builtins'].BalancerHttp = BalancerHttp
 
 
 def exec_into(*args, user=None, **kwargs):
@@ -596,6 +633,12 @@ class Service:
     def __init__(self, srv, code):
         self.srv = srv
         self.code = code
+
+    def l7_balancer(self):
+        try:
+            yield from self.srv.l7_balancer()
+        except AttributeError:
+            pass
 
     def prom_ports(self):
         try:
@@ -766,7 +809,7 @@ def cluster_conf(code):
         'node_exporter': 1003,
         'torrent': 1004,
         'sftp_d': 1005,
-        'proxy': 1006,
+        'balancer_http': 1006,
         'git_lab': 1007,
         'git_ci': 1008,
         'h_z': 1009,
@@ -784,6 +827,11 @@ def cluster_conf(code):
         'users': users,
     }
 
+    by_name = dict()
+
+    for h in hosts:
+        by_name[h['hostname']] = h
+
     by_host = collections.defaultdict(list)
     by_addr = dict()
 
@@ -797,6 +845,17 @@ def cluster_conf(code):
 
         for job in hndl.prom_jobs():
             by_addr[f'{host}:collector'].srv.jobs.append(job)
+
+        for bal in hndl.l7_balancer():
+            proto, vhost = bal['vhost'].split('://')
+
+            for net in by_name[host]['net']:
+                rec = {
+                    'vhost': vhost,
+                    'real': 'http://' + net['ip'] + ':' + str(bal['port']),
+                }
+
+                by_addr[f'{host}:balancer_{proto}'].srv.real.append(rec)
 
     for h in hosts:
         srvs = by_host[h['hostname']]

@@ -14,8 +14,6 @@ lab/services/etcd
 {% endif %}
 
 lab/services/autoupdate(user=ix)
-lab/services/proxy(proxy_ip=10.0.0.32,proxy_port={{cm.ports.proxy_http}})
-lab/services/proxy(proxy_ip=10.0.0.33,proxy_port={{cm.ports.proxy_https}},proxy_https=1)
 
 bin/mc
 bin/htop
