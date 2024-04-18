@@ -480,7 +480,7 @@ class ClusterMap:
             }
 
             for i in []:
-                cmap = 'http://lab{1...3}.eth{1...3}.min/mnt/minio'
+                cmap = 'http://lab{1...3}.eth{1...3}/mnt/minio'
 
                 yield {
                     'host': hn,

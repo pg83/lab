@@ -11,7 +11,7 @@ cat << EOF > ${out}/etc/hosts.d/01-locals
 {{x.nebula.ip}} {{x.hostname}}.nebula
 {% for h in x.net %}
 {{h.ip}} {{h.if}}.{{x.hostname}}
-{{h.ip}} {{x.hostname}}.{{h.if}}.min
+{{h.ip}} {{x.hostname}}.{{h.if}}
 {% endfor %}
 {% endfor %}
 EOF
