@@ -46,7 +46,7 @@ class WebHooks:
 
     def l7_balancer(self):
         yield {
-            'vhost': 'http://webhook.homelab.cam',
+            'url': 'http://webhook.homelab.cam',
             'port': self.port,
         }
 
@@ -847,7 +847,7 @@ def cluster_conf(code):
             by_addr[f'{host}:collector'].srv.jobs.append(job)
 
         for bal in hndl.l7_balancer():
-            proto, vhost = bal['vhost'].split('://')
+            proto, vhost = bal['url'].split('://')
 
             for net in by_name[host]['net']:
                 rec = {
