@@ -420,18 +420,18 @@ class BalancerHttp:
             'pkg': 'bin/reproxy',
         }
 
+    def it_args(self):
+        yield 'reproxy'
+        yield f'--listen=0.0.0.0:{self.port}'
+        yield '--static.enabled'
+        yield '--logger.enabled'
+        yield '--logger.stdout'
+
+        for x in self.real:
+            yield '--static.rule={x["vhost"]},/,{x["real"]}'
+
     def run(self):
-        args = [
-            'reproxy',
-            f'--listen=0.0.0.0:{self.port}',
-            '--static.enabled',
-            '--logger.enabled',
-            '--logger.stdout',
-        ]
-
-        args = args + list(f'--static.rule={x["vhost"]},/,{x["real"]}' for x in self.real)
-
-        exec_into(*args)
+        exec_into(*list(self.it_args()))
 
 
 def it_nebula_reals(lh, h, port):
