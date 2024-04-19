@@ -116,7 +116,8 @@ class Collector:
         }
 
     def prepare(self):
-        make_dirs('/home/collector', owner='collector')
+        srv = Service(self, '')
+        make_dirs(srv.home_dir(), owner=srv.user())
 
     def run(self):
         with memfd('prometheus.conf') as fn:
@@ -697,6 +698,12 @@ class Service:
     def __init__(self, srv, code):
         self.srv = srv
         self.code = code
+
+    def home_dir(self):
+        try:
+            return self.srv.home_dir()
+        except AttributeError:
+            return f'/home/{self.user()}'
 
     def l7_balancer(self):
         try:
