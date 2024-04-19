@@ -3,6 +3,7 @@ import sys
 import zlib
 import time
 import json
+import shutil
 import pickle
 import base64
 import contextlib
@@ -85,6 +86,13 @@ class NodeExporter:
         exec_into('node_exporter', f'--web.listen-address=:{self.port}')
 
 
+def make_dirs(path, owner=None):
+    os.makedirs(path, exist_ok=True)
+
+    if owner:
+        shutil.chown(path, user=owner, group=owner)
+
+
 class Collector:
     def __init__(self, port):
         self.port = port
@@ -106,6 +114,9 @@ class Collector:
             },
             'scrape_configs': self.jobs,
         }
+
+    def prepare(self):
+        make_dirs('/home/collector', owner='collector')
 
     def run(self):
         with memfd('prometheus.conf') as fn:
