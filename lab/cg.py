@@ -460,6 +460,9 @@ class Etcd:
         self.port_client = port_client
         self.hostname = hostname
 
+    def prepare(self):
+        make_dirs('/home/etcd', owner='etcd')
+
     def pkgs(self):
         yield {
             'pkg': 'bin/etcd/server',
