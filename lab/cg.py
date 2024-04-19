@@ -441,16 +441,6 @@ def it_nebula_reals(lh, h, port):
         yield n['ip'], port
 
 
-def nebula_smap(hosts, lh_port):
-    lhs = dict()
-
-    for h in hosts:
-        if lh := h.get('nebula', {}).get('lh', None):
-            lhs[lh['vip']] = list(f'{h}:{p}' for h, p in it_nebula_reals(lh, h, lh_port))
-
-    return lhs
-
-
 class Etcd:
     def __init__(self, peers, port_peer, port_client, hostname):
         self.etcid = 'etcd-cluster-2'
@@ -505,7 +495,7 @@ class ClusterMap:
     def it_cluster(self):
         p = self.conf['ports']
 
-        neb_map = nebula_smap(self.conf['hosts'], p['nebula_lh'])
+        neb_map = {}
         bal_map = []
         all_etc = []
 
@@ -573,9 +563,13 @@ class ClusterMap:
             }
 
             if lh := h.get('nebula', {}).get('lh', None):
+                lh_port = p['nebula_lh']
+                neb_reals = list(it_nebula_reals(lh, h, lh_port))
+                neb_map[lh['vip']] = list(f'{h}:{p}' for h, p in neb_reals)
+
                 yield {
                     'host': hn,
-                    'serv': NebulaLh(lh['name'], p['nebula_lh'], neb_map, p['nebula_lh_prom']),
+                    'serv': NebulaLh(lh['name'], lh_port, neb_map, p['nebula_lh_prom']),
                 }
 
         tp = '/big/torrent/profiles/qBittorrent/downloads'
