@@ -482,7 +482,7 @@ class Etcd:
             '--initial-advertise-peer-urls',
             f'http://{self.hostname}:{self.port_peer}',
             '--listen-peer-urls',
-            f'http://0.0.0.0:{self.ports_peer}',
+            f'http://0.0.0.0:{self.port_peer}',
             '--listen-client-urls',
             f'http://0.0.0.0:{self.port_client}',
             '--advertise-client-urls',
