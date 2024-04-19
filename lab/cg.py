@@ -305,7 +305,7 @@ class Ssh3:
             '-url-path', '/',
         ]
 
-        exec_into(*args, SSH3_LOG_FILE='/dev/stdout')
+        exec_into(*args, SSH3_LOG_FILE='/proc/self/fd/1')
 
 
 class SftpD:
