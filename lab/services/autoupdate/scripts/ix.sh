@@ -1,32 +1,25 @@
 {% extends '//die/proxy.sh' %}
 
 {% block install %}
-cd ${out}; mkdir bin; cd bin
+mkdir -p ${out}/bin
 
-cat << EOF > ix
+cat << EOF > ${out}/bin/ix
 #!/usr/bin/env sh
+export IX_ROOT=/ix
+export IX_EXEC_KIND=system
 exec /var/run/autoupdate_ix/ix/ix "\${@}"
 EOF
 
-cat << EOF > autoupdate_cycle
+cat << EOF > ${out}/bin/autoupdate_cycle
 #!/usr/bin/env sh
 set -xue
-
-export PATH=/bin
-export IX_ROOT=/ix
-export IX_EXEC_KIND=system
-
-cycle() (
-    gpull https://github.com/pg83/lab ix
-    cd ix
-    ./ix mut system
-    ./ix mut \$(./ix list)
-)
-
 etcdctl watch --prefix /git/logs/git_lab | gnugrep --line-buffered 'PUT' | while read l; do
-    cycle || sleep 10
+    sleep 10
+    gpull https://github.com/pg83/lab ix
+    ix mut system
+    ix mut \$(ix list)
 done
 EOF
 
-chmod +x *
+chmod +x ${out}/bin/*
 {% endblock %}
