@@ -938,5 +938,6 @@ def do(code):
             x['disabled'].append('dhcpcd')
 
     cconf['by_host'] = dict((h['hostname'], h) for h in hosts)
+    cconf['by_host']['lab3']['disabled'].append('etcd')
 
     return cconf
