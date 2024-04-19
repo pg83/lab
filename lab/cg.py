@@ -451,6 +451,53 @@ def nebula_smap(hosts, lh_port):
     return lhs
 
 
+class Etcd:
+    def __init__(self, peers, port_peer, port_client, hostname):
+        self.etcid = 'etcd-cluster-2'
+        self.peers = peers
+        self.port_peer = port_peer
+        self.port_client = port_client
+        self.hostname = hostname
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/etcd/server',
+        }
+
+    @property
+    def data_dir(self):
+        return f'/home/etcd/{self.etcid}'
+
+    def it_all(self):
+        for x in self.peers:
+            yield f'{x}=http://{x}:{self.port_peer}'
+
+    def run(self):
+        os.makedirs(self.data_dir, exist_ok=True)
+
+        args = [
+            'etcd',
+            '--name', self.hostname,
+            '--data-dir', self.data_dir,
+            '--initial-advertise-peer-urls',
+            f'http://{self.hostname}:{self.port_peer}',
+            '--listen-peer-urls',
+            f'http://0.0.0.0:{self.ports_peer}',
+            '--listen-client-urls',
+            f'http://0.0.0.0:{self.port_client}',
+            '--advertise-client-urls',
+            f'http://{self.hostname}:{self.port_client}',
+            '--initial-cluster-token',
+            self.etcid,
+            '--initial-cluster',
+            ','.join(self.it_all()),
+            '--initial-cluster-state',
+            'existing',
+       ]
+
+       exec_into(*args)
+
+
 class ClusterMap:
     def __init__(self, conf):
         self.conf = conf
@@ -459,7 +506,8 @@ class ClusterMap:
         p = self.conf['ports']
 
         neb_map = nebula_smap(self.conf['hosts'], p['nebula_lh'])
-        bal_map = list()
+        bal_map = []
+        all_etc = []
 
         for h in self.conf['hosts']:
             hn = h['hostname']
@@ -472,6 +520,13 @@ class ClusterMap:
             yield {
                 'host': hn,
                 'serv': BalancerHttp(p['proxy_http'], bal_map),
+            }
+
+            all_etc.append(hn)
+
+            yield {
+                'host': hn,
+                'serv': Etcd(all_etc, p['etcd_peer'], p['etcd_client'], hn),
             }
 
             yield {
@@ -561,6 +616,7 @@ sys.modules['builtins'].HZ = HZ
 sys.modules['builtins'].MinIO = MinIO
 sys.modules['builtins'].DropBear = DropBear
 sys.modules['builtins'].BalancerHttp = BalancerHttp
+sys.modules['builtins'].Etcd = Etcd
 
 
 def exec_into(*args, user=None, **kwargs):
@@ -876,20 +932,6 @@ def gen_cluster(v):
 
         if 'net' in x:
             x['disabled'].append('dhcpcd')
-
-    ep = v['ports']['etcd_client']
-
-    etcd = {
-        'hosts': [x['hostname'] for x in v['hosts']][:3],
-        'ports': {
-            'client': ep,
-            'peer': v['ports']['etcd_peer'],
-        },
-    }
-
-    etcd['ep'] = ','.join(f'{x}:{ep}' for x in etcd['hosts'])
-
-    v['etcd'] = etcd
 
     by_host = {}
 

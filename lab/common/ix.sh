@@ -1,17 +1,9 @@
 {% extends '//die/hub.sh' %}
 
-{% set cm = cluster_map | des %}
-{% set hm = cm.by_host[hostname] %}
-
 {% block run_deps %}
-# there will be dragons
-{{hm.extra}}
+{{(cluster_map | des).by_host[hostname].extra}}
 
 lab/etc
-
-{% if hostname in cm.etcd.hosts %}
-lab/services/etcd
-{% endif %}
 
 lab/services/autoupdate(user=ix)
 
