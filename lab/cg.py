@@ -850,6 +850,10 @@ def it_srvs(srvs):
 def do(code):
     hosts = [gen_host(h) for h in (1, 2, 3)]
 
+    for x in hosts:
+        x['ip'] = x['net'][0]['ip']
+        x['disabled'].append('dhcpcd')
+
     ports = {
         'etcd_client': 2379,
         'etcd_peer': 2380,
@@ -937,10 +941,6 @@ def do(code):
         for s in srvs:
             if s.disabled():
                 h['disabled'].append(s.name())
-
-    for x in hosts:
-        x['ip'] = x['net'][0]['ip']
-        x['disabled'].append('dhcpcd')
 
     #cconf['by_host']['lab3']['disabled'].append('etcd')
 
