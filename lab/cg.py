@@ -892,16 +892,17 @@ def do(code):
         'minio_3': 1015,
     }
 
-    cconf = {
-        'hosts': hosts,
-        'ports': ports,
-        'users': users,
-    }
-
     by_name = dict()
 
     for h in hosts:
         by_name[h['hostname']] = h
+
+    cconf = {
+        'hosts': hosts,
+        'ports': ports,
+        'users': users,
+        'by_host': by_name,
+    }
 
     by_host = collections.defaultdict(list)
     by_addr = dict()
@@ -938,13 +939,8 @@ def do(code):
                 h['disabled'].append(s.name())
 
     for x in hosts:
-        if 'ip' not in x:
-            x['ip'] = x['net'][0]['ip']
-
-        if 'net' in x:
-            x['disabled'].append('dhcpcd')
-
-    cconf['by_host'] = dict((h['hostname'], h) for h in hosts)
+        x['ip'] = x['net'][0]['ip']
+        x['disabled'].append('dhcpcd')
 
     #cconf['by_host']['lab3']['disabled'].append('etcd')
 
