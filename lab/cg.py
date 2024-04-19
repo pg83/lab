@@ -826,7 +826,7 @@ def it_srvs(srvs):
             yield to_srv(**x)
 
 
-def cluster_conf(code):
+def do(code):
     hosts = [gen_host(h) for h in (1, 2, 3)]
 
     ports = {
@@ -916,28 +916,13 @@ def cluster_conf(code):
             if s.disabled():
                 h['disabled'].append(s.name())
 
-    return cconf
-
-
-def gen_cluster(v):
-    for x in v['hosts']:
+    for x in hosts:
         if 'ip' not in x:
             x['ip'] = x['net'][0]['ip']
 
         if 'net' in x:
             x['disabled'].append('dhcpcd')
 
-    by_host = {}
+    cconf['by_host'] = dict((h['hostname'], h) for h in hosts)
 
-    for h in v['hosts']:
-        by_host[h['hostname']] = h
-
-    # by_host['lab1']['disabled'].append('etcd')
-
-    v['by_host'] = by_host
-
-    return v
-
-
-def do(code):
-    return gen_cluster(cluster_conf(code))
+    return cconf
