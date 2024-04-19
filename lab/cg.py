@@ -493,9 +493,9 @@ class Etcd:
             ','.join(self.it_all()),
             '--initial-cluster-state',
             'existing',
-       ]
+        ]
 
-       exec_into(*args)
+        exec_into(*args)
 
 
 class ClusterMap:
