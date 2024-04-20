@@ -942,6 +942,6 @@ def do(code):
             if s.disabled():
                 h['disabled'].append(s.name())
 
-    cconf['by_host']['lab2']['disabled'].append('etcd')
+    # cconf['by_host']['lab2']['disabled'].append('etcd')
 
     return cconf
