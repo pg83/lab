@@ -925,6 +925,7 @@ def do(code):
 
         for bal in hndl.l7_balancer():
             proto, vhost = bal['url'].split('://')
+            srv = by_addr[f'{host}:balancer_{proto}'].srv
 
             for net in by_name[host]['net']:
                 rec = {
@@ -932,7 +933,7 @@ def do(code):
                     'real': 'http://' + net['ip'] + ':' + str(bal['port']),
                 }
 
-                by_addr[f'{host}:balancer_{proto}'].srv.real.append(rec)
+                srv.real.append(rec)
 
     for h in hosts:
         srvs = by_host[h['hostname']]
