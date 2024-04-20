@@ -536,7 +536,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': DropBear(h['nebula']['ip'], 22),
+                'serv': DropBear(h['nebula']['ip'], p['sshd']),
             }
 
             for i in []:
@@ -855,6 +855,7 @@ def do(code):
         x['disabled'].append('dhcpcd')
 
     ports = {
+        'sshd': 22,
         'etcd_client': 2379,
         'etcd_peer': 2380,
         'nebula_lh': 4242,
