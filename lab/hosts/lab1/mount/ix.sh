@@ -10,5 +10,6 @@ mount LABEL=MINIO_1 /var/mnt/minio/1
 mount LABEL=MINIO_2 /var/mnt/minio/2
 mount LABEL=MINIO_3 /var/mnt/minio/3
 rm -rf /home
-ln -s /var/mnt/home /home
+mkdir /home
+mount -O bind /var/mnt/home /home
 {% endblock %}
