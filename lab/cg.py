@@ -116,7 +116,7 @@ class Collector:
         }
 
     def prepare(self):
-        srv = Service(self, '')
+        srv = Service(self)
         make_dirs(srv.home_dir(), owner=srv.user())
 
     def run(self):
@@ -695,9 +695,8 @@ def norm(n):
 
 
 class Service:
-    def __init__(self, srv, code):
+    def __init__(self, srv):
         self.srv = srv
-        self.code = code
 
     def home_dir(self):
         try:
@@ -784,7 +783,7 @@ class Service:
     def users(self):
         return list(sorted(frozenset(self.it_users())))
 
-    def serialize(self):
+    def serialize(self, code):
         try:
             yield from self.srv.pkgs()
         except AttributeError:
@@ -799,7 +798,116 @@ class Service:
         yield {
             'pkg': 'lab/services/py',
             'srv_dir': self.name(),
-            'runpy_script': gen_runner(self.code, self.srv),
+            'runpy_script': gen_runner(code, self.srv),
+            'srv_user': self.user(),
+        }
+
+
+class Service2:
+    def __init__(self, srv):
+        self.srv = srv
+
+    def home_dir(self):
+        try:
+            return self.srv.home_dir()
+        except AttributeError:
+            return f'/home/{self.user()}'
+
+    def l7_balancer(self):
+        try:
+            yield from self.srv.l7_balancer()
+        except AttributeError:
+            pass
+
+    def prom_ports(self):
+        try:
+            yield self.srv.prom_port()
+        except AttributeError:
+            pass
+
+        try:
+            yield from self.srv.prom_ports()
+        except AttributeError:
+            pass
+
+    def prom_jobs(self):
+        try:
+            yield from self.srv.prom_jobs()
+        except AttributeError:
+            pass
+
+        ports = list(self.prom_ports())
+
+        if ports:
+            yield {
+                'job_name': self.name(),
+                'static_configs': [
+                    {
+                        'targets': [f'localhost:{p}' for p in ports],
+                    },
+                ],
+            }
+
+    def enabled(self):
+        return not self.disabled()
+
+    def disabled(self):
+        try:
+            self.srv.run
+        except AttributeError:
+            return True
+
+        try:
+            return self.srv.disabled()
+        except AttributeError:
+            pass
+
+        return False
+
+    def name(self):
+        try:
+            return self.srv.name()
+        except AttributeError:
+            return norm(self.srv.__class__.__name__)
+
+    def user(self):
+        try:
+            return self.srv.user()
+        except AttributeError:
+            try:
+                return self.srv.users()[0]
+            except AttributeError:
+                pass
+
+        return self.name()
+
+    def it_users(self):
+        yield self.user()
+
+        try:
+            yield from self.srv.users()
+        except AttributeError:
+            pass
+
+    def users(self):
+        return list(sorted(frozenset(self.it_users())))
+
+    def serialize(self, code):
+        try:
+            yield from self.srv.pkgs()
+        except AttributeError:
+            pass
+
+        for user in self.users():
+            yield {
+                'pkg': 'lab/etc/user',
+                'user': user,
+            }
+
+        yield {
+            'pkg': 'lab/services/py',
+            'srv_dir': self.name(),
+            'runpy_script': gen_runner2(self.srv),
             'srv_user': self.user(),
         }
 
@@ -838,9 +946,9 @@ def to_srv(pkg='', **args):
     return pkg
 
 
-def it_srvs(srvs):
+def it_srvs(srvs, code):
     for s in srvs:
-        for x in s.serialize():
+        for x in s.serialize(code):
             yield to_srv(**x)
 
 
@@ -909,7 +1017,11 @@ def do(code):
     by_addr = dict()
 
     for rec in ClusterMap(cconf).it_cluster():
-        hndl = Service(rec['serv'], code)
+        if rec.get('version', '1') == '2':
+            hndl = Service2(rec['serv'])
+        else:
+            hndl = Service(rec['serv'])
+
         host = rec['host']
         addr = host + ':' + hndl.name()
 
@@ -934,7 +1046,7 @@ def do(code):
     for h in hosts:
         srvs = by_host[h['hostname']]
 
-        h['extra'] = '\n'.join(it_srvs(srvs))
+        h['extra'] = '\n'.join(it_srvs(srvs, code))
 
         for s in srvs:
             if s.disabled():
