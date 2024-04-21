@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 import sys
 import zlib
@@ -560,6 +562,7 @@ class ClusterMap:
             yield {
                 'host': hn,
                 'serv': IPerf(p['i_perf']),
+                'version': 2,
             }
 
             yield {
@@ -674,6 +677,13 @@ def gen_runner(code, srv):
     runpy = base64.b64encode(runpy.encode()).decode()
 
     return runpy
+
+
+def gen_runner2(srv):
+    ctx = base64.b64encode(pickle.dumps(srv)).decode()
+    scr = 'exec runpy ' + ctx + ' ${@}'
+
+    return base64.b64encode(scr.encode()).decode()
 
 
 def it_norm(n):
@@ -803,6 +813,17 @@ class Service:
         }
 
 
+RUNNER = '''
+import sys
+import base64
+import pickle
+
+if __name__ == '__main__':
+    ctx = pickle.loads(base64.b64decode(sys.argv[1]))
+    getattr(ctx, sys.argv[2], lambda: None)(*sys.argv[3:])
+'''
+
+
 class Service2:
     def __init__(self, srv):
         self.srv = srv
@@ -905,9 +926,15 @@ class Service2:
             }
 
         yield {
-            'pkg': 'lab/services/py',
+            'pkg': 'bin/mk/file',
+            'file_path': 'bin/runpy',
+            'file_data': base64.b64encode((code + '\n' + RUNNER).encode()).decode(),
+        }
+
+        yield {
+            'pkg': 'lab/services/sh',
             'srv_dir': self.name(),
-            'runpy_script': gen_runner2(self.srv),
+            'runsh_script': gen_runner2(self.srv),
             'srv_user': self.user(),
         }
 
@@ -1017,7 +1044,7 @@ def do(code):
     by_addr = dict()
 
     for rec in ClusterMap(cconf).it_cluster():
-        if rec.get('version', '1') == '2':
+        if rec.get('version', 1) == 2:
             hndl = Service2(rec['serv'])
         else:
             hndl = Service(rec['serv'])
