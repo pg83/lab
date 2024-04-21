@@ -882,6 +882,7 @@ def do(code):
         'minio_2': 1014,
         'minio_3': 1015,
         'mirror': 1016,
+        'ci': 1017,
     }
 
     by_name = dict()
