@@ -522,11 +522,13 @@ class ClusterMap:
             yield {
                 'host': hn,
                 'serv': Collector(p['collector']),
+                'version': 2,
             }
 
             yield {
                 'host': hn,
                 'serv': BalancerHttp(p['proxy_http'], bal_map),
+                'version': 2,
             }
 
             all_etc.append(hn)
@@ -557,6 +559,7 @@ class ClusterMap:
             yield {
                 'host': hn,
                 'serv': HZ(),
+                'version': 2,
             }
 
             yield {
@@ -568,11 +571,13 @@ class ClusterMap:
             yield {
                 'host': hn,
                 'serv': WebHooks(p['web_hooks'], '/etc/hooks/'),
+                'version': 2,
             }
 
             yield {
                 'host': hn,
                 'serv': NodeExporter(p['node_exporter']),
+                'version': 2,
             }
 
             yield {
@@ -595,7 +600,8 @@ class ClusterMap:
         for hn in ['lab2']:
             yield {
                 'host': hn,
-                'serv': SftpD(p['sftp_d'], tp)
+                'serv': SftpD(p['sftp_d'], tp),
+                'version': 2,
             }
 
 
@@ -616,8 +622,8 @@ class HZ:
             exec_into('etcdctl', 'lock', 'hz', '--', '/bin/sh', ss)
 
 
-sys.modules['builtins'].WebHooks = WebHooks
 sys.modules['builtins'].IPerf = IPerf
+sys.modules['builtins'].WebHooks = WebHooks
 sys.modules['builtins'].NodeExporter = NodeExporter
 sys.modules['builtins'].Collector = Collector
 sys.modules['builtins'].NebulaNode = NebulaNode
