@@ -784,14 +784,6 @@ class Service:
     def users(self):
         return list(sorted(frozenset(self.it_users())))
 
-    def run_py(self):
-        return {
-            'pkg': 'lab/services/py',
-            'srv_dir': self.name(),
-            'runpy_script': gen_runner(self.code, self.srv),
-            'srv_user': self.user(),
-        }
-
     def serialize(self):
         try:
             yield from self.srv.pkgs()
@@ -804,7 +796,12 @@ class Service:
                 'user': user,
             }
 
-        yield self.run_py()
+        yield {
+            'pkg': 'lab/services/py',
+            'srv_dir': self.name(),
+            'runpy_script': gen_runner(self.code, self.srv),
+            'srv_user': self.user(),
+        }
 
 
 def gen_host(n):
@@ -819,7 +816,7 @@ def gen_host(n):
         }
 
     return {
-        'disabled': [],
+        'disabled': ['dhcpcd'],
         'hostname': f'lab{n}',
         'nebula': {
             'ip': '192.168.100.' + str(15 + n),
@@ -852,7 +849,6 @@ def do(code):
 
     for x in hosts:
         x['ip'] = x['net'][0]['ip']
-        x['disabled'].append('dhcpcd')
 
     ports = {
         'sshd': 22,
@@ -878,7 +874,6 @@ def do(code):
     }
 
     users = {
-        'mirror': 103,
         'ci': 104,
         'collector': 1001,
         'etcd': 1002,
@@ -895,6 +890,7 @@ def do(code):
         'minio_1': 1013,
         'minio_2': 1014,
         'minio_3': 1015,
+        'mirror': 1016,
     }
 
     by_name = dict()
