@@ -766,7 +766,7 @@ class Service:
     def users(self):
         return list(sorted(frozenset(self.it_users())))
 
-    def serialize(self, code):
+    def serialize(self):
         try:
             yield from self.srv.pkgs()
         except AttributeError:
@@ -777,12 +777,6 @@ class Service:
                 'pkg': 'lab/etc/user',
                 'user': user,
             }
-
-        yield {
-            'pkg': 'bin/mk/file',
-            'file_path': 'bin/runpy',
-            'file_data': base64.b64encode(code.encode()).decode(),
-        }
 
         yield {
             'pkg': 'lab/services/sh',
@@ -826,10 +820,20 @@ def to_srv(pkg='', **args):
     return pkg
 
 
-def it_srvs(srvs, code):
+def it_pkgs(srvs, code):
     for s in srvs:
-        for x in s.serialize(code):
-            yield to_srv(**x)
+        yield from s.serialize()
+
+    yield {
+        'pkg': 'bin/mk/file',
+        'file_path': 'bin/runpy',
+        'file_data': base64.b64encode(code.encode()).decode(),
+    }
+
+
+def it_srvs(srvs, code):
+    for x in it_pkgs(srvs, code):
+        yield to_srv(**x)
 
 
 def do(code):
