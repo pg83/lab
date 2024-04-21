@@ -651,41 +651,7 @@ def exec_into(*args, user=None, **kwargs):
     os.execvpe(args[0], args, env)
 
 
-RUN_PY = '''
-import sys
-import zlib
-import base64
-import pickle
-ctx = '__CTX__'
-ctx = base64.b64decode(ctx)
-ctx = zlib.decompress(ctx)
-ctx = pickle.loads(ctx)
-exec(ctx['code'])
-ctx = pickle.loads(ctx['data'])
-getattr(ctx['obj'], sys.argv[1], lambda: None)()
-'''
-
-
-def gen_runner(code, srv):
-    ctx = {
-        'obj': srv,
-    }
-
-    ctx = {
-        'code': code,
-        'data': pickle.dumps(ctx)
-    }
-
-    runpy = pickle.dumps(ctx)
-    runpy = zlib.compress(runpy)
-    runpy = base64.b64encode(runpy).decode()
-    runpy = RUN_PY.replace('__CTX__', runpy)
-    runpy = base64.b64encode(runpy.encode()).decode()
-
-    return runpy
-
-
-def gen_runner2(srv):
+def gen_runner(srv):
     ctx = base64.b64encode(pickle.dumps(srv)).decode()
     scr = 'exec runpy ' + ctx + ' ${@}'
 
@@ -710,115 +676,6 @@ def norm(n):
     return res
 
 
-class Service:
-    def __init__(self, srv):
-        self.srv = srv
-
-    def home_dir(self):
-        try:
-            return self.srv.home_dir()
-        except AttributeError:
-            return f'/home/{self.user()}'
-
-    def l7_balancer(self):
-        try:
-            yield from self.srv.l7_balancer()
-        except AttributeError:
-            pass
-
-    def prom_ports(self):
-        try:
-            yield self.srv.prom_port()
-        except AttributeError:
-            pass
-
-        try:
-            yield from self.srv.prom_ports()
-        except AttributeError:
-            pass
-
-    def prom_jobs(self):
-        try:
-            yield from self.srv.prom_jobs()
-        except AttributeError:
-            pass
-
-        ports = list(self.prom_ports())
-
-        if ports:
-            yield {
-                'job_name': self.name(),
-                'static_configs': [
-                    {
-                        'targets': [f'localhost:{p}' for p in ports],
-                    },
-                ],
-            }
-
-    def enabled(self):
-        return not self.disabled()
-
-    def disabled(self):
-        try:
-            self.srv.run
-        except AttributeError:
-            return True
-
-        try:
-            return self.srv.disabled()
-        except AttributeError:
-            pass
-
-        return False
-
-    def name(self):
-        try:
-            return self.srv.name()
-        except AttributeError:
-            return norm(self.srv.__class__.__name__)
-
-    def user(self):
-        try:
-            return self.srv.user()
-        except AttributeError:
-            try:
-                return self.srv.users()[0]
-            except AttributeError:
-                pass
-
-        return self.name()
-
-    def it_users(self):
-        yield self.user()
-
-        try:
-            yield from self.srv.users()
-        except AttributeError:
-            pass
-
-    def users(self):
-        return list(sorted(frozenset(self.it_users())))
-
-    def serialize(self, code):
-        try:
-            yield from self.srv.pkgs()
-        except AttributeError:
-            pass
-
-        for user in self.users():
-            yield {
-                'pkg': 'lab/etc/user',
-                'user': user,
-            }
-
-        yield {
-            'pkg': 'lab/services/py',
-            'srv_dir': self.name(),
-            'runpy_script': gen_runner(code, self.srv),
-            'srv_user': self.user(),
-        }
-
-
 RUNNER = '''
 import sys
 import base64
@@ -830,7 +687,7 @@ if __name__ == '__main__':
 '''
 
 
-class Service2:
+class Service:
     def __init__(self, srv):
         self.srv = srv
 
@@ -940,7 +797,7 @@ class Service2:
         yield {
             'pkg': 'lab/services/sh',
             'srv_dir': self.name(),
-            'runsh_script': gen_runner2(self.srv),
+            'runsh_script': gen_runner(self.srv),
             'srv_user': self.user(),
         }
 
@@ -1050,11 +907,7 @@ def do(code):
     by_addr = dict()
 
     for rec in ClusterMap(cconf).it_cluster():
-        if rec.get('version', 1) == 2:
-            hndl = Service2(rec['serv'])
-        else:
-            hndl = Service(rec['serv'])
-
+        hndl = Service(rec['serv'])
         host = rec['host']
         addr = host + ':' + hndl.name()
 
