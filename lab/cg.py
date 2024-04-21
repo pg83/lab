@@ -866,7 +866,6 @@ def do(code):
     }
 
     users = {
-        'ci': 104,
         'collector': 1001,
         'etcd': 1002,
         'node_exporter': 1003,
