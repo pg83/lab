@@ -676,16 +676,6 @@ def norm(n):
     return res
 
 
-RUNNER = '''
-import sys
-import base64
-import pickle
-
-if __name__ == '__main__':
-    ctx = pickle.loads(base64.b64decode(sys.argv[1]))
-    getattr(ctx, sys.argv[2], lambda: None)(*sys.argv[3:])
-'''
-
 
 class Service:
     def __init__(self, srv):
@@ -791,7 +781,7 @@ class Service:
         yield {
             'pkg': 'bin/mk/file',
             'file_path': 'bin/runpy',
-            'file_data': base64.b64encode((code + '\n' + RUNNER).encode()).decode(),
+            'file_data': base64.b64encode(code.encode()).decode(),
         }
 
         yield {
@@ -941,3 +931,8 @@ def do(code):
     # cconf['by_host']['lab2']['disabled'].append('etcd')
 
     return cconf
+
+
+if __name__ == '__main__':
+    ctx = pickle.loads(base64.b64decode(sys.argv[1]))
+    getattr(ctx, sys.argv[2], lambda: None)(*sys.argv[3:])
