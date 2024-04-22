@@ -522,13 +522,11 @@ class ClusterMap:
             yield {
                 'host': hn,
                 'serv': Collector(p['collector']),
-                'version': 2,
             }
 
             yield {
                 'host': hn,
                 'serv': BalancerHttp(p['proxy_http'], bal_map),
-                'version': 2,
             }
 
             all_etc.append(hn)
@@ -559,25 +557,21 @@ class ClusterMap:
             yield {
                 'host': hn,
                 'serv': HZ(),
-                'version': 2,
             }
 
             yield {
                 'host': hn,
                 'serv': IPerf(p['i_perf']),
-                'version': 2,
             }
 
             yield {
                 'host': hn,
                 'serv': WebHooks(p['web_hooks'], '/etc/hooks/'),
-                'version': 2,
             }
 
             yield {
                 'host': hn,
                 'serv': NodeExporter(p['node_exporter']),
-                'version': 2,
             }
 
             yield {
@@ -601,7 +595,6 @@ class ClusterMap:
             yield {
                 'host': hn,
                 'serv': SftpD(p['sftp_d'], tp),
-                'version': 2,
             }
 
 
