@@ -549,10 +549,11 @@ class ClusterMap:
                     'serv': MinIO(i, h['net'][i]['ip'], p['minio'], cmap),
                 }
 
-            yield {
-                'host': hn,
-                'serv': Ssh3(p['ssh_3']),
-            }
+            if False:
+                yield {
+                    'host': hn,
+                    'serv': Ssh3(p['ssh_3']),
+                }
 
             yield {
                 'host': hn,
