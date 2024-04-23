@@ -403,7 +403,7 @@ class DropBear:
 
     def pkgs(self):
         yield {
-            'pkg': 'bin/dropbear',
+            'pkg': 'bin/dropbear/2024',
         }
 
     def run(self):
