@@ -411,7 +411,7 @@ class MinIO:
                 '/bin/sh', ss
             ]
 
-            exec_into(*args, LAB_LOCAL_IP=self.ipv4, MINIO_ROOT_USER='qwerty', MINIO_ROOT_PASSWORD='qwerty')
+            exec_into(*args, LAB_LOCAL_IP=self.ipv4, MINIO_ROOT_USER='qwerty', MINIO_ROOT_PASSWORD='qwerty123')
 
 
 DB_PREPARE = '''
