@@ -10,8 +10,8 @@ mount LABEL=MINIO_3 /var/mnt/minio/3
 btrfs device scan /dev/sda /dev/sdb /dev/sdc
 sleep 10
 btrfs device scan /dev/sda /dev/sdb /dev/sdc
-mkdir -p /var/mnt/home
-mount /dev/sda /var/mnt/home
+mkdir -p /var/mnt/torrent
+mount /dev/sda /var/mnt/torrent
 rm -rf /home
-ln -s /var/mnt/home /home
+mkdir -p /home/root
 {% endblock %}
