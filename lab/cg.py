@@ -362,20 +362,25 @@ mkdir -p /var/mnt/minio/my
 mount /var/mnt/minio/{n} /var/mnt/minio/my
 mkdir -p /var/mnt/minio/my/data
 chown {user} /var/mnt/minio/my/data
-exec su-exec {user} minio server --address {addr} {cmap}
+exec su-exec {user} minio server --address {addr} --console-address {webp} {cmap}
 '''
 
 
 class MinIO:
-    def __init__(self, uniq, ipv4, port, cmap):
+    def __init__(self, uniq, ipv4, port, cmap, webp):
         self.ipv4 = ipv4
         self.port = port
         self.uniq = uniq
         self.cmap = cmap
+        self.webp = webp
 
     @property
     def addr(self):
         return f'{self.ipv4}:{self.port}'
+
+    @property
+    def web_addr(self):
+        return f'{self.ipv4}:{self.webp}'
 
     def name(self):
         return f'minio_{self.uniq}'
@@ -397,10 +402,12 @@ class MinIO:
 
     def run(self):
         s = MINIO_SCRIPT
+
         s = s.replace('{n}', str(self.uniq))
         s = s.replace('{addr}', self.addr)
         s = s.replace('{cmap}', self.cmap)
         s = s.replace('{user}', self.name())
+        s = s.replace('{webp}', self.web_addr)
 
         with memfd('script') as ss:
             with open(ss, 'w') as f:
@@ -411,7 +418,14 @@ class MinIO:
                 '/bin/sh', ss
             ]
 
-            exec_into(*args, LAB_LOCAL_IP=self.ipv4, MINIO_ROOT_USER='qwerty', MINIO_ROOT_PASSWORD='qwerty123')
+            kwargs = {
+                'LAB_LOCAL_IP': self.ipv4,
+                'MINIO_ROOT_USER': 'qwerty',
+                'MINIO_ROOT_PASSWORD': 'qwerty123',
+                'MINIO_SERVER_URL': f'http://10.0.0.65:{self.port}',
+            }
+
+            exec_into(*args, **kwargs)
 
 
 DB_PREPARE = '''
@@ -575,7 +589,7 @@ class ClusterMap:
 
                 yield {
                     'host': hn,
-                    'serv': MinIO(i, h['net'][i]['ip'], p['minio'], cmap),
+                    'serv': MinIO(i, h['net'][i]['ip'], p['minio'], cmap, p['minio_web']),
                 }
 
             if False:
@@ -884,6 +898,7 @@ def do(code):
         'nebula_lh_prom': 8010,
         'ssh_3': 8011,
         'minio': 8012,
+        'minio_web': 8013,
         'proxy_http': 8080,
         'proxy_https': 8090,
     }
