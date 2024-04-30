@@ -423,6 +423,7 @@ class MinIO:
                 'MINIO_ROOT_USER': 'qwerty',
                 'MINIO_ROOT_PASSWORD': 'qwerty123',
                 # 'MINIO_SERVER_URL': f'http://10.0.0.65:{self.port}',
+                'MINIO_SERVER_URL': f'http://{self.addr}',
             }
 
             exec_into(*args, **kwargs)
