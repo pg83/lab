@@ -362,25 +362,20 @@ mkdir -p /var/mnt/minio/my
 mount /var/mnt/minio/{n} /var/mnt/minio/my
 mkdir -p /var/mnt/minio/my/data
 chown {user} /var/mnt/minio/my/data
-exec su-exec {user} minio server --address {addr} --console-address {webp} {cmap}
+exec su-exec {user} minio server --address {addr} {cmap}
 '''
 
 
 class MinIO:
-    def __init__(self, uniq, ipv4, port, cmap, webp):
+    def __init__(self, uniq, ipv4, port, cmap):
         self.ipv4 = ipv4
         self.port = port
         self.uniq = uniq
         self.cmap = cmap
-        self.webp = webp
 
     @property
     def addr(self):
         return f'{self.ipv4}:{self.port}'
-
-    @property
-    def web_addr(self):
-        return f'{self.ipv4}:{self.webp}'
 
     def name(self):
         return f'minio_{self.uniq}'
@@ -407,7 +402,6 @@ class MinIO:
         s = s.replace('{addr}', self.addr)
         s = s.replace('{cmap}', self.cmap)
         s = s.replace('{user}', self.name())
-        s = s.replace('{webp}', self.web_addr)
 
         with memfd('script') as ss:
             with open(ss, 'w') as f:
@@ -422,7 +416,7 @@ class MinIO:
                 'LAB_LOCAL_IP': self.ipv4,
                 'MINIO_ROOT_USER': 'qwerty',
                 'MINIO_ROOT_PASSWORD': 'qwerty123',
-                'MINIO_SERVER_URL': f'http://minio:{self.port}',
+                'MINIO_BROWSER': 'off',
             }
 
             exec_into(*args, **kwargs)
@@ -589,7 +583,7 @@ class ClusterMap:
 
                 yield {
                     'host': hn,
-                    'serv': MinIO(i, h['net'][i]['ip'], p['minio'], cmap, p['minio_web']),
+                    'serv': MinIO(i, h['net'][i]['ip'], p['minio'], cmap),
                 }
 
             if False:
