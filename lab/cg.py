@@ -360,6 +360,8 @@ MINIO_SCRIPT = '''
 set -xue
 mkdir -p /var/mnt/minio/my
 mount /var/mnt/minio/{n} /var/mnt/minio/my
+mkdir -p /var/mnt/minio/my/data
+chown {user} /var/mnt/minio/my/data
 exec su-exec {user} minio server --address {addr} {cmap}
 '''
 
@@ -569,7 +571,7 @@ class ClusterMap:
             }
 
             for i in [1, 2, 3]:
-                cmap = 'http://lab{1...3}.eth{1...3}/var/mnt/minio/my'
+                cmap = 'http://lab{1...3}.eth{1...3}/var/mnt/minio/my/data'
 
                 yield {
                     'host': hn,
