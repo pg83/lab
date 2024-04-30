@@ -12,6 +12,4 @@ sleep 10
 btrfs device scan /dev/sda /dev/sdb /dev/sdc
 mkdir -p /var/mnt/torrent
 mount /dev/sda /var/mnt/torrent
-rm -rf /home
-mkdir -p /home/root
 {% endblock %}
