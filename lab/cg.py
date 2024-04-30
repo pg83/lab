@@ -356,6 +356,14 @@ class SftpD:
             exec_into(*args, user=self.users()[1])
 
 
+MINIO_SCRIPT = '''
+set -xue
+mkdir -p /var/mnt/minio/my
+mount /var/mnt/minio/{n} /var/mnt/minio/my
+exec su-exec {user} minio server --address {addr} {cmap}
+'''
+
+
 class MinIO:
     def __init__(self, uniq, ipv4, port, cmap):
         self.ipv4 = ipv4
@@ -370,19 +378,38 @@ class MinIO:
     def name(self):
         return f'minio_{self.uniq}'
 
+    def users(self):
+        return [
+            'root',
+            self.name(),
+        ]
+
     def pkgs(self):
         yield {
             'pkg': 'bin/minio/patched',
         }
 
-    def run(self):
-        args = [
-            'minio', 'server',
-            '--address', self.addr,
-            self.cmap,
-        ]
+        yield {
+            'pkg': 'bin/su/exec',
+        }
 
-        exec_into(*args, LAB_LOCAL_IP=self.ipv4)
+    def run(self):
+        s = MINIO_SCRIPT
+        s = s.replace('{n}', str(self.uniq))
+        s = s.replace('{addr}', self.addr)
+        s = s.replace('{cmap}', self.cmap)
+        s = s.replace('{user}', self.name())
+
+        with memfd('script') as ss:
+            with open(ss, 'w') as f:
+                f.write(s)
+
+            args = [
+                '/bin/unshare', '-m',
+                '/bin/sh', ss
+            ]
+
+            exec_into(*args, LAB_LOCAL_IP=self.ipv4)
 
 
 DB_PREPARE = '''
@@ -541,8 +568,8 @@ class ClusterMap:
                 'serv': DropBear(h['nebula']['ip'], p['sshd']),
             }
 
-            for i in []:
-                cmap = 'http://lab{1...3}.eth{1...3}/mnt/minio'
+            for i in [1, 2, 3]:
+                cmap = 'http://lab{1...3}.eth{1...3}/var/mnt/minio/my'
 
                 yield {
                     'host': hn,
