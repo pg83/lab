@@ -422,7 +422,7 @@ class MinIO:
                 'LAB_LOCAL_IP': self.ipv4,
                 'MINIO_ROOT_USER': 'qwerty',
                 'MINIO_ROOT_PASSWORD': 'qwerty123',
-                'MINIO_SERVER_URL': f'http://10.0.0.65:{self.port}',
+                # 'MINIO_SERVER_URL': f'http://10.0.0.65:{self.port}',
             }
 
             exec_into(*args, **kwargs)
