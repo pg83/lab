@@ -422,6 +422,27 @@ class MinIO:
             exec_into(*args, **kwargs)
 
 
+class MinioConsole:
+    def __init__(self, addr, server):
+        self.addr = addr
+        self.server = server
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/minio/console',
+        }
+
+    def run(self):
+        args = [
+            'minio-console',
+            'server',
+            '--address',
+            self.addr,
+        ]
+
+        exec_into(*args, CONSOLE_MINIO_SERVER=self.server)
+
+
 DB_PREPARE = '''
 set -xue
 mkdir -p /home/root/.ssh
@@ -578,13 +599,26 @@ class ClusterMap:
                 'serv': DropBear(h['nebula']['ip'], p['sshd']),
             }
 
-            for i in [1, 2, 3]:
-                cmap = 'http://lab{1...3}.eth{1...3}/var/mnt/minio/my/data'
+            mio_cmap = 'http://lab{1...3}.eth{1...3}/var/mnt/minio/my/data'
 
+            def mio_srv(i):
+                return MinIO(i, h['net'][i]['ip'], p['minio'], mio_cmap)
+
+            minios = [mio_srv(i) for i in (1, 2, 3)]
+
+            for m in minios:
                 yield {
                     'host': hn,
-                    'serv': MinIO(i, h['net'][i]['ip'], p['minio'], cmap),
+                    'serv': m,
                 }
+
+            mc_addr = h['nebula']['ip'] + ':' + str(p['minio_web'])
+            mc_serv = 'http://' + minios[0].addr
+
+            yield {
+                'host': hn,
+                'serv': MinioConsole(mc_addr, mc_serv),
+            }
 
             if False:
                 yield {
@@ -666,6 +700,7 @@ sys.modules['builtins'].MinIO = MinIO
 sys.modules['builtins'].DropBear = DropBear
 sys.modules['builtins'].BalancerHttp = BalancerHttp
 sys.modules['builtins'].Etcd = Etcd
+sys.modules['builtins'].MinioConsole = MinioConsole
 
 
 def exec_into(*args, user=None, **kwargs):
@@ -915,6 +950,7 @@ def do(code):
         'minio_3': 1015,
         'mirror': 1016,
         'ci': 1017,
+        'minio_console': 1018,
     }
 
     by_name = dict()
