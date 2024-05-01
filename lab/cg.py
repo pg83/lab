@@ -423,8 +423,9 @@ class MinIO:
 
 
 class MinioConsole:
-    def __init__(self, addr, server):
-        self.addr = addr
+    def __init__(self, host, port, server):
+        self.host = host
+        self.port = port
         self.server = server
 
     def pkgs(self):
@@ -436,8 +437,10 @@ class MinioConsole:
         args = [
             'minio-console',
             'server',
-            '--address',
-            self.addr,
+            '--host',
+            self.host,
+            '--port',
+            self.port,
         ]
 
         exec_into(*args, CONSOLE_MINIO_SERVER=self.server)
@@ -612,12 +615,13 @@ class ClusterMap:
                     'serv': m,
                 }
 
-            mc_addr = h['nebula']['ip'] + ':' + str(p['minio_web'])
+            mc_host = h['nebula']['ip']
+            mc_port = p['minio_web']
             mc_serv = 'http://' + minios[0].addr
 
             yield {
                 'host': hn,
-                'serv': MinioConsole(mc_addr, mc_serv),
+                'serv': MinioConsole(mc_host, mc_port, mc_serv),
             }
 
             if False:
