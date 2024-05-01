@@ -12,8 +12,7 @@ set -x
 mkdir -p /ix/trash
 chmod 01777 /ix/trash
 chmod 01777 /ix/realm
-chown -h ix:ix /ix/realm/system
-chown -h ix:ix /ix/realm/boot
+chown -h ix:ix /ix/realm/*
 resolvconf -u
 EOF
 {% endblock %}
