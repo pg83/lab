@@ -9,11 +9,11 @@ lab/services/autoupdate(user=ix)
 
 bin/mc
 bin/htop
-bin/gengrub
 etc/host/keys
 bin/kernel/6/8
 bin/kernel/6/7
 bin/fixits(delay=10)
+bin/kernel/gengrub(kernel_boot_flags=rootdelay=20)
 
 set/fs
 set/stalix/server
