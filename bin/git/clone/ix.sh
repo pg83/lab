@@ -2,5 +2,5 @@
 
 {% block run_deps %}
 bin/git/unwrap
-bin/clone/scripts
+bin/git/clone/scripts
 {% endblock %}
