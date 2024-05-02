@@ -5,6 +5,7 @@ mkdir -p ${out}/etc/hooks
 cat << EOF > ${out}/etc/hooks/cas.sh
 #!/usr/bin/env sh
 echo ""
+# TODO(pg): validate input
 minio-client cat "minio/cas/\${QUERY_STRING}"
 EOF
 chmod + ${out}/etc/hooks/*
