@@ -4,7 +4,7 @@
 {{(cluster_map | des).by_host[hostname].extra}}
 
 lab/etc
-
+bin/mirror/serve
 lab/services/autoupdate(user=ix)
 
 bin/mc
