@@ -26,6 +26,7 @@ func cgiHandler(w http.ResponseWriter, r *http.Request) {
 
 	handler := cgi.Handler{
 		Path: os.Args[2] + sanitize(r.URL.Path),
+		Env: os.Environ(),
 	}
 
 	handler.ServeHTTP(w, r)
