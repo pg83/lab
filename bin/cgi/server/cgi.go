@@ -9,7 +9,7 @@ import (
 )
 
 var (
-    BAD = []string{"..", "/", "\\"}
+    BAD = []string{"..", "\\"}
 )
 
 func sanitize(s string) string {
