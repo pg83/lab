@@ -52,14 +52,14 @@ class WebHooks:
             'proto': 'http',
             'server': 'webhook.homelab.cam',
             'source': '^/(.*)',
-            'dest': f'http://$ip:{self.port}/$1',
+            'dest': f':{self.port}/$1',
         }
 
         yield {
             'proto': 'http',
             'server': 'ix.homelab.cam',
-            'source': '^/cas/(.*)',
-            'dest': f'http://$ip:{self.port}/cas.sh?$1',
+            'source': '^/(.*)',
+            'dest': f':{self.port}/cas.sh?$1',
         }
 
     def run(self):
@@ -1004,7 +1004,7 @@ def do(code):
                 rec = {
                     'server': bal['server'],
                     'source': bal['source'],
-                    'dest': bal['dest'].replace('$ip', net['ip']),
+                    'dest': 'http://' + net['ip'] + bal['dest'],
                 }
 
                 srv.real.append(rec)
