@@ -9,5 +9,5 @@ echo ""
 # TODO(pg): validate input
 minio-client cat "minio/cas/\${QUERY_STRING}"
 EOF
-chmod + ${out}/etc/hooks/*
+chmod +x ${out}/etc/hooks/*
 {% endblock %}
