@@ -49,13 +49,17 @@ class WebHooks:
 
     def l7_balancer(self):
         yield {
-            'url': 'http://webhook.homelab.cam',
-            'port': self.port,
+            'proto': 'http',
+            'server': 'webhook.homelab.cam',
+            'source': '^/(.*)',
+            'dest': f'http://$ip:{self.port}/$1',
         }
 
         yield {
-            'url': 'http://ix.homelab.cam',
-            'port': f'{self.port}/cas.sh?',
+            'proto': 'http',
+            'server': 'ix.homelab.cam',
+            'source': '^/(.*)',
+            'dest': f'http://$ip:{self.port}/cas.sh?$1',
         }
 
     def run(self):
@@ -512,7 +516,7 @@ class BalancerHttp:
         yield '--logger.stdout'
 
         for x in self.real:
-            yield f'--static.rule={x["vhost"]},/,{x["real"]}'
+            yield f'--static.rule={x["server"]},{x["source"]},{x["dest"]}'
 
     def run(self):
         exec_into(*list(self.it_args()))
@@ -993,13 +997,14 @@ def do(code):
             by_addr[f'{host}:collector'].srv.jobs.append(job)
 
         for bal in hndl.l7_balancer():
-            proto, vhost = bal['url'].split('://')
+            proto = bal['proto']
             srv = by_addr[f'{host}:balancer_{proto}'].srv
 
             for net in by_name[host]['net']:
                 rec = {
-                    'vhost': vhost,
-                    'real': 'http://' + net['ip'] + ':' + str(bal['port']),
+                    'server': bal['server'],
+                    'source': bal['source'],
+                    'dest': bal['dest'].replace('$ip', net['ip']),
                 }
 
                 srv.real.append(rec)
