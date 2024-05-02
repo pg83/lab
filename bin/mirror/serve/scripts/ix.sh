@@ -8,7 +8,7 @@ echo "Content-Type: application/stream"
 echo ""
 export MC_CONFIG_DIR=\$(dirname \${TMPDIR})
 # TODO(pg): validate input
-minio-client cat "minio/cas/\${QUERY_STRING}"
+exec minio-client cat "minio/cas/\${QUERY_STRING}"
 EOF
 chmod +x ${out}/etc/hooks/*
 {% endblock %}
