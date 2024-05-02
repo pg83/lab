@@ -58,7 +58,7 @@ class WebHooks:
         yield {
             'proto': 'http',
             'server': 'ix.homelab.cam',
-            'source': '^(.*)/',
+            'source': '^/(.*)',
             'dest': f'http://$ip:{self.port}/cas.sh?$1',
         }
 
