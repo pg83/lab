@@ -6,7 +6,7 @@ cat << EOF > ${out}/etc/hooks/cas.sh
 #!/usr/bin/env sh
 echo "Content-Type: application/stream"
 echo ""
-export MC_CONFIG_DIR=\${TMPDIR}
+export MC_CONFIG_DIR=\$(dirname \${TMPDIR})
 # TODO(pg): validate input
 minio-client cat "minio/cas/\${QUERY_STRING}"
 EOF
