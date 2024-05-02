@@ -53,6 +53,11 @@ class WebHooks:
             'port': self.port,
         }
 
+        yield {
+            'url': 'http://ix.homelab.cam',
+            'port': f'{self.port}/cas.sh?',
+        }
+
     def run(self):
         exec_into('cgi_server', f'0.0.0.0:{self.port}', self.path)
 
@@ -69,6 +74,10 @@ class WebHooks:
         yield {
             'pkg': 'bin/git/hook',
             'evlog_topic': 'git_lab',
+        }
+
+        yield {
+            'pkg': 'bin/mirror/serve',
         }
 
 
