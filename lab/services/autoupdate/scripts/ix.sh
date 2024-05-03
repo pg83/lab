@@ -5,8 +5,6 @@ mkdir -p ${out}/bin
 
 cat << EOF > ${out}/bin/ix
 #!/usr/bin/env sh
-export IX_ROOT=/ix
-export IX_EXEC_KIND=system
 exec /var/run/autoupdate_ix/ix/ix "\${@}"
 EOF
 
