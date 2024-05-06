@@ -509,6 +509,9 @@ class SecondIP:
     def __init__(self, addr):
         self.addr = addr
 
+    def name(self):
+        return 'ip_' + self.addr.replace('.', '_').replace('/', '_')
+
     def user(self):
         return 'root'
 
