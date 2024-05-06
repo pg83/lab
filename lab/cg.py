@@ -498,6 +498,28 @@ class DropBear:
             exec_into(*args)
 
 
+SECOND_IP = '''
+set -xue
+ip addr del {addr} dev eth0
+etcdctl lock {addr} /bin/sh -c "ip addr add {addr} dev eth0; sleep 1000"
+'''
+
+
+class SecondIP:
+    def __init__(self, addr):
+        self.addr = addr
+
+    def user(self):
+        return 'root'
+
+    def run(self):
+        with memfd('script') as fn:
+            with open(fn, 'w') as f:
+                f.write(SECOND_IP.replace('{addr}', self.addr))
+
+            exec_into('/bin/sh', fn)
+
+
 class BalancerHttp:
     def __init__(self, port, real):
         self.port = port
@@ -601,6 +623,16 @@ class ClusterMap:
             yield {
                 'host': hn,
                 'serv': BalancerHttp(p['proxy_http'], bal_map),
+            }
+
+            yield {
+                'host': hn,
+                'serv': SecondIP('10.0.0.32/24'),
+            }
+
+            yield {
+                'host': hn,
+                'serv': SecondIP('10.0.0.33/24'),
             }
 
             all_etc.append(hn)
@@ -718,6 +750,7 @@ sys.modules['builtins'].DropBear = DropBear
 sys.modules['builtins'].BalancerHttp = BalancerHttp
 sys.modules['builtins'].Etcd = Etcd
 sys.modules['builtins'].MinioConsole = MinioConsole
+sys.modules['builtins'].SecondIP = SecondIP
 
 
 def exec_into(*args, user=None, **kwargs):
