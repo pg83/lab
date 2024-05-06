@@ -499,7 +499,7 @@ class DropBear:
 
 
 SECOND_IP = '''
-set -xue
+set -x
 ip addr del {addr} dev eth0
 etcdctl lock {addr} /bin/sh -c "ip addr add {addr} dev eth0; sleep 1000"
 '''
