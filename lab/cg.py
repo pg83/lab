@@ -227,6 +227,8 @@ class Nebula:
 
             cfg['stats']['listen'] = '127.0.0.1:' + str(self.prom_port())
 
+            print(json.dumps(cfg, indent=4, sort_keys=True))
+
             with open(conf, "w") as f:
                 f.write(json.dumps(cfg, indent=4, sort_keys=True))
 
@@ -243,11 +245,12 @@ class Nebula:
 
 
 class NebulaNode(Nebula):
-    def __init__(self, host, port, smap, prom):
+    def __init__(self, host, port, smap, prom, advr):
         self.host = host
         self.port = port
         self.smap = smap
         self.prom = prom
+        self.advr = advr
 
     def prom_port(self):
         return self.prom
@@ -270,7 +273,8 @@ class NebulaNode(Nebula):
         cfg['lighthouse'] = {
             'am_lighthouse': False,
             'interval': 60,
-            'hosts': list(self.smap.keys())
+            'hosts': list(self.smap.keys()),
+            'advertise_addrs': self.advr,
         }
 
         return cfg
@@ -498,6 +502,11 @@ class DropBear:
             exec_into(*args)
 
 
+class DropBear2(DropBear):
+    def __init__(self, port):
+        DropBear.__init__(self, '0.0.0.0', port)
+
+
 SECOND_IP = '''
 set -x
 ip addr del {addr} dev eth0
@@ -650,6 +659,12 @@ class ClusterMap:
                 'serv': DropBear(h['nebula']['ip'], p['sshd']),
             }
 
+            if True:
+                yield {
+                    'host': hn,
+                    'serv': DropBear2(23),
+                }
+
             mio_cmap = 'http://lab{1...3}.eth{1...3}/var/mnt/minio/my/data'
 
             def mio_srv(i):
@@ -698,9 +713,12 @@ class ClusterMap:
                 'serv': NodeExporter(p['node_exporter']),
             }
 
+            nn_port = p['nebula_node']
+            nn_adv = [x['ip'] + f':{nn_port}' for x in h['net']]
+
             yield {
                 'host': hn,
-                'serv': NebulaNode(hn, p['nebula_node'], neb_map, p['nebula_node_prom']),
+                'serv': NebulaNode(hn, nn_port, neb_map, p['nebula_node_prom'], nn_adv),
             }
 
             if lh := h.get('nebula', {}).get('lh', None):
@@ -754,6 +772,7 @@ sys.modules['builtins'].BalancerHttp = BalancerHttp
 sys.modules['builtins'].Etcd = Etcd
 sys.modules['builtins'].MinioConsole = MinioConsole
 sys.modules['builtins'].SecondIP = SecondIP
+sys.modules['builtins'].DropBear2 = DropBear2
 
 
 def exec_into(*args, user=None, **kwargs):
