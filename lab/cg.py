@@ -227,7 +227,7 @@ class Nebula:
 
             cfg['stats']['listen'] = '127.0.0.1:' + str(self.prom_port())
 
-            print(json.dumps(cfg, indent=4, sort_keys=True))
+            print(cfg, file=sys.stderr)
 
             with open(conf, "w") as f:
                 f.write(json.dumps(cfg, indent=4, sort_keys=True))
