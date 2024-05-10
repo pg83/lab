@@ -957,11 +957,15 @@ class Service:
 
         for rec in self.iter_upnp():
             yield {
-                'pkg': 'bin/upnpc/lease',
+                'pkg': 'bin/xiaomi',
                 'upnp_ip': rec['addr'],
                 'upnp_port': rec['port'],
                 'upnp_ext_port': rec['ext_port'],
                 'upnp_proto': rec['proto'],
+                'xiaomi_gw': '10.0.0.1',
+                'xiaomi_passwd': 'qwerty123',
+                'xiaomi_name': str(rec['ext_port']) + '_' + rec['proto'],
+                'xiaomi_proto': {'TCP': 1, 'UDP': 2}[rec['proto']],
                 'delay': 100,
             }
 
