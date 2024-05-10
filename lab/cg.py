@@ -252,22 +252,6 @@ class NebulaNode(Nebula):
         self.prom = prom
         self.advr = advr
 
-    def pkgs(self):
-        yield {
-            'pkg': 'bin/nebula/daemon',
-        }
-
-        for h, p, ep in self.iter_upnp():
-            for proto in ('TCP', 'UDP'):
-                yield {
-                    'pkg': 'bin/upnpc/lease',
-                    'upnp_ip': h,
-                    'upnp_port': p,
-                    'upnp_ext_port': ep,
-                    'upnp_proto': proto,
-                    'delay': 100,
-                }
-
     def prom_port(self):
         return self.prom
 
@@ -275,13 +259,23 @@ class NebulaNode(Nebula):
         return 'root'
 
     def iter_upnp(self):
+        for h, p, ep in self.iter_upnp_3():
+            for proto in ('TCP', 'UDP'):
+                yield {
+                    'addr': h,
+                    'port': p,
+                    'ext_port': ep,
+                    'proto': proto,
+                }
+
+    def iter_upnp_3(self):
         for r in self.advr:
             h, p = r.split(':')
 
             yield (h, int(p), int(p) + int(h.split('.')[-1]))
 
     def extra_advr(self):
-        return [f'5.188.103.251:{ep}' for h, p, ep in self.iter_upnp()]
+        return [f'5.188.103.251:{ep}' for h, p, ep in self.iter_upnp_3()]
 
     def config(self):
         cfg = json.loads(json.dumps(NEBULA))
@@ -844,6 +838,12 @@ class Service:
     def __init__(self, srv):
         self.srv = srv
 
+    def iter_upnp(self):
+        try:
+            return self.srv.iter_upnp()
+        except AttributeError:
+            return []
+
     def home_dir(self):
         try:
             return self.srv.home_dir()
@@ -939,6 +939,16 @@ class Service:
             yield {
                 'pkg': 'lab/etc/user',
                 'user': user,
+            }
+
+        for rec in self.iter_upnp():
+            yield {
+                'pkg': 'bin/upnpc/lease',
+                'upnp_ip': rec['addr'],
+                'upnp_port': rec['port'],
+                'upnp_ext_port': rec['ext_port'],
+                'upnp_proto': rec['proto'],
+                'delay': 100,
             }
 
         yield {
