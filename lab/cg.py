@@ -957,12 +957,13 @@ class Service:
 
         for rec in self.iter_upnp():
             yield {
-                'pkg': 'bin/upnpc/lease',
+                'pkg': 'bin/pf',
                 'upnp_ip': rec['addr'],
                 'upnp_port': rec['port'],
                 'upnp_ext_port': rec['ext_port'],
                 'upnp_proto': rec['proto'],
                 'delay': 100,
+                'user': 'pf',
             }
 
         yield {
@@ -1072,6 +1073,7 @@ def do(code):
         'mirror': 1016,
         'ci': 1017,
         'minio_console': 1018,
+        'pf': 1019,
     }
 
     by_name = dict()
