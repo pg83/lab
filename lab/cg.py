@@ -300,11 +300,25 @@ class NebulaNode(Nebula):
 
 
 class NebulaLh(Nebula):
-    def __init__(self, host, port, smap, prom):
+    def __init__(self, host, port, smap, prom, pmap):
         self.host = host
         self.port = port
         self.smap = smap
         self.prom = prom
+        self.pmap = pmap
+
+    def iter_upnp_3(self):
+        yield self.pmap
+
+    def iter_upnp(self):
+        for h, p, ep in self.iter_upnp_3():
+            for proto in ('TCP', 'UDP'):
+                yield {
+                    'addr': h,
+                    'port': p,
+                    'ext_port': ep,
+                    'proto': proto,
+                }
 
     def prom_port(self):
         return self.prom;
@@ -742,12 +756,13 @@ class ClusterMap:
 
             if lh := h.get('nebula', {}).get('lh', None):
                 lh_port = p['nebula_lh']
+                pm = (h['ip'], lh_port, int(lh['port']))
                 neb_reals = list(it_nebula_reals(lh, h, lh_port))
                 neb_map[lh['vip']] = list(f'{h}:{p}' for h, p in neb_reals)
 
                 yield {
                     'host': hn,
-                    'serv': NebulaLh(lh['name'], lh_port, neb_map, p['nebula_lh_prom']),
+                    'serv': NebulaLh(lh['name'], lh_port, neb_map, p['nebula_lh_prom'], pm),
                 }
 
         tp = '/var/mnt/torrent/profiles/qBittorrent/downloads'
@@ -831,7 +846,6 @@ def norm(n):
         res = res[1:]
 
     return res
-
 
 
 class Service:
