@@ -260,13 +260,12 @@ class NebulaNode(Nebula):
 
     def iter_upnp(self):
         for h, p, ep in self.iter_upnp_3():
-            for proto in ('TCP', 'UDP'):
-                yield {
-                    'addr': h,
-                    'port': p,
-                    'ext_port': ep,
-                    'proto': proto,
-                }
+            yield {
+                'addr': h,
+                'port': p,
+                'ext_port': ep,
+                'proto': 'UDP',
+            }
 
     def iter_upnp_3(self):
         for r in self.advr:
@@ -312,13 +311,12 @@ class NebulaLh(Nebula):
 
     def iter_upnp(self):
         for h, p, ep in self.iter_upnp_3():
-            for proto in ('TCP', 'UDP'):
-                yield {
-                    'addr': h,
-                    'port': p,
-                    'ext_port': ep,
-                    'proto': proto,
-                }
+            yield {
+                'addr': h,
+                'port': p,
+                'ext_port': ep,
+                'proto': 'UDP',
+            }
 
     def prom_port(self):
         return self.prom;
