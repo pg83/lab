@@ -690,7 +690,7 @@ class ClusterMap:
                 'serv': DropBear(h['nebula']['ip'], p['sshd']),
             }
 
-            if True:
+            if False:
                 yield {
                     'host': hn,
                     'serv': DropBear2(23),
