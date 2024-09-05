@@ -1129,6 +1129,8 @@ def do(code):
         for s in ['minio_1', 'minio_2', 'minio_3']:
             cconf['by_host'][h]['disabled'].append(s)
 
+    cconf['by_host']['lab3']['disabled'].append('etcd')
+
     return cconf
 
 
