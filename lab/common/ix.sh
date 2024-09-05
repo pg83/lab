@@ -10,7 +10,6 @@ bin/mc
 bin/htop
 etc/host/keys
 bin/kernel/6/10
-bin/kernel/6/6
 bin/fixits(delay=10)
 bin/kernel/gengrub(kernel_boot_flags=rootdelay=20)
 
