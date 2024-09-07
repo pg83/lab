@@ -407,7 +407,7 @@ class SftpD:
 MINIO_SCRIPT = '''
 set -xue
 mkdir -p /var/mnt/minio/my
-mount /var/mnt/minio/{n} /var/mnt/minio/my
+mount LABEL=MINIO_{n} /var/mnt/minio/my
 mkdir -p /var/mnt/minio/my/data
 chown {user} /var/mnt/minio/my/data
 exec su-exec {user} minio server --address {addr} {cmap}
