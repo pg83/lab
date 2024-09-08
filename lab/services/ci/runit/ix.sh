@@ -1,7 +1,7 @@
 {% extends '//lab/services/persist/ix.sh' %}
 
 {% block srv_user_prepare %}
-/bin/mount_ci {{wd}}
+/bin/mount_ci /var/mnt/ci
 {{super()}}
 {% endblock %}
 
