@@ -4,6 +4,7 @@
 mkdir ${out}/bin
 
 cat << EOF > ${out}/bin/mount_ci
+#!/usr/bin/env sh
 set -xue
 devlink
 mdadm --assemble md0 /dev/links/6ce93586-ad55-4248-bb21-d23eac83dbff /dev/links/7965901e-abed-4628-92f2-a1a4194e6d1c
