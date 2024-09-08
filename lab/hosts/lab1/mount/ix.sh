@@ -1,4 +1,4 @@
-{% extends '//die/hub.sh' %}
+{% extends '//die/proxy.sh' %}
 
 {% block install %}
 mkdir ${out}/bin
