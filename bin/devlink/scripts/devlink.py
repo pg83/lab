@@ -49,5 +49,5 @@ def uniq_items():
 
 for i in uniq_items():
     for k, v in i.items():
-        if v and k in ('ptuuid', 'uuid', 'partuuid'):
+        if v and k in ('ptuuid', 'partuuid'):
             os.symlink(i['name'], sys.argv[1] + '/' + v)
