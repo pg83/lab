@@ -12,7 +12,14 @@ devlink
 mdadm --assemble md1 /dev/md/md0 /dev/links/40a63ab3-62f3-43dd-843f-fbed27622bf2
 echo '/dev/sda' > /sys/fs/bcache/register
 echo '/dev/md/md1' > /sys/fs/bcache/register
-bcache attach /dev/sda /dev/md/md1
+bcache attach /dev/sda /dev/md/md1 || true
+sleep 1
+bcache attach /dev/sda /dev/md/md1 || true
+sleep 1
+bcache attach /dev/sda /dev/md/md1 || true
+sleep 1
+bcache attach /dev/sda /dev/md/md1 || true
+sleep 1
 devlink
 mkdir -p \${1}
 mount /dev/bcache0 \${1}
