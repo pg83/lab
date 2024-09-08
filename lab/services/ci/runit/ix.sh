@@ -1,5 +1,10 @@
 {% extends '//lab/services/persist/ix.sh' %}
 
+{% block srv_user_prepare %}
+{{super()}}
+/bin/mount_ci {{wd}}
+{% endblock %}
+
 {% block srv_command %}
 set -xue
 

@@ -1,6 +1,14 @@
-{% extends '//lab/etc/mount/ix.sh' %}
+{% extends '//die/proxy.sh' %}
 
-{% block mount %}
-mkdir -p /var/mnt/ci
-mount LABEL=HOME /var/mnt/ci
+{% block install %}
+mkdir ${out}/bin
+
+cat << EOF > ${out}/bin/mount_ci
+#!/bin/sh
+set -xue
+mkdir -p \${1}
+mount LABEL=HOME \${1}
+EOF
+
+chmod +x ${out}/bin/*
 {% endblock %}
