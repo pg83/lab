@@ -3,7 +3,7 @@
 {% block install %}
 mkdir ${out}/bin
 
-cat << EOF > ${out}/bin/mount_ci
+cat << EOF > ${out}/bin/mount_ci_old
 #!/usr/bin/env sh
 set -xue
 devlink
@@ -24,6 +24,15 @@ devlink
 mkdir -p \${1}
 mount /dev/bcache0 \${1}
 chown ci:ci \${1}
+EOF
+
+cat << EOF > ${out}/bin/mount_ci
+#!/usr/bin/env sh
+set -xue
+mkdir -p \${1}
+mount /dev/sda \${1}
+mkdir -p \${1}/ci
+chown ci:ci \${1}/ci
 EOF
 
 chmod +x ${out}/bin/*
