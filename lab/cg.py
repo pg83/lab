@@ -661,6 +661,8 @@ mkdir -p {wd}
 /bin/mount_ci {wd}
 mkdir -p {wd}/ix_root
 chown {user}:{user} {wd}/ix_root
+mkdir -p /var/run/{user}/ix
+chown {user}:{user} /var/run/{user}/ix
 exec su-exec {user} /bin/ci_cycle
 '''
 
