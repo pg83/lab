@@ -684,7 +684,7 @@ class CI:
 
     def pkgs(self):
         yield {
-            'pkg': 'lab/services/ci/scripts',
+            'pkg': 'lab/services/ci',
             'wd': self.wd(),
             'ci_targets': self.targets,
         }
