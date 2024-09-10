@@ -4,6 +4,8 @@
 mkdir ${out}/bin
 
 cat << EOF > ${out}/bin/ci_cycle
+#!/usr/bin/env sh
+
 set -xue
 
 export PATH=/bin
