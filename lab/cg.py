@@ -655,6 +655,63 @@ class Etcd:
         exec_into(*args)
 
 
+CI_SCRIPT = '''
+set -xue
+mkdir -p {wd}
+/bin/mount_ci {wd}
+mkdir -p {wd}/ix_root
+chown {user}:{user} {wd}/ix_root
+exec su-exec {user} /bin/ci_cycle
+'''
+
+
+class CI:
+    def __init__(self, targets):
+        self.targets = targets
+
+    def name(self):
+        return 'ci'
+
+    def users(self):
+        return [
+            'root',
+            self.name(),
+        ]
+
+    def wd(self):
+        return '/var/run/' + self.name() + '/mount'
+
+    def pkgs(self):
+        yield {
+            'pkg': 'lab/services/ci/scripts',
+            'wd': self.wd(),
+            'ci_targets': self.targets,
+        }
+
+    def run(self):
+        s = CI_SCRIPT
+
+        s = s.replace('{user}', self.name())
+        s = s.replace('{wd}', self.wd())
+
+        with memfd('script') as ss:
+            with open(ss, 'w') as f:
+                f.write(s)
+
+            args = [
+                '/bin/unshare', '-m',
+                '/bin/sh', ss
+            ]
+
+            exec_into(*args)
+
+
+CI_MAP = {
+    'lab1': 'set/ci',
+    'lab3': 'set/ci/tier/1',
+}
+
+
 class ClusterMap:
     def __init__(self, conf):
         self.conf = conf
@@ -782,6 +839,12 @@ class ClusterMap:
                 'serv': SftpD(p['sftp_d'], tp),
             }
 
+        for hn, path in CI_MAP.items():
+            yield {
+                'host': hn,
+                'serv': CI(path),
+            }
+
 
 HZ_SCRIPT = '''
 sleep 60
@@ -816,6 +879,7 @@ sys.modules['builtins'].Etcd = Etcd
 sys.modules['builtins'].MinioConsole = MinioConsole
 sys.modules['builtins'].SecondIP = SecondIP
 sys.modules['builtins'].DropBear2 = DropBear2
+sys.modules['builtins'].CI = CI
 
 
 def exec_into(*args, user=None, **kwargs):
