@@ -418,7 +418,7 @@ class SftpD:
 MINIO_SCRIPT = '''
 set -xue
 mkdir -p /var/mnt/minio/my
-mount LABEL=MINIO_{n} /var/mnt/minio/my
+mount -t xfs LABEL=MINIO_{n} /var/mnt/minio/my
 mkdir -p /var/mnt/minio/my/data
 chown {user} /var/mnt/minio/my/data
 exec su-exec {user} minio server --address {addr} {cmap}
@@ -1201,7 +1201,7 @@ def do(code):
             if s.disabled():
                 h['disabled'].append(s.name())
 
-    if True:
+    if False:
         for h in ['lab1', 'lab2', 'lab3']:
             for s in ['minio_1', 'minio_2', 'minio_3']:
                 cconf['by_host'][h]['disabled'].append(s)
