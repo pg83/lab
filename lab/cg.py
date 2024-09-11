@@ -1200,7 +1200,7 @@ def do(code):
             if s.disabled():
                 h['disabled'].append(s.name())
 
-    if False:
+    if True:
         for h in ['lab1', 'lab2', 'lab3']:
             for s in ['minio_1', 'minio_2', 'minio_3']:
                 cconf['by_host'][h]['disabled'].append(s)
