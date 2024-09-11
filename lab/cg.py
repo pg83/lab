@@ -708,7 +708,8 @@ class CI:
 
 
 CI_MAP = {
-    'lab3': 'set/ci',
+    'lab1': 'set/ci',
+    'lab3': 'set/ci/tier/1',
 }
 
 

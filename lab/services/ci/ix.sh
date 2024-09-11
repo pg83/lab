@@ -2,6 +2,7 @@
 
 {% block run_deps %}
 bin/python
+bin/devlink
 bin/gnugrep
 bin/su/exec
 bin/etcd/ctl
