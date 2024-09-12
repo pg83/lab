@@ -16,7 +16,7 @@ import collections
 DISABLE = {
     'lab1': ['minio_1', 'minio_2', 'minio_3', 'ci'],
     'lab2': [],
-    'lab3': ['etcd'],
+    'lab3': [],
 }
 
 
