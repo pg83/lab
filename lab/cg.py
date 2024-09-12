@@ -13,6 +13,11 @@ import subprocess
 import collections
 
 
+DISABLE = {
+    'lab1': ['minio_1', 'minio_2', 'minio_3', 'ci'],
+}
+
+
 @contextlib.contextmanager
 def memfd(name):
     fd = os.memfd_create(name, flags=0)
@@ -708,6 +713,7 @@ class CI:
 
 
 CI_MAP = {
+    'lab1': 'set/ci',
     'lab3': 'set/ci',
 }
 
@@ -1200,12 +1206,8 @@ def do(code):
             if s.disabled():
                 h['disabled'].append(s.name())
 
-    if False:
-        for h in ['lab1', 'lab2', 'lab3']:
-            for s in ['minio_1', 'minio_2', 'minio_3']:
-                cconf['by_host'][h]['disabled'].append(s)
-
-    # cconf['by_host']['lab3']['disabled'].append('etcd')
+    for h, ss in DISABLE.items():
+        cconf['by_host'][h]['disabled'].extend(ss)
 
     return cconf
 
