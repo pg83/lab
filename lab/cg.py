@@ -864,10 +864,13 @@ date | /etc/hooks/git_lab.sh
 
 
 class HZ:
+    def __init__(self):
+        self.script = HZ_SCRIPT
+
     def run(self):
         with memfd('script') as ss:
             with open(ss, 'w') as f:
-                f.write(HZ_SCRIPT)
+                f.write(self.script)
 
             cmd = [
                 'etcdctl',
