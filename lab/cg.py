@@ -855,6 +855,7 @@ class ClusterMap:
 
 
 HZ_SCRIPT = '''
+set -xue
 sleep 60
 date | /etc/hooks/git_ci.sh
 sleep 60
@@ -868,7 +869,19 @@ class HZ:
             with open(ss, 'w') as f:
                 f.write(HZ_SCRIPT)
 
-            exec_into('etcdctl', 'lock', 'hz', '--', '/bin/sh', ss)
+            cmd = [
+                'etcdctl',
+                'lock',
+                'hz',
+                '--',
+                '/bin/subreaper',
+                '/bin/timeout',
+                '200s',
+                '/bin/sh',
+                ss,
+            ]
+
+            exec_into(*cmd)
 
 
 sys.modules['builtins'].IPerf = IPerf
