@@ -865,6 +865,7 @@ date | /etc/hooks/git_lab.sh
 
 class HZ:
     def __init__(self):
+        self.x = 1
         self.script = HZ_SCRIPT
 
     def run(self):
@@ -873,13 +874,13 @@ class HZ:
                 f.write(self.script)
 
             cmd = [
-                'etcdctl',
-                'lock',
-                'hz',
-                '--',
                 '/bin/subreaper',
                 '/bin/timeout',
                 '200s',
+                'etcdctl',
+                'lock',
+                'hz1',
+                '--',
                 '/bin/sh',
                 ss,
             ]
