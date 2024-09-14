@@ -20,6 +20,13 @@ DISABLE = {
 }
 
 
+CI_MAP = {
+    'lab1': 'set/ci',
+    'lab2': 'set/ci/tier/1',
+    'lab3': 'set/ci',
+}
+
+
 @contextlib.contextmanager
 def memfd(name):
     fd = os.memfd_create(name, flags=0)
@@ -712,12 +719,6 @@ class CI:
             ]
 
             exec_into(*args)
-
-
-CI_MAP = {
-    'lab1': 'set/ci',
-    'lab3': 'set/ci',
-}
 
 
 class ClusterMap:
