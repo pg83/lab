@@ -674,6 +674,7 @@ set -xue
 mkdir -p {wd}
 /bin/mount_ci {wd}
 mkdir -p {wd}/ix_root
+rm -rf {wd}/ix_root/trash {wd}/ix_root/build
 chown {user}:{user} {wd}/ix_root
 chown {user}:{user} /var/run/{user}
 exec su-exec {user} /bin/ci_cycle
