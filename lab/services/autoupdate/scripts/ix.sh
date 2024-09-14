@@ -11,12 +11,11 @@ EOF
 cat << EOF > ${out}/bin/autoupdate_cycle
 #!/usr/bin/env sh
 set -xue
-etcdctl watch --prefix /git/logs/git_lab | gnugrep --line-buffered 'PUT' | while read l; do
-    sleep 10
-    gpull https://github.com/pg83/lab ix
-    ix mut system
-    ix mut \$(ix list)
-done
+sleep 10
+gpull https://github.com/pg83/lab ix
+ix mut system
+ix mut \$(ix list)
+etcdctl watch --prefix /git/logs/git_lab | gnugrep --line-buffered 'PUT' | head -n 1
 EOF
 
 chmod +x ${out}/bin/*
