@@ -804,11 +804,6 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': HZ(),
-            }
-
-            yield {
-                'host': hn,
                 'serv': IPerf(p['i_perf']),
             }
 
@@ -856,40 +851,6 @@ class ClusterMap:
             }
 
 
-HZ_SCRIPT = '''
-set -xue
-sleep 60
-date | /etc/hooks/git_ci.sh
-sleep 60
-date | /etc/hooks/git_lab.sh
-'''
-
-
-class HZ:
-    def __init__(self):
-        self.x = 1
-        self.script = HZ_SCRIPT
-
-    def run(self):
-        with memfd('script') as ss:
-            with open(ss, 'w') as f:
-                f.write(self.script)
-
-            cmd = [
-                '/bin/subreaper',
-                '/bin/timeout',
-                '200s',
-                'etcdctl',
-                'lock',
-                'hz1',
-                '--',
-                '/bin/sh',
-                ss,
-            ]
-
-            exec_into(*cmd)
-
-
 sys.modules['builtins'].IPerf = IPerf
 sys.modules['builtins'].WebHooks = WebHooks
 sys.modules['builtins'].NodeExporter = NodeExporter
@@ -898,7 +859,6 @@ sys.modules['builtins'].NebulaNode = NebulaNode
 sys.modules['builtins'].NebulaLh = NebulaLh
 sys.modules['builtins'].Ssh3 = Ssh3
 sys.modules['builtins'].SftpD = SftpD
-sys.modules['builtins'].HZ = HZ
 sys.modules['builtins'].MinIO = MinIO
 sys.modules['builtins'].DropBear = DropBear
 sys.modules['builtins'].BalancerHttp = BalancerHttp

@@ -19,7 +19,7 @@ cd ix
 rm -rf \${IX_ROOT}/build \${IX_ROOT}/trash
 ./ix build bld/all {{ci_targets}}
 
-etcdctl watch --prefix /git/logs/git_ci | gnugrep --line-buffered 'PUT' | head -n 1
+subreaper timeout 60s etcdctl watch --prefix /git/logs/git_ci | gnugrep --line-buffered 'PUT' | head -n 1
 EOF
 
 chmod +x ${out}/bin/*
