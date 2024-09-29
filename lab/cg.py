@@ -396,10 +396,10 @@ class SshTunnel:
 
         args = [
             'ssh',
-            '-i', keyp,
+            '-i', 'key',
             '-D', self.port,
             '-N',
-            'key',
+            self.addr,
         ]
 
         exec_into(*args)
