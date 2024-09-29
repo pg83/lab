@@ -392,7 +392,7 @@ class SshTunnel:
         with open('key', 'wb') as f:
             f.write(get_key(self.keyn))
 
-        os.chown(0o666, 'key')
+        os.chmod('key', 0o400)
 
         args = [
             'ssh',
