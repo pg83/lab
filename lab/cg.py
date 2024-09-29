@@ -389,19 +389,20 @@ class SshTunnel:
         }
 
     def run(self):
-        with memfd("key") as keyp:
-            with open(keyp, 'wb') as f:
-                f.write(get_key(self.keyn))
+        with open('key', 'wb') as f:
+            f.write(get_key(self.keyn))
 
-            args = [
-                'ssh',
-                '-i', keyp,
-                '-D', self.port,
-                '-N',
-                self.addr,
-            ]
+        os.chown(0o666, 'key')
 
-            exec_into(*args)
+        args = [
+            'ssh',
+            '-i', keyp,
+            '-D', self.port,
+            '-N',
+            'key',
+        ]
+
+        exec_into(*args)
 
 
 TORRENT_PREPARE = '''
