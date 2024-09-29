@@ -390,7 +390,7 @@ class SshTunnel:
 
     def run(self):
         with memfd("key") as keyp:
-            with open(keyp, 'w') as f:
+            with open(keyp, 'wb') as f:
                 f.write(get_key(self.keyn))
 
             args = [
