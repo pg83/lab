@@ -385,7 +385,7 @@ class SshTunnel:
 
     def pkgs(self):
         yield {
-            'pkg': 'bin/openssh',
+            'pkg': 'bin/openssh/client',
         }
 
     def run(self):
