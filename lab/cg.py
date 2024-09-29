@@ -810,7 +810,7 @@ class ClusterMap:
             yield {
                 'host': hn,
                 'serv': SshTunnel(
-                    '0.0.0.0:' + p['ssh_aws_tunnel'],
+                    '0.0.0.0:' + str(p['ssh_aws_tunnel']),
                     'ec2-user@13.50.197.102',
                     'aws_key',
                     'ssh_aws_tunnel',
