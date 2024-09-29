@@ -400,7 +400,8 @@ class SshTunnel:
         os.chmod('key', 0o400)
 
         args = [
-            'ssh',
+            'ssh', '-q',
+            '-o', 'StrictHostKeyChecking no',
             '-i', 'key',
             '-D', self.port,
             '-N',
