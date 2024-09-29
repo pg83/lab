@@ -373,6 +373,37 @@ class Ssh3:
         exec_into(*args, SSH3_LOG_FILE='/proc/self/fd/1')
 
 
+class SshTunnel:
+    def __init__(self, port, addr, keyn, user):
+        self.port = port
+        self.addr = addr
+        self.keyn = keyn
+        self._usr = user
+
+    def name(self):
+        return self._usr
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/openssh',
+        }
+
+    def run(self):
+        with memfd("key") as keyp:
+            with open(keyp, 'w') as f:
+                f.write(get_key(self.keyn))
+
+            args = [
+                'ssh',
+                '-i', keyp,
+                '-D', self.port,
+                '-N',
+                self.addr,
+            ]
+
+            exec_into(*args)
+
+
 TORRENT_PREPARE = '''
 set -xue
 btrfs device scan
@@ -768,6 +799,16 @@ class ClusterMap:
                 'serv': DropBear(h['nebula']['ip'], p['sshd']),
             }
 
+            yield {
+                'host': hn,
+                'serv': SshTunnel(
+                    p['ssh_aws_tunnel'],
+                    'ec2-user@13.50.197.102',
+                    'aws_key',
+                    'ssh_aws_tunnel',
+                ),
+            }
+
             if False:
                 yield {
                     'host': hn,
@@ -867,6 +908,7 @@ sys.modules['builtins'].MinioConsole = MinioConsole
 sys.modules['builtins'].SecondIP = SecondIP
 sys.modules['builtins'].DropBear2 = DropBear2
 sys.modules['builtins'].CI = CI
+sys.modules['builtins'].SshTunnel = SshTunnel
 
 
 def exec_into(*args, user=None, **kwargs):
@@ -1113,6 +1155,7 @@ def do(code):
         'ssh_3': 8011,
         'minio': 8012,
         'minio_web': 8013,
+        'ssh_aws_tunnel': 8014,
         'proxy_http': 8080,
         'proxy_https': 8090,
     }
@@ -1137,6 +1180,7 @@ def do(code):
         'ci': 1017,
         'minio_console': 1018,
         'pf': 1019,
+        'ssh_aws_tunnel': 1020,
     }
 
     by_name = dict()
