@@ -389,6 +389,11 @@ class SshTunnel:
         }
 
     def run(self):
+        try:
+            os.unlink('key')
+        except Exception:
+            pass
+
         with open('key', 'wb') as f:
             f.write(get_key(self.keyn))
 
