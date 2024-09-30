@@ -373,6 +373,52 @@ class Ssh3:
         exec_into(*args, SSH3_LOG_FILE='/proc/self/fd/1')
 
 
+HA_CONF = '''
+global
+    maxconn 100
+
+defaults
+    timeout connect 5000
+    timeout client 50000
+    timeout server 50000
+
+listen socks5
+    bind :{port}
+    mode tcp
+    balance roundrobin
+    server server1 lab2.local:8014
+    server server2 lab3.local:8014
+'''
+
+
+def haproxy_conf_parts(port, addrs):
+    yield HA_CONF.replace('{port}', str(port))
+
+    for n, addr in enumerate(addrs):
+        yield f'    server server{n} {addr}'
+
+
+class SocksProxy:
+    def __init__(self, port, addrs):
+        self.p = port
+        self.a = addrs
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/haproxy',
+        }
+
+    def conf(self):
+        return '\n'.join(haproxy_conf_parts(self.p, self.a)).strip() + '\n'
+
+    def run(self):
+        with memfd('haproxy.conf') as path:
+            with open(path, 'w') as f:
+                f.write(self.conf())
+
+            exec_into('haproxy', '-f', path)
+
+
 class SshTunnel:
     def __init__(self, port, addr, keyn, user):
         self.port = port
@@ -771,6 +817,7 @@ class ClusterMap:
         neb_map = {}
         bal_map = []
         all_etc = []
+        all_s5s = []
 
         for h in self.conf['hosts']:
             hn = h['hostname']
@@ -815,6 +862,13 @@ class ClusterMap:
                     'aws_key',
                     'ssh_aws_tunnel',
                 ),
+            }
+
+            all_s5s.append(hn + ':' + str(p['ssh_aws_tunnel']))
+
+            yield {
+                'host': hn,
+                'serv': SocksProxy(p['socks_proxy'], all_s5s),
             }
 
             if False:
@@ -917,6 +971,7 @@ sys.modules['builtins'].SecondIP = SecondIP
 sys.modules['builtins'].DropBear2 = DropBear2
 sys.modules['builtins'].CI = CI
 sys.modules['builtins'].SshTunnel = SshTunnel
+sys.modules['builtins'].SocksProxy = SocksProxy
 
 
 def exec_into(*args, user=None, **kwargs):
@@ -1164,6 +1219,7 @@ def do(code):
         'minio': 8012,
         'minio_web': 8013,
         'ssh_aws_tunnel': 8014,
+        'socks_proxy': 8015,
         'proxy_http': 8080,
         'proxy_https': 8090,
     }
@@ -1189,6 +1245,7 @@ def do(code):
         'minio_console': 1018,
         'pf': 1019,
         'ssh_aws_tunnel': 1020,
+        'socks_proxy': 1021,
     }
 
     by_name = dict()
