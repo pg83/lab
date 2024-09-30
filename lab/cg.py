@@ -810,6 +810,18 @@ class CI:
             exec_into(*args)
 
 
+SSH_TUNNELS = [
+    {
+        'key': 'ssh_aws_tunnel',
+        'addr': 'ec2-user@13.50.197.102',
+    },
+    {
+        'key': 'ssh_pq_tunnel',
+        'addr': 'root@185.156.108.52',
+    },
+]
+
+
 class ClusterMap:
     def __init__(self, conf):
         self.conf = conf
@@ -857,17 +869,20 @@ class ClusterMap:
                 'serv': DropBear(h['nebula']['ip'], p['sshd']),
             }
 
-            yield {
-                'host': hn,
-                'serv': SshTunnel(
-                    '0.0.0.0:' + str(p['ssh_aws_tunnel']),
-                    'ec2-user@13.50.197.102',
-                    'aws_key',
-                    'ssh_aws_tunnel',
-                ),
-            }
+            for tun in SSH_TUNNELS:
+                k = tun['key']
 
-            all_s5s.append(hn + ':' + str(p['ssh_aws_tunnel']))
+                yield {
+                    'host': hn,
+                    'serv': SshTunnel(
+                        '0.0.0.0:' + str(p[k]),
+                        tun['addr'],
+                        'aws_key',
+                        k,
+                    ),
+                }
+
+                all_s5s.append(hn + ':' + str(p[k]))
 
             yield {
                 'host': hn,
@@ -1223,6 +1238,7 @@ def do(code):
         'minio_web': 8013,
         'ssh_aws_tunnel': 8014,
         'socks_proxy': 8015,
+        'ssh_pq_tunnel': 8016,
         'proxy_http': 8080,
         'proxy_https': 8090,
     }
@@ -1249,6 +1265,7 @@ def do(code):
         'pf': 1019,
         'ssh_aws_tunnel': 1020,
         'socks_proxy': 1021,
+        'ssh_pq_tunnel': 1022,
     }
 
     by_name = dict()
