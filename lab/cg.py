@@ -386,8 +386,6 @@ listen socks5
     bind :{port}
     mode tcp
     balance roundrobin
-    server server1 lab2.local:8014
-    server server2 lab3.local:8014
 '''
 
 
