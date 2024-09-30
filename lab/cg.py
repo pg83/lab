@@ -412,6 +412,8 @@ class SocksProxy:
         return '\n'.join(haproxy_conf_parts(self.p, self.a)).strip() + '\n'
 
     def run(self):
+        print(self.conf())
+
         with memfd('haproxy.conf') as path:
             with open(path, 'w') as f:
                 f.write(self.conf())
