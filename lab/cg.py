@@ -378,7 +378,7 @@ global
     maxconn 100
 
 defaults
-    timeout connect 5000
+    timeout connect 0
     timeout client 50000
     timeout server 50000
 
@@ -400,7 +400,7 @@ def haproxy_conf_parts(port, addrs):
 
 class SocksProxy:
     def __init__(self, port, addrs):
-        self.v = 1
+        self.v = 2
         self.p = port
         self.a = addrs
 
