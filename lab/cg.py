@@ -386,7 +386,7 @@ listen socks5
     bind :{port}
     mode tcp
     balance roundrobin
-    retries 4
+    retries 10
     option redispatch
 '''
 
@@ -395,12 +395,12 @@ def haproxy_conf_parts(port, addrs):
     yield HA_CONF.replace('{port}', str(port))
 
     for n, addr in enumerate(addrs):
-        yield f'    server server{n} {addr}'
+        yield f'    server server{n} {addr} check'
 
 
 class SocksProxy:
     def __init__(self, port, addrs):
-        self.v = 3
+        self.v = 4
         self.p = port
         self.a = addrs
 
