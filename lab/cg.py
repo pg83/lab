@@ -8,6 +8,7 @@ import json
 import shutil
 import pickle
 import base64
+import random
 import contextlib
 import subprocess
 import collections
@@ -450,6 +451,7 @@ class SshTunnel:
         os.chmod('key', 0o400)
 
         args = [
+            'timeout', str(int((random.random() + 0.5) * 200)) + 's',
             'ssh', '-q',
             '-o', 'StrictHostKeyChecking no',
             '-i', 'key',
