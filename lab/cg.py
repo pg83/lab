@@ -28,6 +28,22 @@ CI_MAP = {
 }
 
 
+SSH_TUNNELS = [
+    {
+        'key': 'ssh_aws_tunnel',
+        'addr': 'ec2-user@13.50.197.102',
+    },
+    {
+        'key': 'ssh_pq_tunnel',
+        'addr': 'root@185.156.108.52',
+    },
+    {
+        'key': 'ssh_oracle_tunnel',
+        'addr': 'ubuntu@130.61.161.3',
+    },
+]
+
+
 @contextlib.contextmanager
 def memfd(name):
     fd = os.memfd_create(name, flags=0)
@@ -810,22 +826,6 @@ class CI:
             ]
 
             exec_into(*args)
-
-
-SSH_TUNNELS = [
-    {
-        'key': 'ssh_aws_tunnel',
-        'addr': 'ec2-user@13.50.197.102',
-    },
-    {
-        'key': 'ssh_pq_tunnel',
-        'addr': 'root@185.156.108.52',
-    },
-    {
-        'key': 'ssh_pq_tunnel',
-        'addr': 'ubuntu@130.61.161.3',
-    },
-]
 
 
 class ClusterMap:
