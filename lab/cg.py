@@ -821,6 +821,10 @@ SSH_TUNNELS = [
         'key': 'ssh_pq_tunnel',
         'addr': 'root@185.156.108.52',
     },
+    {
+        'key': 'ssh_pq_tunnel',
+        'addr': 'ubuntu@130.61.161.3',
+    },
 ]
 
 
