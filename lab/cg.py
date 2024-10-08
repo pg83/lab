@@ -445,7 +445,7 @@ class SshTunnel:
         self.addr = addr
         self.keyn = keyn
         self._usr = user
-        self.v = 1
+        self.v = 2
 
     def name(self):
         return self._usr
