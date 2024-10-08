@@ -31,14 +31,17 @@ CI_MAP = {
 SSH_TUNNELS = [
     {
         'key': 'ssh_aws_tunnel',
+        'keyn': 'aws_key',
         'addr': 'ec2-user@13.50.197.102',
     },
     {
         'key': 'ssh_pq_tunnel',
+        'keyn': 'aws_key',
         'addr': 'root@185.156.108.52',
     },
     {
         'key': 'ssh_oracle_tunnel',
+        'keyn': 'ssh_oracle_tunnel',
         'addr': 'ubuntu@130.61.161.3',
     },
 ]
@@ -883,7 +886,7 @@ class ClusterMap:
                     'serv': SshTunnel(
                         '0.0.0.0:' + str(p[k]),
                         tun['addr'],
-                        'aws_key',
+                        tun['keyn'],
                         k,
                     ),
                 }
