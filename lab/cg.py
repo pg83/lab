@@ -40,9 +40,9 @@ SSH_TUNNELS = [
         'addr': 'root@185.156.108.52',
     },
     {
-        'key': 'ssh_oracle_tunnel',
-        'keyn': 'ssh_oracle_tunnel',
-        'addr': 'ubuntu@130.61.161.3',
+        'key': 'ssh_ampere_tunnel',
+        'keyn': 'ssh_ampere_tunnel',
+        'addr': 'ubuntu@138.2.175.102',
     },
 ]
 
@@ -1248,7 +1248,7 @@ def do(code):
         'ssh_aws_tunnel': 8014,
         'socks_proxy': 8015,
         'ssh_pq_tunnel': 8016,
-        'ssh_oracle_tunnel': 8017,
+        'ssh_ampere_tunnel': 8017,
         'proxy_http': 8080,
         'proxy_https': 8090,
     }
@@ -1276,7 +1276,7 @@ def do(code):
         'ssh_aws_tunnel': 1020,
         'socks_proxy': 1021,
         'ssh_pq_tunnel': 1022,
-        'ssh_oracle_tunnel': 1023,
+        'ssh_ampere_tunnel': 1023,
     }
 
     by_name = dict()
