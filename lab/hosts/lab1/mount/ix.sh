@@ -1,5 +1,6 @@
 {% extends '//die/proxy.sh' %}
 
+
 {% block install %}
 mkdir ${out}/bin
 

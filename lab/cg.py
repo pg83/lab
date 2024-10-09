@@ -14,10 +14,17 @@ import subprocess
 import collections
 
 
+DISABLE_ALL = [
+    'minio_1',
+    'minio_2',
+    'minio_3',
+]
+
+
 DISABLE = {
-    'lab1': ['minio_1', 'minio_2', 'minio_3', 'ci'],
-    'lab2': ['minio_1', 'minio_2', 'minio_3'],
-    'lab3': ['minio_1', 'minio_2', 'minio_3'],
+    'lab1': DISABLE_ALL + [],
+    'lab2': DISABLE_ALL + [],
+    'lab3': DISABLE_ALL + [],
 }
 
 
