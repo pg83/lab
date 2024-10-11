@@ -14,11 +14,7 @@ import subprocess
 import collections
 
 
-DISABLE_ALL = [
-    'minio_1',
-    'minio_2',
-    'minio_3',
-]
+DISABLE_ALL = []
 
 
 DISABLE = {
