@@ -36,16 +36,25 @@ SSH_TUNNELS = [
         'key': 'ssh_aws_tunnel',
         'keyn': 'aws_key',
         'addr': 'ec2-user@13.50.197.102',
+        'port': 22,
     },
     {
         'key': 'ssh_pq_tunnel',
         'keyn': 'aws_key',
         'addr': 'root@185.156.108.52',
+        'port': 22,
     },
     {
         'key': 'ssh_ampere_tunnel',
         'keyn': 'ssh_ampere_tunnel',
         'addr': 'ubuntu@138.2.175.102',
+        'port': 22,
+    },
+    {
+        'key': 'ssh_jopa_tunnel',
+        'keyn': 'ssh_jopa_tunnel',
+        'addr': 'root@home.7mind.io',
+        'port': 1489,
     },
 ]
 
@@ -446,11 +455,12 @@ class SocksProxy:
 
 
 class SshTunnel:
-    def __init__(self, port, addr, keyn, user):
+    def __init__(self, port, addr, keyn, user, rport):
         self.port = port
         self.addr = addr
         self.keyn = keyn
         self._usr = user
+        self.rport = rport
         self.v = 2
 
     def name(self):
@@ -475,6 +485,7 @@ class SshTunnel:
         args = [
             'timeout', str(int((random.random() + 0.5) * 200)) + 's',
             'ssh', '-q',
+            '-p', str(self.rport),
             '-o', 'StrictHostKeyChecking no',
             '-i', 'key',
             '-D', self.port,
@@ -891,6 +902,7 @@ class ClusterMap:
                         tun['addr'],
                         tun['keyn'],
                         k,
+                        tun['port'],
                     ),
                 }
 
@@ -1252,6 +1264,7 @@ def do(code):
         'socks_proxy': 8015,
         'ssh_pq_tunnel': 8016,
         'ssh_ampere_tunnel': 8017,
+        'ssh_jopa_tunnel': 8018,
         'proxy_http': 8080,
         'proxy_https': 8090,
     }
@@ -1280,6 +1293,7 @@ def do(code):
         'socks_proxy': 1021,
         'ssh_pq_tunnel': 1022,
         'ssh_ampere_tunnel': 1023,
+        'ssh_jopa_tunnel': 1024,
     }
 
     by_name = dict()
