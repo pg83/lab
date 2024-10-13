@@ -50,12 +50,6 @@ SSH_TUNNELS = [
         'addr': 'ubuntu@138.2.175.102',
         'port': 22,
     },
-    {
-        'key': 'ssh_jopa_tunnel',
-        'keyn': 'ssh_jopa_tunnel',
-        'addr': 'root@home.7mind.io',
-        'port': 22,
-    },
 ]
 
 
