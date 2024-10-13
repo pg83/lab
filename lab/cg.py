@@ -54,7 +54,7 @@ SSH_TUNNELS = [
         'key': 'ssh_jopa_tunnel',
         'keyn': 'ssh_jopa_tunnel',
         'addr': 'root@home.7mind.io',
-        'port': 1489,
+        'port': 22,
     },
 ]
 
