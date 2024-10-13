@@ -916,7 +916,7 @@ class ClusterMap:
             for tun in SSH_TUNNELS:
                 k = tun['key']
 
-                if k.get('disabled', False):
+                if tun.get('disabled', False):
                     continue
 
                 yield {
