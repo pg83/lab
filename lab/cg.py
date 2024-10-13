@@ -839,6 +839,25 @@ class CI:
             exec_into(*args)
 
 
+class CO2Mon:
+    def __init__(self, port):
+        self.port = port
+
+    def name(self):
+        return 'co2_mon'
+
+    def user(self):
+        return 'root'
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/co2mon',
+        }
+
+    def run(self):
+        exec_into('co2mond', '-P', f'0.0.0.0:{self.port}')
+
+
 class ClusterMap:
     def __init__(self, conf):
         self.conf = conf
@@ -983,6 +1002,11 @@ class ClusterMap:
                 'serv': SftpD(p['sftp_d'], tp),
             }
 
+            yield {
+                'host': hn,
+                'serv': CO2Mon(p['co2_mon']),
+            }
+
         for hn, path in CI_MAP.items():
             yield {
                 'host': hn,
@@ -1008,6 +1032,7 @@ sys.modules['builtins'].DropBear2 = DropBear2
 sys.modules['builtins'].CI = CI
 sys.modules['builtins'].SshTunnel = SshTunnel
 sys.modules['builtins'].SocksProxy = SocksProxy
+sys.modules['builtins'].CO2Mon = CO2Mon
 
 
 def exec_into(*args, user=None, **kwargs):
@@ -1259,6 +1284,7 @@ def do(code):
         'ssh_pq_tunnel': 8016,
         'ssh_ampere_tunnel': 8017,
         'ssh_jopa_tunnel': 8018,
+        'co2_mon': 8019,
         'proxy_http': 8080,
         'proxy_https': 8090,
     }
