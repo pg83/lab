@@ -51,6 +51,7 @@ SSH_TUNNELS = [
         'port': 22,
     },
     {
+        'disabled': True,
         'key': 'ssh_jopa_tunnel',
         'keyn': 'ssh_jopa_tunnel',
         'addr': 'root@home.7mind.io',
@@ -914,6 +915,9 @@ class ClusterMap:
 
             for tun in SSH_TUNNELS:
                 k = tun['key']
+
+                if k.get('disabled', False):
+                    continue
 
                 yield {
                     'host': hn,
