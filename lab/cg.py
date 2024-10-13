@@ -855,7 +855,7 @@ class CO2Mon:
         }
 
     def run(self):
-        exec_into('co2mond', '-P', f'0.0.0.0:{self.port}')
+        exec_into('co2mond')
 
 
 class ClusterMap:
