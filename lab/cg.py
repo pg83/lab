@@ -16,6 +16,7 @@ import collections
 
 DISABLE_ALL = [
     'ssh_jopa_tunnel',
+    'ssh_ampere_tunnel',
 ]
 
 
