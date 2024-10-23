@@ -16,7 +16,6 @@ import collections
 
 DISABLE_ALL = [
     'ssh_jopa_tunnel',
-    'ssh_ampere_tunnel',
 ]
 
 
@@ -435,7 +434,7 @@ def haproxy_conf_parts(port, addrs):
 
 class SocksProxy:
     def __init__(self, port, addrs):
-        self.v = 4
+        self.v = 5
         self.p = port
         self.a = addrs
 
