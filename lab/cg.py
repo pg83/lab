@@ -434,7 +434,7 @@ def haproxy_conf_parts(port, addrs):
 
 class SocksProxy:
     def __init__(self, port, addrs):
-        self.v = 5
+        self.v = 6
         self.p = port
         self.a = addrs
 
@@ -447,13 +447,13 @@ class SocksProxy:
         return '\n'.join(haproxy_conf_parts(self.p, self.a)).strip() + '\n'
 
     def run(self):
-        print(self.conf())
-
         with memfd('haproxy.conf') as path:
             with open(path, 'w') as f:
                 f.write(self.conf())
 
-            exec_into('haproxy', '-f', path)
+            tout = int((random.random() + 0.5) * 200)
+
+            exec_into('timeout', f'{tout}s', 'haproxy', '-f', path)
 
 
 class SshTunnel:
