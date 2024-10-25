@@ -14,5 +14,5 @@ bin/fixits(delay=10)
 bin/kernel/gengrub(kernel_boot_flags=rootdelay=20)
 
 set/fs
-set/stalix/server
+set/stalix/server(fetcher_socks5_proxy=localhost:8015)
 {% endblock %}
