@@ -437,6 +437,7 @@ class SocksProxy:
         self.v = 6
         self.p = port
         self.a = addrs
+        self.t = 400
 
     def pkgs(self):
         yield {
@@ -451,7 +452,7 @@ class SocksProxy:
             with open(path, 'w') as f:
                 f.write(self.conf())
 
-            tout = int((random.random() + 0.5) * 200)
+            tout = int((random.random() + 0.5) * self.t)
 
             exec_into('timeout', f'{tout}s', 'haproxy', '-f', path)
 
@@ -463,7 +464,7 @@ class SshTunnel:
         self.keyn = keyn
         self._usr = user
         self.rport = rport
-        self.v = 2
+        self.tout = 400
 
     def name(self):
         return self._usr
@@ -484,8 +485,10 @@ class SshTunnel:
 
         os.chmod('key', 0o400)
 
+        tout = int((random.random() + 0.5) * self.tout)
+
         args = [
-            'timeout', str(int((random.random() + 0.5) * 200)) + 's',
+            'timeout', str(tout) + 's',
             'ssh', '-q',
             '-p', str(self.rport),
             '-o', 'StrictHostKeyChecking no',
