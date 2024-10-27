@@ -943,7 +943,7 @@ class ClusterMap:
                 'serv': SocksProxy(p['socks_proxy'], all_s5s),
             }
 
-            if True:
+            if False:
                 yield {
                     'host': hn,
                     'serv': DropBear2(23),
