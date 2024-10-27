@@ -694,7 +694,7 @@ class DropBear2(DropBear):
 SECOND_IP = '''
 set -x
 ip addr del {addr} dev eth0
-timeout 1000s etcdctl lock {addr} /bin/sh -- -c "ip addr add {addr} dev eth0"
+timeout 1000s etcdctl lock {name} /bin/sh -- -c "ip addr add {addr} dev eth0"
 '''
 
 
@@ -702,6 +702,7 @@ class SecondIP:
     def __init__(self, addr):
         self.addr = addr
         self.script = SECOND_IP
+        self.v = 1
 
     def name(self):
         return 'ip_' + self.addr.replace('.', '_').replace('/', '_')
@@ -710,9 +711,13 @@ class SecondIP:
         return 'root'
 
     def run(self):
+        s = self.script
+        s = s.replace('{addr}', self.addr)
+        s = s.replace('{name}', self.name())
+
         with memfd('script') as fn:
             with open(fn, 'w') as f:
-                f.write(self.script.replace('{addr}', self.addr))
+                f.write(s)
 
             exec_into('/bin/sh', fn)
 
