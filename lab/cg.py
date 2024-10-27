@@ -892,6 +892,11 @@ class ClusterMap:
 
             yield {
                 'host': hn,
+                'serv': CO2Mon(p['co2_mon']),
+            }
+
+            yield {
+                'host': hn,
                 'serv': BalancerHttp(p['proxy_http'], bal_map),
             }
 
@@ -1012,11 +1017,6 @@ class ClusterMap:
             yield {
                 'host': hn,
                 'serv': SftpD(p['sftp_d'], tp),
-            }
-
-            yield {
-                'host': hn,
-                'serv': CO2Mon(p['co2_mon']),
             }
 
         for hn, path in CI_MAP.items():
