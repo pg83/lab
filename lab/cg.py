@@ -871,6 +871,9 @@ class CO2Mon:
 
 
 class MirrorFetch:
+    def __init__(self):
+        self.v = 1
+
     def pkgs(self):
         yield {
             'pkg': 'bin/mirror/fetch',
