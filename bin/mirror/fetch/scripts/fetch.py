@@ -7,6 +7,7 @@ import subprocess
 
 import urllib.request as ur
 
+os.environ['HOME'] = os.getcwd()
 
 PART = '''
 {sha}.touch:
@@ -15,7 +16,6 @@ PART = '''
 	cas {sha}
 	rm {sha}
 	touch {sha}.touch
-
 
 all: {sha}.touch
 
@@ -28,6 +28,8 @@ def make_part(u):
 
 
 def it_parts():
+    yield '.ONESHELL'
+
     for u in ur.urlopen('https://raw.githubusercontent.com/pg83/ix/main/pkgs/die/scripts/urls.txt').read().decode().split('\n'):
         yield make_part(u)
 
