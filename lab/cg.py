@@ -870,6 +870,16 @@ class CO2Mon:
         exec_into('co2mond')
 
 
+class MirrorFetch:
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/mirror/fetch',
+        }
+
+    def run(self):
+        exec_into('cache_ix_sources', os.getcwd())
+
+
 class ClusterMap:
     def __init__(self, conf):
         self.conf = conf
@@ -893,6 +903,11 @@ class ClusterMap:
             yield {
                 'host': hn,
                 'serv': CO2Mon(p['co2_mon']),
+            }
+
+            yield {
+                'host': hn,
+                'serv': MirrorFetch(),
             }
 
             yield {
@@ -943,12 +958,6 @@ class ClusterMap:
                 'serv': SocksProxy(p['socks_proxy'], all_s5s),
             }
 
-            if False:
-                yield {
-                    'host': hn,
-                    'serv': DropBear2(23),
-                }
-
             mio_cmap = 'http://lab{1...3}.eth{1...3}/var/mnt/minio/my/data'
 
             def mio_srv(i):
@@ -970,12 +979,6 @@ class ClusterMap:
                 'host': hn,
                 'serv': MinioConsole(mc_host, mc_port, mc_serv),
             }
-
-            if False:
-                yield {
-                    'host': hn,
-                    'serv': Ssh3(p['ssh_3']),
-                }
 
             yield {
                 'host': hn,
@@ -1045,6 +1048,7 @@ sys.modules['builtins'].CI = CI
 sys.modules['builtins'].SshTunnel = SshTunnel
 sys.modules['builtins'].SocksProxy = SocksProxy
 sys.modules['builtins'].CO2Mon = CO2Mon
+sys.modules['builtins'].MirrorFetch = MirrorFetch
 
 
 def exec_into(*args, user=None, **kwargs):
@@ -1326,6 +1330,7 @@ def do(code):
         'ssh_pq_tunnel': 1022,
         'ssh_ampere_tunnel': 1023,
         'ssh_jopa_tunnel': 1024,
+        'mirror_fetch': 1025,
     }
 
     by_name = dict()
