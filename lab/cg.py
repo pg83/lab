@@ -441,7 +441,7 @@ class SocksProxy:
 
     def pkgs(self):
         yield {
-            'pkg': 'bin/haproxy',
+            'pkg': 'bin/haproxy/ext',
         }
 
     def conf(self):
