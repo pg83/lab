@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import os
 import sys
 import hashlib
 import subprocess
@@ -31,9 +30,6 @@ def it_parts():
 
     for u in ur.urlopen('https://raw.githubusercontent.com/pg83/ix/main/pkgs/die/scripts/urls.txt').read().decode().split('\n'):
         yield make_part(u)
-
-os.environ['HOME'] = os.getcwd()
-os.environ['TMPDIR'] = os.getcwd()
 
 cmd = ''.join(it_parts())
 

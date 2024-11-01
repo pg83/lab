@@ -886,7 +886,7 @@ class MirrorFetch:
         }
 
     def run(self):
-        exec_into('cache_ix_sources')
+        exec_into('cache_ix_sources', HOME=os.getcwd(), TMPDIR=os.getcwd())
 
 
 class ClusterMap:
