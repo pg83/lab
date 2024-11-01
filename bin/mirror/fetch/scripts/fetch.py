@@ -33,6 +33,7 @@ def it_parts():
         yield make_part(u)
 
 os.environ['HOME'] = os.getcwd()
+os.environ['TMPDIR'] = os.getcwd()
 
 cmd = ''.join(it_parts())
 
