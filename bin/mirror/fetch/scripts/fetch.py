@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 
 import sys
+import time
 import hashlib
 import subprocess
 
 import urllib.request as ur
+
+
+time.sleep(100)
 
 
 PART = '''
