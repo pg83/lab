@@ -878,7 +878,7 @@ class CO2Mon:
 
 class MirrorFetch:
     def __init__(self):
-        self.v = 1
+        self.v = 2
 
     def pkgs(self):
         yield {
@@ -886,7 +886,7 @@ class MirrorFetch:
         }
 
     def run(self):
-        exec_into('cache_ix_sources', os.getcwd())
+        exec_into('cache_ix_sources')
 
 
 class ClusterMap:

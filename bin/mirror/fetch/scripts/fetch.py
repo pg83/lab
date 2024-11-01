@@ -7,6 +7,7 @@ import subprocess
 
 import urllib.request as ur
 
+
 PART = '''
 {sha}.touch:
 	rm -rf {sha}
@@ -31,16 +32,8 @@ def it_parts():
     for u in ur.urlopen('https://raw.githubusercontent.com/pg83/ix/main/pkgs/die/scripts/urls.txt').read().decode().split('\n'):
         yield make_part(u)
 
-
-where = sys.argv[1]
-
-try:
-    os.makedirs(where)
-except OSError:
-    pass
-
-os.environ['HOME'] = where
+os.environ['HOME'] = os.getcwd()
 
 cmd = ''.join(it_parts())
 
-subprocess.run(['timeout', '1h', 'make', '-k', '-j', '10', '-C', where, '-f', '/proc/self/fd/0', 'all'], input=cmd.encode(), check=True)
+subprocess.run(['timeout', '1h', 'make', '-k', '-j', '10', '-f', '/proc/self/fd/0', 'all'], input=cmd.encode(), check=True)
