@@ -7,6 +7,7 @@
 lab/etc/env
 lab/etc/keys
 lab/etc/hosts
+lab/etc/certs
 
 {% for d in hm.disabled %}
 lab/etc/stopper(srv_dir={{d}})
