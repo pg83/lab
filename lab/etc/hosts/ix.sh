@@ -1,4 +1,4 @@
-{% extends '//die/proxy.sh' %}
+{% extends '//die/gen.sh' %}
 
 {% set cm = cluster_map | des %}
 
