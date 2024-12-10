@@ -8,6 +8,8 @@ cat << EOF > ${out}/bin/ci_cycle
 
 set -xue
 
+ulimit -a
+
 export PATH=/bin:/ix/realm/boot/bin
 export IX_ROOT={{wd}}/ix_root
 export IX_EXEC_KIND=local

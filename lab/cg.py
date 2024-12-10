@@ -811,6 +811,8 @@ mkdir -p {wd}/ix_root
 rm -rf {wd}/ix_root/trash {wd}/ix_root/build
 chown {user}:{user} {wd}/ix_root
 chown {user}:{user} /var/run/{user}
+ulimit -s unlimited
+ulimit -a
 exec su-exec {user} /bin/ci_cycle
 '''
 
