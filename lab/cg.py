@@ -45,8 +45,8 @@ SSH_TUNNELS = [
     },
     {
         'key': 'ssh_pq_tunnel',
-        'keyn': 'aws_key',
-        'addr': 'root@185.156.108.52',
+        'keyn': 'pq_key',
+        'addr': 'root@45.12.146.58',
         'port': 22,
     },
     {
