@@ -19,7 +19,8 @@ sleep 10
 gpull https://github.com/pg83/ix ix
 cd ix
 rm -rf \${IX_ROOT}/build \${IX_ROOT}/trash
-./ix build bld/all {{ci_targets}}
+./ix build bld/all
+./ix build {{ci_targets}} --jail=1 --seed=1
 
 timeout 60s etcdctl watch --prefix /git/logs/git_ci | gnugrep --line-buffered 'PUT' | head -n 1
 EOF
