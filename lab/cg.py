@@ -16,9 +16,6 @@ import collections
 
 DISABLE_ALL = [
     'ssh_jopa_tunnel',
-    'minio_1',
-    'minio_2',
-    'minio_3',
 ]
 
 
