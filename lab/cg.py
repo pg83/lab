@@ -501,15 +501,6 @@ class SshTunnel:
         exec_into(*args)
 
 
-TORRENT_PREPARE = '''
-set -xue
-btrfs device scan
-btrfs device scan /dev/sda /dev/sdb /dev/sdc
-mkdir -p /var/mnt/torrent
-mount /dev/sda /var/mnt/torrent
-'''
-
-
 class SftpD:
     def __init__(self, port, path):
         self.port = port
@@ -524,8 +515,6 @@ class SftpD:
         }
 
     def run(self):
-        subprocess.run(['/bin/sh'], input=TORRENT_PREPARE.encode())
-
         with multi(memfd("conf"), memfd("rsa"), memfd("ecdsa"), memfd("ed")) as (conf, rsa, ecdsa, ed):
             cfg = {
                 'sftpd': {
@@ -1024,14 +1013,6 @@ class ClusterMap:
                     'host': hn,
                     'serv': NebulaLh(lh['name'], lh_port, neb_map, p['nebula_lh_prom'], pm),
                 }
-
-        tp = '/var/mnt/torrent/profiles/qBittorrent/downloads'
-
-        for hn in ['lab2']:
-            yield {
-                'host': hn,
-                'serv': SftpD(p['sftp_d'], tp),
-            }
 
         for hn, path in CI_MAP.items():
             yield {
