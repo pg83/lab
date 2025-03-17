@@ -792,6 +792,64 @@ class Etcd:
         exec_into(*args)
 
 
+class EtcdPrivate:
+    def __init__(self, peers, port_peer, port_client, hostname, etcid, addr, user_name):
+        self.etcid = etcid
+        self.peers = peers
+        self.port_peer = port_peer
+        self.port_client = port_client
+        self.hostname = hostname
+        self.addr = addr
+        self.user_name = user_name
+
+    def name(self):
+        return self.user_name
+
+    def user(self):
+        return self.user_name
+
+    def prepare(self):
+        make_dirs(f'/home/{self.user_name}', owner=self.user_name)
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/etcd/server',
+        }
+
+    @property
+    def data_dir(self):
+        return f'/home/{self.user_name}/{self.etcid}'
+
+    def it_all(self):
+        for x in self.peers:
+            yield f'{x}=http://{x}:{self.port_peer}'
+
+    def run(self):
+        os.makedirs(self.data_dir, exist_ok=True)
+
+        args = [
+            'etcd',
+            '--name', self.hostname,
+            '--data-dir', self.data_dir,
+            '--initial-advertise-peer-urls',
+            f'http://{self.hostname}:{self.port_peer}',
+            '--listen-peer-urls',
+            f'http://{self.addr}:{self.port_peer}',
+            '--listen-client-urls',
+            f'http://{self.addr}:{self.port_client}',
+            '--advertise-client-urls',
+            f'http://{self.hostname}:{self.port_client}',
+            '--initial-cluster-token',
+            self.etcid,
+            '--initial-cluster',
+            ','.join(self.it_all()),
+            '--initial-cluster-state',
+            'existing',
+        ]
+
+        exec_into(*args)
+
+
 CI_SCRIPT = '''
 set -xue
 mkdir -p {wd}
@@ -891,6 +949,7 @@ class ClusterMap:
         bal_map = []
         all_etc = []
         all_s5s = []
+        all_etc_private = []
 
         for h in self.conf['hosts']:
             hn = h['hostname']
@@ -930,6 +989,21 @@ class ClusterMap:
             yield {
                 'host': hn,
                 'serv': Etcd(all_etc, p['etcd_peer'], p['etcd_client'], hn),
+            }
+
+            all_etc_private.append(h['nebula']['hostname'])
+
+            yield {
+                'host': hn,
+                'serv': EtcdPrivate(
+                    all_etc_private,
+                    p['etcd_peer_private'],
+                    p['etcd_client_private'],
+                    h['nebula']['hostname'],
+                    'etcd_private',
+                    h['nebula']['ip'],
+                    'etcd_private',
+                ),
             }
 
             yield {
@@ -1033,6 +1107,7 @@ sys.modules['builtins'].MinIO = MinIO
 sys.modules['builtins'].DropBear = DropBear
 sys.modules['builtins'].BalancerHttp = BalancerHttp
 sys.modules['builtins'].Etcd = Etcd
+sys.modules['builtins'].EtcdPrivate = EtcdPrivate
 sys.modules['builtins'].MinioConsole = MinioConsole
 sys.modules['builtins'].SecondIP = SecondIP
 sys.modules['builtins'].DropBear2 = DropBear2
@@ -1226,6 +1301,7 @@ def gen_host(n):
         'disabled': ['dhcpcd'],
         'hostname': f'lab{n}',
         'nebula': {
+            'hostname': f'lab{n}.nebula',
             'ip': '192.168.100.' + str(15 + n),
             'lh': {
                 'name': f'lh{n}',
@@ -1295,6 +1371,8 @@ def do(code):
         'co2_mon': 8019,
         'proxy_http': 8080,
         'proxy_https': 8090,
+        'etcd_client_private': 8020,
+        'etcd_peer_private': 8021,
     }
 
     users = {
@@ -1323,6 +1401,7 @@ def do(code):
         'ssh_ampere_tunnel': 1023,
         'ssh_jopa_tunnel': 1024,
         'mirror_fetch': 1025,
+        'etcd_private': 1026,
     }
 
     by_name = dict()
