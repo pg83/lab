@@ -844,7 +844,7 @@ class EtcdPrivate:
             '--initial-cluster',
             ','.join(self.it_all()),
             '--initial-cluster-state',
-            'existing',
+            'new',
         ]
 
         exec_into(*args)
