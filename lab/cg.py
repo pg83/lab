@@ -1004,7 +1004,7 @@ class ClusterMap:
                     all_etc_private,
                     p['etcd_peer_private'],
                     p['etcd_client_private'],
-                    nb['hostname'],
+                    hn,
                     'secrets',
                     nb['ip'],
                     'etcd_private',
