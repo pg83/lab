@@ -822,7 +822,7 @@ class EtcdPrivate:
 
     def it_all(self):
         for x in self.peers:
-            yield f'{x}=http://{x}:{self.port_peer}'
+            yield f'{x["hostname"]}=http://{x["ip"]}:{self.port_peer}'
 
     def run(self):
         os.makedirs(self.data_dir, exist_ok=True)
@@ -832,13 +832,13 @@ class EtcdPrivate:
             '--name', self.hostname,
             '--data-dir', self.data_dir,
             '--initial-advertise-peer-urls',
-            f'http://{self.hostname}:{self.port_peer}',
+            f'http://{self.addr}:{self.port_peer}',
             '--listen-peer-urls',
             f'http://{self.addr}:{self.port_peer}',
             '--listen-client-urls',
             f'http://{self.addr}:{self.port_client}',
             '--advertise-client-urls',
-            f'http://{self.hostname}:{self.port_client}',
+            f'http://{self.addr}:{self.port_client}',
             '--initial-cluster-token',
             self.etcid,
             '--initial-cluster',
@@ -991,7 +991,12 @@ class ClusterMap:
                 'serv': Etcd(all_etc, p['etcd_peer'], p['etcd_client'], hn),
             }
 
-            all_etc_private.append(h['nebula']['hostname'])
+            nb = h['nebula']
+
+            all_etc_private.append({
+                'hostname': hn,
+                'ip': nb['ip'],
+            })
 
             yield {
                 'host': hn,
@@ -999,16 +1004,16 @@ class ClusterMap:
                     all_etc_private,
                     p['etcd_peer_private'],
                     p['etcd_client_private'],
-                    h['nebula']['hostname'],
-                    'etcd_private',
-                    h['nebula']['ip'],
+                    nb['hostname'],
+                    'secrets',
+                    nb['ip'],
                     'etcd_private',
                 ),
             }
 
             yield {
                 'host': hn,
-                'serv': DropBear(h['nebula']['ip'], p['sshd']),
+                'serv': DropBear(nb['ip'], p['sshd']),
             }
 
             for tun in SSH_TUNNELS:
@@ -1045,7 +1050,7 @@ class ClusterMap:
                     'serv': m,
                 }
 
-            mc_host = h['nebula']['ip']
+            mc_host = nb['ip']
             mc_port = p['minio_web']
             mc_serv = 'http://' + minios[0].addr
 
