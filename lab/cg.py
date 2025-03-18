@@ -855,8 +855,16 @@ set -xue
 mkdir -p {wd}
 /bin/mount_ci {wd}
 mkdir -p {wd}/ix_root
-rm -rf {wd}/ix_root/trash {wd}/ix_root/build
 chown {user}:{user} {wd}/ix_root
+mkdir -p {wd}/tmpfs
+mount -t tmpfs tmpfs {wd}/tmpfs
+mkdir {wd}/tmpfs/trash
+chown {user}:{user} {wd}/tmpfs/trash
+mkdir {wd}/tmpfs/build
+chown {user}:{user} {wd}/tmpfs/build
+rm -rf {wd}/ix_root/trash {wd}/ix_root/build
+ln -s ../tmpfs/build {wd}/ix_root/build
+ln -s ../tmpfs/trash {wd}/ix_root/trash
 chown {user}:{user} /var/run/{user}
 ulimit -s unlimited
 ulimit -a
