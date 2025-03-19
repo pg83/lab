@@ -19,7 +19,7 @@ def get_secret(path):
     for f in [get_secret_1, get_secret_2]:
         try:
             if res := f(path):
-                return ret
+                return res
         except Exception as e:
             print(e, file=sys.stderr)
 
