@@ -13,6 +13,8 @@ import contextlib
 import subprocess
 import collections
 
+import urllib.request as ur
+
 
 DISABLE_ALL = [
     'ssh_jopa_tunnel',
@@ -245,9 +247,9 @@ NEBULA = {
 
 
 def get_key_new(k):
-    print(k, file=sys.stderr)
+    url = 'http://localhost:8022/' + k
 
-    return ''
+    return ur.urlopen(url.replace('//', '/')).read()
 
 
 def get_key(k):
