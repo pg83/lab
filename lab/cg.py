@@ -912,6 +912,50 @@ class CI:
             exec_into(*args)
 
 
+SECRETS_SCRIPT = '''
+set -xue
+mount -t efivarfs none -o ro /sys/firmware/efi/efivars
+chown {user}:{user} /var/run/{user}
+exec su-exec {user} /bin/ix_serve_secrets {port}
+'''
+
+
+class Secrets:
+    def __init__(self, port):
+        self.port = port
+
+    def name(self):
+        return 'secrets'
+
+    def users(self):
+        return [
+            'root',
+            self.name(),
+        ]
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/secrets',
+        }
+
+    def run(self):
+        s = SECRETS_SCRIPT
+
+        s = s.replace('{user}', self.name())
+        s = s.replace('{port}', str(self.port))
+
+        with memfd('script') as ss:
+            with open(ss, 'w') as f:
+                f.write(s)
+
+            args = [
+                '/bin/unshare', '-m',
+                '/bin/sh', ss
+            ]
+
+            exec_into(*args)
+
+
 class CO2Mon:
     def __init__(self, port):
         self.v = 1
@@ -969,6 +1013,11 @@ class ClusterMap:
             yield {
                 'host': hn,
                 'serv': CO2Mon(p['co2_mon']),
+            }
+
+            yield {
+                'host': hn,
+                'serv': Secrets(p['secrets']),
             }
 
             yield {
@@ -1128,6 +1177,7 @@ sys.modules['builtins'].SshTunnel = SshTunnel
 sys.modules['builtins'].SocksProxy = SocksProxy
 sys.modules['builtins'].CO2Mon = CO2Mon
 sys.modules['builtins'].MirrorFetch = MirrorFetch
+sys.modules['builtins'].Secrets = Secrets
 
 
 def exec_into(*args, user=None, **kwargs):
@@ -1385,6 +1435,7 @@ def do(code):
         'proxy_https': 8090,
         'etcd_client_private': 8020,
         'etcd_peer_private': 8021,
+        'secrets': 8022,
     }
 
     users = {
@@ -1414,6 +1465,7 @@ def do(code):
         'ssh_jopa_tunnel': 1024,
         'mirror_fetch': 1025,
         'etcd_private': 1026,
+        'secrets': 1027,
     }
 
     by_name = dict()
