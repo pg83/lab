@@ -857,6 +857,7 @@ mkdir -p {wd}
 /bin/mount_ci {wd}
 mkdir -p {wd}/ix_root
 chown {user}:{user} {wd}/ix_root
+rm -rf {wd}/ix_root/tmpfs
 rm -rf {wd}/ix_root/trash
 mkdir {wd}/ix_root/trash
 chown {user}:{user} {wd}/ix_root/trash
