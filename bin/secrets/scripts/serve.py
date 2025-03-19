@@ -7,7 +7,9 @@ import http.server as hs
 
 
 def get_secret_1(path):
-    with open(path.replace('/', '_').replace('.', '_').replace('_neb', 'neb'), 'rb') as f:
+    path = path.replace('/', '_').replace('.', '_').replace('_neb', 'neb')
+
+    with open('/sys/firmware/efi/efivars/' + path + '-f299ef14-61d1-4bf0-bfbc-565af88df0c9', 'rb') as f:
         return f.read()[4:]
 
 
