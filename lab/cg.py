@@ -922,6 +922,7 @@ exec su-exec {user} /bin/ix_serve_secrets {port}
 
 class Secrets:
     def __init__(self, port):
+        self.script = SECRETS_SCRIPT
         self.port = port
 
     def name(self):
@@ -939,7 +940,7 @@ class Secrets:
         }
 
     def run(self):
-        s = SECRETS_SCRIPT
+        s = self.script
 
         s = s.replace('{user}', self.name())
         s = s.replace('{port}', str(self.port))
