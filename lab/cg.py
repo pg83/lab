@@ -244,7 +244,19 @@ NEBULA = {
 }
 
 
+def get_key_new(k):
+    print(k, file=sys.stderr)
+
+    return ''
+
+
 def get_key(k):
+    try:
+        if res := get_key_new(k):
+            return res
+    except Exception as e:
+        pass
+
     cmd = ['etcdctl', 'get', '--print-value-only', k]
 
     return subprocess.check_output(cmd)
