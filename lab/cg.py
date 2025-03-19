@@ -852,12 +852,18 @@ class EtcdPrivate:
 
 CI_SCRIPT = '''
 set -xue
+chown {user}:{user} /var/run/{user}
 mkdir -p {wd}
 /bin/mount_ci {wd}
 mkdir -p {wd}/ix_root
-rm -rf {wd}/ix_root/trash {wd}/ix_root/build
 chown {user}:{user} {wd}/ix_root
-chown {user}:{user} /var/run/{user}
+rm -rf {wd}/ix_root/trash
+mkdir {wd}/ix_root/trash
+chown {user}:{user} {wd}/ix_root/trash
+rm -rf {wd}/ix_root/build
+mkdir {wd}/ix_root/build
+chown {user}:{user} {wd}/ix_root/build
+ls -la {wd}/ix_root
 ulimit -s unlimited
 ulimit -a
 exec su-exec {user} /bin/ci_cycle
