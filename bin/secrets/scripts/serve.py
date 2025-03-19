@@ -12,7 +12,7 @@ def get_secret_1(path):
 
 
 def get_secret_2(path):
-    return subprocess.check_output(['etcdctl', 'get', '--print-value-only'])
+    return subprocess.check_output(['etcdctl', 'get', '--print-value-only', path])
 
 
 def get_secret(path):
