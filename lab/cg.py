@@ -257,7 +257,7 @@ def get_key(k):
         if res := get_key_new(k):
             return res
     except Exception as e:
-        pass
+        print(e, file=sys.stderr)
 
     cmd = ['etcdctl', 'get', '--print-value-only', k]
 
