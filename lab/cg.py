@@ -247,9 +247,7 @@ NEBULA = {
 
 
 def get_key_new(k):
-    url = 'http://localhost:8022/' + k
-
-    return ur.urlopen(url.replace('//', '/')).read()
+    return ur.urlopen('http://localhost:8022' + k).read()
 
 
 def get_key(k):
