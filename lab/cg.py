@@ -38,25 +38,25 @@ CI_MAP = {
 SSH_TUNNELS = [
     {
         'key': 'ssh_aws_tunnel',
-        'keyn': 'aws_key',
+        'keyn': '/aws_key',
         'addr': 'ec2-user@13.50.197.102',
         'port': 22,
     },
     {
         'key': 'ssh_pq_tunnel',
-        'keyn': 'pq_key',
+        'keyn': '/pq_key',
         'addr': 'root@45.12.146.58',
         'port': 22,
     },
     {
         'key': 'ssh_ampere_tunnel',
-        'keyn': 'ssh_ampere_tunnel',
+        'keyn': '/ssh_ampere_tunnel',
         'addr': 'ubuntu@138.2.175.102',
         'port': 22,
     },
     {
         'key': 'ssh_jopa_tunnel',
-        'keyn': 'ssh_jopa_tunnel',
+        'keyn': '/ssh_jopa_tunnel',
         'addr': 'root@home.7mind.io',
         'port': 22,
     },
