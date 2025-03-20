@@ -6,6 +6,9 @@ import subprocess
 import http.server as hs
 
 
+CACHE = {}
+
+
 def get_secret_1(path):
     path = path.replace('/', '_').replace('.', '_').replace('_neb', 'neb')
 
@@ -17,13 +20,19 @@ def get_secret_2(path):
     return subprocess.check_output(['etcdctl', 'get', '--print-value-only', path])
 
 
+def get_secret_3(path):
+    return CACHE[path]
+
+
 def get_secret(path):
-    for f in [get_secret_1, get_secret_2]:
+    for f in [get_secret_1, get_secret_2, get_secret_3]:
         try:
             if res := f(path):
+                CACHE[path] = res
+
                 return res
         except Exception as e:
-            print(e, file=sys.stderr)
+            print(f'while get {path}: {e}', file=sys.stderr)
 
     raise Exception(f'no such secret {path}')
 
