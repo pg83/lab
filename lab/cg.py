@@ -246,20 +246,8 @@ NEBULA = {
 }
 
 
-def get_key_new(k):
-    return ur.urlopen('http://localhost:8022' + k).read()
-
-
 def get_key(k):
-    try:
-        if res := get_key_new(k):
-            return res
-    except Exception as e:
-        print(e, file=sys.stderr)
-
-    cmd = ['etcdctl', 'get', '--print-value-only', k]
-
-    return subprocess.check_output(cmd)
+    return ur.urlopen('http://localhost:8022' + k).read()
 
 
 class Nebula:
