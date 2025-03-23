@@ -742,56 +742,6 @@ def it_nebula_reals(lh, h, port):
         yield n['ip'], port
 
 
-class Etcd:
-    def __init__(self, peers, port_peer, port_client, hostname):
-        self.etcid = 'etcd-cluster-2'
-        self.peers = peers
-        self.port_peer = port_peer
-        self.port_client = port_client
-        self.hostname = hostname
-
-    def prepare(self):
-        make_dirs('/home/etcd', owner='etcd')
-
-    def pkgs(self):
-        yield {
-            'pkg': 'bin/etcd/server',
-        }
-
-    @property
-    def data_dir(self):
-        return f'/home/etcd/{self.etcid}'
-
-    def it_all(self):
-        for x in self.peers:
-            yield f'{x}=http://{x}:{self.port_peer}'
-
-    def run(self):
-        os.makedirs(self.data_dir, exist_ok=True)
-
-        args = [
-            'etcd',
-            '--name', self.hostname,
-            '--data-dir', self.data_dir,
-            '--initial-advertise-peer-urls',
-            f'http://{self.hostname}:{self.port_peer}',
-            '--listen-peer-urls',
-            f'http://0.0.0.0:{self.port_peer}',
-            '--listen-client-urls',
-            f'http://0.0.0.0:{self.port_client}',
-            '--advertise-client-urls',
-            f'http://{self.hostname}:{self.port_client}',
-            '--initial-cluster-token',
-            self.etcid,
-            '--initial-cluster',
-            ','.join(self.it_all()),
-            '--initial-cluster-state',
-            'existing',
-        ]
-
-        exec_into(*args)
-
-
 class EtcdPrivate:
     def __init__(self, peers, port_peer, port_client, hostname, etcid, addr, user_name):
         self.etcid = etcid
@@ -999,7 +949,6 @@ class ClusterMap:
 
         neb_map = {}
         bal_map = []
-        all_etc = []
         all_s5s = []
         all_etc_private = []
 
@@ -1039,13 +988,6 @@ class ClusterMap:
             yield {
                 'host': hn,
                 'serv': SecondIP('10.0.0.33/24'),
-            }
-
-            all_etc.append(hn)
-
-            yield {
-                'host': hn,
-                'serv': Etcd(all_etc, p['etcd_peer'], p['etcd_client'], hn),
             }
 
             nb = h['nebula']
@@ -1168,7 +1110,6 @@ sys.modules['builtins'].SftpD = SftpD
 sys.modules['builtins'].MinIO = MinIO
 sys.modules['builtins'].DropBear = DropBear
 sys.modules['builtins'].BalancerHttp = BalancerHttp
-sys.modules['builtins'].Etcd = Etcd
 sys.modules['builtins'].EtcdPrivate = EtcdPrivate
 sys.modules['builtins'].MinioConsole = MinioConsole
 sys.modules['builtins'].SecondIP = SecondIP
@@ -1408,8 +1349,6 @@ def do(code):
 
     ports = {
         'sshd': 22,
-        'etcd_client': 2379,
-        'etcd_peer': 2380,
         'nebula_lh': 4242,
         'nebula_node': 4243,
         'torrent_webui': 8000,
@@ -1441,7 +1380,6 @@ def do(code):
 
     users = {
         'collector': 1001,
-        'etcd': 1002,
         'node_exporter': 1003,
         'torrent': 1004,
         'sftp_d': 1005,
