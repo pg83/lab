@@ -25,6 +25,7 @@ DISABLE = {
     'lab1': DISABLE_ALL + [],
     'lab2': DISABLE_ALL + [],
     'lab3': DISABLE_ALL + [],
+    'lab4': DISABLE_ALL + [],
 }
 
 
@@ -1349,7 +1350,7 @@ def it_srvs(srvs, code):
 
 
 def do(code):
-    hosts = [gen_host(h) for h in (1, 2, 3)]
+    hosts = [gen_host(h) for h in (1, 2, 3, 4)]
 
     for x in hosts:
         x['ip'] = x['net'][0]['ip']
