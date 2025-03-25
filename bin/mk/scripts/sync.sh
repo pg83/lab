@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env sh
 
 set -xue
 
@@ -7,11 +7,11 @@ mkdir -p /mnt
 umount ${1} || true
 umount /mnt || umount -l /mnt || true
 
-mkfs.f2fs -f ${1}
+mkfs.xfs -f ${1}
 
 mount ${1} /mnt
 
-python3 ./sync.py /mnt ${2}
+lab_sync_py /mnt ${2}
 
 cd /mnt
 
