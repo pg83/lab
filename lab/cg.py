@@ -952,6 +952,53 @@ class ClusterMap:
         all_s5s = []
         all_etc_private = []
 
+        for hn in ['lab1', 'lab2', 'lab3']:
+            h = self.conf['by_host'][hn]
+            nb = h['nebula']
+
+            all_etc_private.append({
+                'hostname': hn,
+                'ip': nb['ip'],
+            })
+
+            yield {
+                'host': hn,
+                'serv': EtcdPrivate(
+                    all_etc_private,
+                    p['etcd_peer_private'],
+                    p['etcd_client_private'],
+                    hn,
+                    'secrets',
+                    nb['ip'],
+                    'etcd_private',
+                ),
+            }
+
+        for hn in ['lab1', 'lab2', 'lab3']:
+            h = self.conf['by_host'][hn]
+            nb = h['nebula']
+            mio_cmap = 'http://lab{1...3}.eth{1...3}/var/mnt/minio/my/data'
+
+            def mio_srv(i):
+                return MinIO(i, h['net'][i]['ip'], p['minio'], mio_cmap)
+
+            minios = [mio_srv(i) for i in (1, 2, 3)]
+
+            for m in minios:
+                yield {
+                    'host': hn,
+                    'serv': m,
+                }
+
+            mc_host = nb['ip']
+            mc_port = p['minio_web']
+            mc_serv = 'http://' + minios[0].addr
+
+            yield {
+                'host': hn,
+                'serv': MinioConsole(mc_host, mc_port, mc_serv),
+            }
+
         for h in self.conf['hosts']:
             hn = h['hostname']
 
@@ -992,24 +1039,6 @@ class ClusterMap:
 
             nb = h['nebula']
 
-            all_etc_private.append({
-                'hostname': hn,
-                'ip': nb['ip'],
-            })
-
-            yield {
-                'host': hn,
-                'serv': EtcdPrivate(
-                    all_etc_private,
-                    p['etcd_peer_private'],
-                    p['etcd_client_private'],
-                    hn,
-                    'secrets',
-                    nb['ip'],
-                    'etcd_private',
-                ),
-            }
-
             yield {
                 'host': hn,
                 'serv': DropBear(nb['ip'], p['sshd']),
@@ -1034,28 +1063,6 @@ class ClusterMap:
             yield {
                 'host': hn,
                 'serv': SocksProxy(p['socks_proxy'], all_s5s),
-            }
-
-            mio_cmap = 'http://lab{1...3}.eth{1...3}/var/mnt/minio/my/data'
-
-            def mio_srv(i):
-                return MinIO(i, h['net'][i]['ip'], p['minio'], mio_cmap)
-
-            minios = [mio_srv(i) for i in (1, 2, 3)]
-
-            for m in minios:
-                yield {
-                    'host': hn,
-                    'serv': m,
-                }
-
-            mc_host = nb['ip']
-            mc_port = p['minio_web']
-            mc_serv = 'http://' + minios[0].addr
-
-            yield {
-                'host': hn,
-                'serv': MinioConsole(mc_host, mc_port, mc_serv),
             }
 
             yield {
