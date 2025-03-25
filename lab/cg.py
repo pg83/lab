@@ -953,6 +953,12 @@ class ClusterMap:
         all_s5s = []
         all_etc_private = []
 
+        for hn in ['lab4']:
+            yield {
+                'host': hn,
+                'serv': DropBear2(p['sshd']),
+            }
+
         for hn in ['lab1', 'lab2', 'lab3']:
             h = self.conf['by_host'][hn]
             nb = h['nebula']
