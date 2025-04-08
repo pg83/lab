@@ -953,10 +953,12 @@ class ClusterMap:
         all_s5s = []
         all_etc_private = []
 
-        for hn in []:
+        for h in self.conf['hosts']:
+            hn = h['hostname']
+
             yield {
                 'host': hn,
-                'serv': DropBear2(p['sshd']),
+                'serv': DropBear2(p['sshd_rec']),
             }
 
         for hn in ['lab1', 'lab2', 'lab3']:
@@ -1390,6 +1392,7 @@ def do(code):
         'etcd_client_private': 8020,
         'etcd_peer_private': 8021,
         'secrets': 8022,
+        'sshd_rec': 8033,
     }
 
     users = {

@@ -1,8 +1,10 @@
 {% extends '//die/hub.sh' %}
 
 {% block run_deps %}
-set/fs
 bin/rsync
+bin/parted
+bin/xfsprogs
 bin/grub/efi
+bin/dosfstools
 bin/mk/scripts
 {% endblock %}
