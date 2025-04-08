@@ -18,6 +18,7 @@ import urllib.request as ur
 
 DISABLE_ALL = [
     'ssh_jopa_tunnel',
+    'drop_bear_2',
 ]
 
 
@@ -953,14 +954,6 @@ class ClusterMap:
         all_s5s = []
         all_etc_private = []
 
-        for h in self.conf['hosts']:
-            hn = h['hostname']
-
-            yield {
-                'host': hn,
-                'serv': DropBear2(p['sshd_rec']),
-            }
-
         for hn in ['lab1', 'lab2', 'lab3']:
             h = self.conf['by_host'][hn]
             nb = h['nebula']
@@ -1010,6 +1003,11 @@ class ClusterMap:
 
         for h in self.conf['hosts']:
             hn = h['hostname']
+
+            yield {
+                'host': hn,
+                'serv': DropBear2(p['sshd_rec']),
+            }
 
             yield {
                 'host': hn,
