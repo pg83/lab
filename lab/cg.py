@@ -573,10 +573,6 @@ class MinIO:
     def addr(self):
         return f'{self.ipv4}:{self.port}'
 
-    @property
-    def sftp_addr(self):
-        return f'{self.ipv4}:{self.sftp}'
-
     def name(self):
         return f'minio_{self.uniq}'
 
@@ -601,7 +597,7 @@ class MinIO:
         s = s.replace('{n}', str(self.uniq))
         s = s.replace('{addr}', self.addr)
         s = s.replace('{cmap}', self.cmap)
-        s = s.replace('{sftp}', self.sftp_addr)
+        s = s.replace('{sftp}', str(self.sftp))
         s = s.replace('{user}', self.name())
 
         with multi(memfd('script'), memfd('key')) as (ss, kk):
@@ -996,7 +992,7 @@ class ClusterMap:
             mio_cmap = 'http://lab{1...3}.eth{1...3}/var/mnt/minio/my/data'
 
             def mio_srv(i):
-                return MinIO(i, h['net'][i]['ip'], p['minio'], mio_cmap, p['minio_sftp'])
+                return MinIO(i, h['net'][i]['ip'], p['minio'], mio_cmap, p[f'minio_sftp_{i}'])
 
             minios = [mio_srv(i) for i in (1, 2, 3)]
 
@@ -1405,7 +1401,9 @@ def do(code):
         'etcd_peer_private': 8021,
         'secrets': 8022,
         'sshd_rec': 8033,
-        'minio_sftp': 8034,
+        'minio_sftp_1': 8034,
+        'minio_sftp_2': 8035,
+        'minio_sftp_3': 8036,
     }
 
     users = {
