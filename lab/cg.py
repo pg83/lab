@@ -597,7 +597,7 @@ class MinIO:
         s = s.replace('{n}', str(self.uniq))
         s = s.replace('{addr}', self.addr)
         s = s.replace('{cmap}', self.cmap)
-        s = s.replace('{sftp}', self.sftp)
+        s = s.replace('{sftp}', str(self.sftp))
         s = s.replace('{user}', self.name())
 
         with multi(memfd('script'), memfd('key')) as ss, kk:
