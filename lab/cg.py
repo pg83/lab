@@ -554,20 +554,16 @@ mkdir -p /var/mnt/minio/my
 mount -t xfs LABEL=MINIO_{n} /var/mnt/minio/my
 mkdir -p /var/mnt/minio/my/data
 chown {user} /var/mnt/minio/my/data
-exec su-exec {user} minio server \
-    --address {addr} {cmap} \
-    --sftp=address=:{sftp} \
-    --sftp=ssh-private-key={skey}
+exec su-exec {user} minio server --address {addr} {cmap}
 '''
 
 
 class MinIO:
-    def __init__(self, uniq, ipv4, port, cmap, sftp):
+    def __init__(self, uniq, ipv4, port, cmap):
         self.ipv4 = ipv4
         self.port = port
         self.uniq = uniq
         self.cmap = cmap
-        self.sftp = sftp
 
     @property
     def addr(self):
@@ -597,17 +593,11 @@ class MinIO:
         s = s.replace('{n}', str(self.uniq))
         s = s.replace('{addr}', self.addr)
         s = s.replace('{cmap}', self.cmap)
-        s = s.replace('{sftp}', str(self.sftp))
         s = s.replace('{user}', self.name())
 
-        with multi(memfd('script'), memfd('key')) as (ss, kk):
-            s = s.replace('{skey}', kk)
-
+        with memfd('script') as ss:
             with open(ss, 'w') as f:
                 f.write(s)
-
-            with open(kk, 'w') as f:
-                f.write(open('/etc/keys/ssh_rsa').read())
 
             args = [
                 '/bin/unshare', '-m',
@@ -992,7 +982,7 @@ class ClusterMap:
             mio_cmap = 'http://lab{1...3}.eth{1...3}/var/mnt/minio/my/data'
 
             def mio_srv(i):
-                return MinIO(i, h['net'][i]['ip'], p['minio'], mio_cmap, p[f'minio_sftp_{i}'])
+                return MinIO(i, h['net'][i]['ip'], p['minio'], mio_cmap)
 
             minios = [mio_srv(i) for i in (1, 2, 3)]
 
@@ -1401,9 +1391,6 @@ def do(code):
         'etcd_peer_private': 8021,
         'secrets': 8022,
         'sshd_rec': 8033,
-        'minio_sftp_1': 8034,
-        'minio_sftp_2': 8035,
-        'minio_sftp_3': 8036,
     }
 
     users = {
