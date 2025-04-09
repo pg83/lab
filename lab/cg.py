@@ -573,6 +573,10 @@ class MinIO:
     def addr(self):
         return f'{self.ipv4}:{self.port}'
 
+    @property
+    def sftp_addr(self):
+        return f'{self.ipv4}:{self.sftp}'
+
     def name(self):
         return f'minio_{self.uniq}'
 
@@ -597,7 +601,7 @@ class MinIO:
         s = s.replace('{n}', str(self.uniq))
         s = s.replace('{addr}', self.addr)
         s = s.replace('{cmap}', self.cmap)
-        s = s.replace('{sftp}', str(self.sftp))
+        s = s.replace('{sftp}', self.sftp_addr)
         s = s.replace('{user}', self.name())
 
         with multi(memfd('script'), memfd('key')) as (ss, kk):
