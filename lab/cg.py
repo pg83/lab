@@ -600,7 +600,7 @@ class MinIO:
         s = s.replace('{sftp}', str(self.sftp))
         s = s.replace('{user}', self.name())
 
-        with multi(memfd('script'), memfd('key')) as ss, kk:
+        with multi(memfd('script'), memfd('key')) as (ss, kk):
             s = s.replace('{skey}', kk)
 
             with open(ss, 'w') as f:
