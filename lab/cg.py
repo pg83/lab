@@ -539,10 +539,19 @@ class SftpD:
             args = [
                 'sftpgo', 'portable',
                 '--config-file', conf,
-                '--directory', self.path,
+                '--s3-bucket', self.path,
+                '--s3-endpoint', 'http://10.0.0.65:8012/',
+                '--s3-region', 'minio',
+                '--s3-access-key', 'qwerty',
+                '--s3-access-secret', 'qwerty123',
                 '--password', 'qwerty123',
                 '--username', 'anon',
-                '--sftpd-port', self.port,
+                '--sftpd-port', str(self.port),
+                '--fs-provider', 's3fs',
+                '--s3-force-path-style',
+                '--s3-skip-tls-verify',
+                '--log-level', 'debug',
+                '--log-file-path', '/dev/stdout',
             ]
 
             exec_into(*args, user=self.users()[1])
@@ -1007,6 +1016,11 @@ class ClusterMap:
             yield {
                 'host': hn,
                 'serv': DropBear2(p['sshd_rec']),
+            }
+
+            yield {
+                'host': hn,
+                'serv': SftpD(p['sftp_d'], 'geesefs'),
             }
 
             yield {
