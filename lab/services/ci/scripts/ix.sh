@@ -19,7 +19,9 @@ gpull https://github.com/pg83/ix ix
 cd ix
 
 ./ix build bld/all
-./ix build {{ci_targets}} --jail=1 --seed=1 --tmpfs=1
+./ix mut ci {{ci_targets}} --jail=1 --seed=1 --tmpfs=1
+
+ls -la {{wd}}/ix_root/realm/ci/bin/ > ../binlist
 
 timeout 60s etcdctl watch --prefix /git/logs/git_ci | gnugrep --line-buffered 'PUT' | head -n 1
 EOF
