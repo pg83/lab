@@ -951,6 +951,30 @@ class MirrorFetch:
         exec_into('cache_ix_sources', HOME=os.getcwd(), TMPDIR=os.getcwd())
 
 
+class HFSync:
+    def __init__(self):
+        self.v = 1
+
+    def name(self):
+        return 'hf_sync'
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/hf/sync',
+        }
+
+    def py_modules(self):
+        return [
+            'pip/tqdm',
+            'pip/PyYAML',
+            'pip/requests',
+            'pip/filelock',
+        ]
+
+    def run(self):
+        exec_into('hf_sync')
+
+
 class ClusterMap:
     def __init__(self, conf):
         self.conf = conf
@@ -1012,6 +1036,11 @@ class ClusterMap:
 
         for h in self.conf['hosts']:
             hn = h['hostname']
+
+            yield {
+                'host': hn,
+                'serv': HFSync(),
+            }
 
             yield {
                 'host': hn,
@@ -1148,6 +1177,7 @@ sys.modules['builtins'].SocksProxy = SocksProxy
 sys.modules['builtins'].CO2Mon = CO2Mon
 sys.modules['builtins'].MirrorFetch = MirrorFetch
 sys.modules['builtins'].Secrets = Secrets
+sys.modules['builtins'].HFSync = HFSync
 
 
 def exec_into(*args, user=None, **kwargs):
@@ -1192,6 +1222,12 @@ def norm(n):
 class Service:
     def __init__(self, srv):
         self.srv = srv
+
+    def iter_py_modules(self):
+        try:
+            return self.srv.py_modules()
+        except AttributeError:
+            return []
 
     def iter_upnp(self):
         try:
@@ -1364,9 +1400,14 @@ def it_pkgs(srvs, code):
     }
 
 
-def it_srvs(srvs, code):
+def it_srvs(srvs, code, flags):
     for x in it_pkgs(srvs, code):
-        yield to_srv(**x)
+        args = {}
+
+        args.update(flags)
+        args.update(x)
+
+        yield to_srv(**args)
 
 
 def do(code):
@@ -1434,6 +1475,7 @@ def do(code):
         'mirror_fetch': 1025,
         'etcd_private': 1026,
         'secrets': 1027,
+        'hf_sync': 1028,
     }
 
     by_name = dict()
@@ -1451,8 +1493,13 @@ def do(code):
     by_host = collections.defaultdict(list)
     by_addr = dict()
 
+    py_modules = []
+
     for rec in ClusterMap(cconf).it_cluster():
         hndl = Service(rec['serv'])
+
+        py_modules.extend(hndl.iter_py_modules())
+
         host = rec['host']
         addr = host + ':' + hndl.name()
 
@@ -1475,10 +1522,12 @@ def do(code):
 
                 srv.real.append(rec)
 
+    py_modules = list(sorted(frozenset(py_modules)))
+
     for h in hosts:
         srvs = by_host[h['hostname']]
 
-        h['extra'] = '\n'.join(it_srvs(srvs, code))
+        h['extra'] = '\n'.join(it_srvs(srvs, code, {'py_extra_modules': ':'.join(py_modules)}))
 
         for s in srvs:
             if s.disabled():
