@@ -788,6 +788,9 @@ class EtcdPrivate:
     def run(self):
         os.makedirs(self.data_dir, exist_ok=True)
 
+        if 'ETCDCTL_ENDPOINTS' in os.environ:
+            os.environ.pop('ETCDCTL_ENDPOINTS')
+
         args = [
             'etcd',
             '--name', self.hostname,
