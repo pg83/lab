@@ -4,4 +4,5 @@
 bin/python
 bin/hf/sync/client
 bin/hf/sync/scripts
+bin/mirror/fetch/scripts
 {% endblock %}
