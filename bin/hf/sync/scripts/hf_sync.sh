@@ -4,8 +4,6 @@ set -xue
 
 sleep 100
 
-export MC_CONFIG_DIR=$(dirname ${TMPDIR})
-
 (cd pkgsrc && git pull) || (rm -rf pkgsrc && git clone --filter="blob:none" --depth="1" --no-checkout "https://huggingface.co/datasets/stal-ix/pkgsrc")
 
 cd pkgsrc

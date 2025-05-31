@@ -978,6 +978,8 @@ class HFSync:
     def run(self):
         env = {
             'HF_TOKEN': get_key('/hf/token').strip(),
+            'HOME': os.getcwd(),
+            'TMPDIR': os.getcwd(),
         }
 
         exec_into('hf_sync', **env)
