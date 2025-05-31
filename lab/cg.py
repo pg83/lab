@@ -976,7 +976,11 @@ class HFSync:
         ]
 
     def run(self):
-        exec_into('hf_sync')
+        env = {
+            'HF_TOKEN': get_key('/hf/token').strip(),
+        }
+
+        exec_into('hf_sync', **env)
 
 
 class ClusterMap:
