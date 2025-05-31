@@ -977,7 +977,7 @@ class HFSync:
 
     def run(self):
         env = {
-            'HF_TOKEN': get_key('/hf/token').strip(),
+            'HF_TOKEN': get_key('/hf/token').decode().strip(),
             'HOME': os.getcwd(),
             'TMPDIR': os.getcwd(),
         }

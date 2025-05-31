@@ -14,6 +14,7 @@ minio-client ls minio/cas | grep STA | sed -e 's|.* ||' | sort | grep -v '^$' > 
 git ls-tree -r --name-only 'HEAD' | grep 'cas/' | grep -v gitattr | sed -e 's|.*/||' | sort > 2
 
 diff 2 1 | grep '^+' | grep -v ' ' | tr -d '+' | while read l; do
+    minio-client get minio/cas/${l} _
     huggingface_cli \
         upload \
         --token ${HF_TOKEN} \
