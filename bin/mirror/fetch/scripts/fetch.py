@@ -14,9 +14,9 @@ time.sleep(100)
 PART = '''
 {sha}.touch:
 	rm -rf {sha}
-	wget -O {sha} --no-check-certificate {url}
-	cas {sha}
-	rm {sha}
+	/bin/fetcher {url} {sha}/data __skip__
+	cas {sha}/data
+	rm -rf {sha}
 	touch {sha}.touch
 
 all: {sha}.touch
