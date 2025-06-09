@@ -987,7 +987,7 @@ class HFSync:
 
 class GHCRSync:
     def __init__(self):
-        self.v = 1
+        self.v = 2
 
     def name(self):
         return 'ghcr_sync'
