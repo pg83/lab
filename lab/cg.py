@@ -982,7 +982,29 @@ class HFSync:
             'TMPDIR': os.getcwd(),
         }
 
-        exec_into('hf_sync', **env)
+        exec_into('etcdctl', 'lock', '/lock/hf', 'hf_sync', **env)
+
+
+class GHCRSync:
+    def __init__(self):
+        self.v = 1
+
+    def name(self):
+        return 'ghcr_sync'
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/ghcr',
+        }
+
+    def run(self):
+        env = {
+            'GHCR_TOKEN': get_key('/ghcr/token').decode().strip(),
+            'HOME': os.getcwd(),
+            'TMPDIR': os.getcwd(),
+        }
+
+        exec_into('etcdctl', 'lock', '/lock/ghcr', 'ghcr_sync', **env)
 
 
 class ClusterMap:
@@ -1050,6 +1072,11 @@ class ClusterMap:
             yield {
                 'host': hn,
                 'serv': HFSync(),
+            }
+
+            yield {
+                'host': hn,
+                'serv': GHCRSync(),
             }
 
             yield {
@@ -1188,6 +1215,7 @@ sys.modules['builtins'].CO2Mon = CO2Mon
 sys.modules['builtins'].MirrorFetch = MirrorFetch
 sys.modules['builtins'].Secrets = Secrets
 sys.modules['builtins'].HFSync = HFSync
+sys.modules['builtins'].GHCRSync = GHCRSync
 
 
 def exec_into(*args, user=None, **kwargs):
@@ -1486,6 +1514,7 @@ def do(code):
         'etcd_private': 1026,
         'secrets': 1027,
         'hf_sync': 1028,
+        'ghcr_sync': 1029,
     }
 
     by_name = dict()
