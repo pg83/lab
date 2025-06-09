@@ -1,5 +1,5 @@
 {% extends '//die/hub.sh' %}
 
 {% block run_deps %}
-# nothing here yet
+lab/hosts/lab4/env
 {% endblock %}
