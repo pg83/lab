@@ -43,7 +43,7 @@ diff 2 1 | grep '^+' | grep -v ' ' | tr -d '+' | while read l; do
         -u pg83 \
         -p ${GHCR_TOKEN} \
         -a "org.opencontainers.image.source=https://github.com/stal-ix/pkgsrc" \
-        ghcr.io/stal-ix/pkgsrc/$(echo ${l} | cut -c1-2):${l} ${l}
+        ghcr.io/stal-ix/pkgsrc/$(echo ${l} | cut -c1-1):${l} ${l}
     cd ..
     rm -rf tmp
 done
