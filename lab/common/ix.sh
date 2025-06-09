@@ -8,6 +8,7 @@ lab/services/autoupdate(user=ix)
 
 bin/mc
 bin/htop
+bin/ix/tmpfs
 etc/host/keys
 bin/kernel/6/12
 bin/kernel/6/14
