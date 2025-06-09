@@ -982,7 +982,7 @@ class HFSync:
             'TMPDIR': os.getcwd(),
         }
 
-        exec_into('etcdctl', 'lock', '/lock/hf', 'hf_sync', **env)
+        exec_into('etcdctl', 'lock', '/lock/hf', '/bin/hf_sync', **env)
 
 
 class GHCRSync:
@@ -1004,7 +1004,7 @@ class GHCRSync:
             'TMPDIR': os.getcwd(),
         }
 
-        exec_into('etcdctl', 'lock', '/lock/ghcr', 'ghcr_sync', **env)
+        exec_into('etcdctl', 'lock', '/lock/ghcr', '/bin/ghcr_sync', **env)
 
 
 class ClusterMap:

@@ -2,6 +2,8 @@
 
 set -xue
 
+echo ${PATH}
+
 sleep 200
 
 rm -rf _

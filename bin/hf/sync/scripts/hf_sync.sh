@@ -2,6 +2,8 @@
 
 set -xue
 
+echo ${PATH}
+
 sleep 100
 
 (cd pkgsrc && git pull) || (rm -rf pkgsrc && git clone --filter="blob:none" --depth="1" --no-checkout "https://huggingface.co/datasets/stal-ix/pkgsrc")
