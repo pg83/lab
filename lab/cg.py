@@ -958,6 +958,8 @@ class MirrorFetch:
             'PATH': '/bin',
         }
 
+        time.sleep(random.random() * 10)
+
         exec_into('etcdctl', 'lock', '/lock/mirror', 'cache_ix_sources', **env)
 
 
@@ -983,12 +985,15 @@ class HFSync:
 
     def run(self):
         env = {
+            'PATH': '/bin',
             'HF_TOKEN': get_key('/hf/token').decode().strip(),
             'HOME': os.getcwd(),
             'TMPDIR': os.getcwd(),
         }
 
-        exec_into('etcdctl', 'lock', '/lock/hf', '/bin/hf_sync', **env)
+        time.sleep(random.random() * 10)
+
+        exec_into('etcdctl', 'lock', '/lock/hf', 'hf_sync', **env)
 
 
 class GHCRSync:
@@ -1005,12 +1010,15 @@ class GHCRSync:
 
     def run(self):
         env = {
+            'PATH': '/bin',
             'GHCR_TOKEN': get_key('/ghcr/token').decode().strip(),
             'HOME': os.getcwd(),
             'TMPDIR': os.getcwd(),
         }
 
-        exec_into('etcdctl', 'lock', '/lock/ghcr', '/bin/ghcr_sync', **env)
+        time.sleep(random.random() * 10)
+
+        exec_into('etcdctl', 'lock', '/lock/ghcr', 'ghcr_sync', **env)
 
 
 class ClusterMap:
