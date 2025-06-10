@@ -952,7 +952,13 @@ class MirrorFetch:
         }
 
     def run(self):
-        exec_into('cache_ix_sources', HOME=os.getcwd(), TMPDIR=os.getcwd())
+        env = {
+            'HOME': os.getcwd(),
+            'TMPDIR': os.getcwd(),
+            'PATH': '/bin',
+        }
+
+        exec_into('etcdctl', 'lock', '/lock/mirror', 'cache_ix_sources', **env)
 
 
 class HFSync:
