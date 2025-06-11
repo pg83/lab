@@ -809,7 +809,7 @@ class EtcdPrivate:
             '--initial-cluster',
             ','.join(self.it_all()),
             '--initial-cluster-state',
-            'new',
+            'existing',
         ]
 
         exec_into(*args)
