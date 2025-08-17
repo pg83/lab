@@ -20,6 +20,8 @@ def hash_key(key):
 
 def serve_get(req):
     cmd = [
+        'unshare',
+        '-m',
         'efi_get',
         UUID + '-' + hash_key(req['key']),
     ]
@@ -32,7 +34,7 @@ def memfd(name):
     fd = os.memfd_create(name, flags=0)
 
     try:
-        yield f'/proc/self/fd/{fd}'
+        yield f'/proc/{os.getpid()}/fd/{fd}'
     finally:
         os.close(fd)
 
@@ -43,6 +45,8 @@ def serve_put(req):
             f.write(base64.b64decode(req['val']))
 
         cmd = [
+            'unshare',
+            '-m',
             'efi_put',
             UUID + '-' + hash_key(req['key']),
             path,
