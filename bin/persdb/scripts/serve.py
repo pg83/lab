@@ -27,7 +27,7 @@ def serve_get(req):
         UUID,
     ]
 
-    return subprocess.check_output(cmd)
+    return subprocess.check_output(cmd)[4:]
 
 
 @contextlib.contextmanager
