@@ -877,27 +877,12 @@ class CI:
             exec_into(*args)
 
 
-SECRETS_SCRIPT = '''
-set -xue
-mount -t efivarfs none -o ro /sys/firmware/efi/efivars
-chown {user}:{user} /var/run/{user}
-exec su-exec {user} /bin/ix_serve_secrets {port}
-'''
-
-
 class Secrets:
     def __init__(self, port):
-        self.script = SECRETS_SCRIPT
         self.port = port
 
     def name(self):
         return 'secrets'
-
-    def users(self):
-        return [
-            'root',
-            self.name(),
-        ]
 
     def pkgs(self):
         yield {
@@ -905,21 +890,38 @@ class Secrets:
         }
 
     def run(self):
-        s = self.script
+        args = [
+            'ix_serve_secrets',
+            self.port,
+        ]
 
-        s = s.replace('{user}', self.name())
-        s = s.replace('{port}', str(self.port))
+        exec_into(*args)
 
-        with memfd('script') as ss:
-            with open(ss, 'w') as f:
-                f.write(s)
 
-            args = [
-                '/bin/unshare', '-m',
-                '/bin/sh', ss
-            ]
+class PersDB:
+    def __init__(self, port):
+        self.port = port
 
-            exec_into(*args)
+    def name(self):
+        return 'pers_db'
+
+    def users(self):
+        return [
+            'root',
+        ]
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/persdb',
+        }
+
+    def run(self):
+        args = [
+            'ix_serve_persdb',
+            self.port,
+        ]
+
+        exec_into(*args)
 
 
 class CO2Mon:
@@ -1120,6 +1122,11 @@ class ClusterMap:
 
             yield {
                 'host': hn,
+                'serv': PersDB(p['pers_db']),
+            }
+
+            yield {
+                'host': hn,
                 'serv': MirrorFetch(),
             }
 
@@ -1228,6 +1235,7 @@ sys.modules['builtins'].SocksProxy = SocksProxy
 sys.modules['builtins'].CO2Mon = CO2Mon
 sys.modules['builtins'].MirrorFetch = MirrorFetch
 sys.modules['builtins'].Secrets = Secrets
+sys.modules['builtins'].PersDB = PersDB
 sys.modules['builtins'].HFSync = HFSync
 sys.modules['builtins'].GHCRSync = GHCRSync
 
@@ -1497,7 +1505,8 @@ def do(code):
         'etcd_client_private': 8020,
         'etcd_peer_private': 8021,
         'secrets': 8022,
-        'sshd_rec': 8033,
+        'sshd_rec': 8023,
+        'pers_db': 8024,
     }
 
     users = {
