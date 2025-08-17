@@ -23,7 +23,8 @@ def serve_get(req):
         'unshare',
         '-m',
         'efi_get',
-        UUID + '-' + hash_key(req['key']),
+        hash_key(req['key']),
+        UUID,
     ]
 
     return subprocess.check_output(cmd)
@@ -48,7 +49,8 @@ def serve_put(req):
             'unshare',
             '-m',
             'efi_put',
-            UUID + '-' + hash_key(req['key']),
+            hash_key(req['key']),
+            UUID,
             path,
         ]
 

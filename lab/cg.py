@@ -900,7 +900,7 @@ class Secrets:
 
 class PersDB:
     def __init__(self, port):
-        self.v = 2
+        self.v = 3
         self.port = port
 
     def name(self):

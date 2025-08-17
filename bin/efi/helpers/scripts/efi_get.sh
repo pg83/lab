@@ -3,4 +3,4 @@
 set -xue
 
 mount -o ro -t efivarfs efivarfs /sys/firmware/efi/efivars
-efivar -n ${1} -e /dev/stdout
+exec cat /sys/firmware/efi/efivars/${1}-${2}
