@@ -34,7 +34,8 @@ def get_secret_3(path):
 def get_secret_impl(path):
     for f in [get_secret_1, get_secret_2, get_secret_3]:
         try:
-            return f(path)
+            if res := f(path):
+                return res
         except Exception as e:
             print(f'while get {path}: {e}', file=sys.stderr)
 
