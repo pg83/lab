@@ -13,4 +13,4 @@ req = {
 
 data = ur.urlopen('http://localhost:8024/' + base64.b64encode(json.dumps(req).encode()).decode()).read()
 
-print(data)
+sys.stdout.buffer.write(data)
