@@ -1,19 +1,25 @@
 #!/usr/bin/env python3
 
 import sys
+import json
+import time
+import base64
 import subprocess
 
 import http.server as hs
+import urllib.request as ur
 
 
 CACHE = {}
 
 
 def get_secret_1(path):
-    path = path.replace('/', '_').replace('.', '_').replace('_neb', 'neb')
+    req = {
+        'type': 'get',
+        'key': path,
+    }
 
-    with open('/sys/firmware/efi/efivars/' + path + '-f299ef14-61d1-4bf0-bfbc-565af88df0c9', 'rb') as f:
-        return f.read()[4:]
+    return ur.urlopen('http://localhost:8024/' + base64.b64encode(json.dumps(req).encode()).decode()).read()
 
 
 def get_secret_2(path):
@@ -21,25 +27,31 @@ def get_secret_2(path):
 
 
 def get_secret_3(path):
-    return CACHE[path]
-
-
-def get_secret_4(path):
     with open(path, 'rb') as f:
         return f.read()
 
 
-def get_secret(path):
-    for f in [get_secret_4, get_secret_1, get_secret_2, get_secret_3]:
+def get_secret_impl(path):
+    for f in [get_secret_1, get_secret_2, get_secret_3]:
         try:
-            if res := f(path):
-                CACHE[path] = res
-
-                return res
+            return f(path)
         except Exception as e:
             print(f'while get {path}: {e}', file=sys.stderr)
 
     raise Exception(f'no such secret {path}')
+
+
+def get_secret(path):
+    if len(CACHE) > 10000:
+        CACHE = {}
+
+    k = str(int(time.time() / 1000)) + path
+
+    while True:
+        try:
+            return CACHE[k]
+        except KeyError:
+            CACHE[k] = get_secret_impl(path)
 
 
 class Handler(hs.BaseHTTPRequestHandler):
@@ -48,6 +60,7 @@ class Handler(hs.BaseHTTPRequestHandler):
             res, code = get_secret(self.path), 200
         except Exception as e:
             self.send_error(404, message=str(e))
+
             return
 
         self.send_response(code)
