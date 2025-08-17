@@ -57,8 +57,8 @@ def serve(data):
     if req['type'] == 'get':
         return serve_get(req)
 
-    if req['type'] == 'set':
-        return serve_set(req)
+    if req['type'] == 'put':
+        return serve_put(req)
 
     raise Exception('unknown request type ' + req['type'])
 
