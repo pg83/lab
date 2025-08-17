@@ -42,10 +42,7 @@ def get_secret_impl(path):
 
 
 def get_secret(path):
-    if len(CACHE) > 10000:
-        CACHE = {}
-
-    k = str(int(time.time() / 1000)) + path
+    k = path
 
     while True:
         try:
