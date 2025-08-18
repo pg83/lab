@@ -889,7 +889,11 @@ class Secrets:
         }
 
     def run(self):
+        tout = int(random.random() * 1000 + 500)
+
         args = [
+            'timeout',
+            str(tout) + 's',
             'ix_serve_secrets',
             self.port,
         ]
