@@ -26,13 +26,8 @@ def get_secret_2(path):
     return subprocess.check_output(['etcdctl', 'get', '--print-value-only', path])
 
 
-def get_secret_3(path):
-    with open(path, 'rb') as f:
-        return f.read()
-
-
 def get_secret_impl(path):
-    for f in [get_secret_1, get_secret_2, get_secret_3]:
+    for f in [get_secret_1, get_secret_2]:
         try:
             if res := f(path):
                 return res

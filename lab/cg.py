@@ -877,7 +877,7 @@ class CI:
 
 class Secrets:
     def __init__(self, port):
-        self.v = 3
+        self.v = 4
         self.port = port
 
     def name(self):
