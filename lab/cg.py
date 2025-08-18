@@ -277,8 +277,6 @@ class Nebula:
 
             cfg['stats']['listen'] = '127.0.0.1:' + str(self.prom_port())
 
-            print(cfg, file=sys.stderr)
-
             with open(conf, "w") as f:
                 f.write(json.dumps(cfg, indent=4, sort_keys=True))
 
@@ -542,8 +540,8 @@ class SftpD:
                 '--s3-bucket', self.path,
                 '--s3-endpoint', 'http://10.0.0.65:8012/',
                 '--s3-region', 'minio',
-                '--s3-access-key', 'qwerty',
-                '--s3-access-secret', 'qwerty123',
+                '--s3-access-key', get_key('/s3/user').strip(),
+                '--s3-access-secret', get_key('/s3/password').strip(),
                 '--password', 'qwerty123',
                 '--username', 'anon',
                 '--sftpd-port', str(self.port),
@@ -615,8 +613,8 @@ class MinIO:
 
             kwargs = {
                 'LAB_LOCAL_IP': self.ipv4,
-                'MINIO_ROOT_USER': 'qwerty',
-                'MINIO_ROOT_PASSWORD': 'qwerty123',
+                'MINIO_ROOT_USER': get_key('/s3/user').strip(),
+                'MINIO_ROOT_PASSWORD': get_key('/s3/password').strip(),
                 'MINIO_BROWSER': 'off',
             }
 
