@@ -567,6 +567,7 @@ exec su-exec {user} minio server --address {addr} {cmap}
 
 class MinIO:
     def __init__(self, uniq, ipv4, port, cmap):
+        self.v = 1
         self.ipv4 = ipv4
         self.port = port
         self.uniq = uniq
@@ -613,8 +614,8 @@ class MinIO:
 
             kwargs = {
                 'LAB_LOCAL_IP': self.ipv4,
-                'MINIO_ROOT_USER': get_key('/s3/user').strip(),
-                'MINIO_ROOT_PASSWORD': get_key('/s3/password').strip(),
+                'MINIO_ROOT_USER': get_key('/s3/user').decode().strip(),
+                'MINIO_ROOT_PASSWORD': get_key('/s3/password').decode().strip(),
                 'MINIO_BROWSER': 'off',
             }
 
