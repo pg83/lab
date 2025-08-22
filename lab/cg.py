@@ -503,6 +503,7 @@ class SshTunnel:
 
 class SftpD:
     def __init__(self, port, path):
+        self.v = 1
         self.port = port
         self.path = path
 
@@ -540,8 +541,8 @@ class SftpD:
                 '--s3-bucket', self.path,
                 '--s3-endpoint', 'http://10.0.0.65:8012/',
                 '--s3-region', 'minio',
-                '--s3-access-key', get_key('/s3/user').strip(),
-                '--s3-access-secret', get_key('/s3/password').strip(),
+                '--s3-access-key', get_key('/s3/user').decode().strip(),
+                '--s3-access-secret', get_key('/s3/password').decode().strip(),
                 '--password', 'qwerty123',
                 '--username', 'anon',
                 '--sftpd-port', str(self.port),
