@@ -18,7 +18,7 @@ import urllib.request as ur
 
 DISABLE_ALL = [
     'ssh_jopa_tunnel',
-    'drop_bear_2',
+    #'drop_bear_2',
 ]
 
 
