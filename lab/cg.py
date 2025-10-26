@@ -24,7 +24,7 @@ DISABLE_ALL = [
 
 DISABLE = {
     'lab1': DISABLE_ALL + [],
-    'lab2': DISABLE_ALL + [],
+    'lab2': DISABLE_ALL + ['ci'],
     'lab3': DISABLE_ALL + [],
     'lab4': DISABLE_ALL + [],
 }
