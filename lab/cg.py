@@ -30,9 +30,9 @@ DISABLE = {
 
 
 CI_MAP = {
-    'lab1': 'set/ci/tier/0',
+    'lab1': 'set/ci/tier/2',
     'lab2': 'set/ci/tier/1',
-    'lab3': 'set/ci/tier/2',
+    'lab3': 'set/ci/tier/0',
 }
 
 
