@@ -18,6 +18,7 @@ import urllib.request as ur
 
 DISABLE_ALL = [
     'ssh_jopa_tunnel',
+    'ssh_pq_tunnel',
     #'drop_bear_2',
 ]
 
@@ -463,7 +464,7 @@ class SshTunnel:
         self.keyn = keyn
         self._usr = user
         self.rport = rport
-        self.tout = 400
+        self.tout = 30
 
     def name(self):
         return self._usr
@@ -1037,7 +1038,6 @@ class ClusterMap:
 
         neb_map = {}
         bal_map = []
-        all_s5s = []
         all_etc_private = []
 
         for hn in ['lab1', 'lab2', 'lab3']:
@@ -1156,6 +1156,8 @@ class ClusterMap:
                 'host': hn,
                 'serv': DropBear(nb['ip'], p['sshd']),
             }
+
+            all_s5s = []
 
             for tun in SSH_TUNNELS:
                 k = tun['key']
