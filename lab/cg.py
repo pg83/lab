@@ -41,18 +41,21 @@ SSH_TUNNELS = [
         'keyn': '/tunnel/ssh_ampere_tunnel',
         'addr': 'mudak@45.11.171.78',
         'port': 22,
+        'tout': 300,
     },
     {
         'key': 'ssh_aws_tunnel',
         'keyn': '/tunnel/aws_key',
         'addr': 'ec2-user@13.50.197.102',
         'port': 22,
+        'tout': 30,
     },
     {
         'key': 'ssh_ampere_tunnel',
         'keyn': '/tunnel/ssh_ampere_tunnel',
         'addr': 'ubuntu@138.2.175.102',
         'port': 22,
+        'tout': 30,
     },
 ]
 
@@ -450,13 +453,13 @@ class SocksProxy:
 
 
 class SshTunnel:
-    def __init__(self, port, addr, keyn, user, rport):
+    def __init__(self, port, addr, keyn, user, rport, tout):
         self.port = port
         self.addr = addr
         self.keyn = keyn
         self._usr = user
         self.rport = rport
-        self.tout = 300
+        self.tout = tout
 
     def name(self):
         return self._usr
@@ -1162,6 +1165,7 @@ class ClusterMap:
                         tun['keyn'],
                         k,
                         tun['port'],
+                        tun['tout'],
                     ),
                 }
 
