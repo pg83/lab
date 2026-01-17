@@ -407,7 +407,7 @@ global
     maxconn 100
 
 defaults
-    timeout connect 1
+    timeout connect 1ms
     timeout client 50000
     timeout server 50000
 
