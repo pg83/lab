@@ -429,7 +429,7 @@ def haproxy_conf_parts(port, addrs):
 
 class SocksProxy:
     def __init__(self, port, addrs):
-        self.v = 6
+        self.v = HA_CONF
         self.p = port
         self.a = addrs
         self.t = 400
