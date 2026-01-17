@@ -17,8 +17,6 @@ import urllib.request as ur
 
 
 DISABLE_ALL = [
-    'ssh_jopa_tunnel',
-    'ssh_pq_tunnel',
     #'drop_bear_2',
 ]
 
@@ -39,27 +37,21 @@ CI_MAP = {
 
 SSH_TUNNELS = [
     {
+        'key': 'ssh_jopa_tunnel',
+        'keyn': '/tunnel/ssh_ampere_tunnel',
+        'addr': 'mudak@45.11.171.78',
+        'port': 22,
+    },
+    {
         'key': 'ssh_aws_tunnel',
         'keyn': '/tunnel/aws_key',
         'addr': 'ec2-user@13.50.197.102',
         'port': 22,
     },
     {
-        'key': 'ssh_pq_tunnel',
-        'keyn': '/tunnel/pq_key',
-        'addr': 'root@45.12.146.58',
-        'port': 22,
-    },
-    {
         'key': 'ssh_ampere_tunnel',
         'keyn': '/tunnel/ssh_ampere_tunnel',
         'addr': 'ubuntu@138.2.175.102',
-        'port': 22,
-    },
-    {
-        'key': 'ssh_jopa_tunnel',
-        'keyn': '/tunnel/ssh_jopa_tunnel',
-        'addr': 'root@home.7mind.io',
         'port': 22,
     },
 ]
@@ -464,7 +456,7 @@ class SshTunnel:
         self.keyn = keyn
         self._usr = user
         self.rport = rport
-        self.tout = 30
+        self.tout = 300
 
     def name(self):
         return self._usr
@@ -1503,7 +1495,6 @@ def do(code):
         'minio_web': 8013,
         'ssh_aws_tunnel': 8014,
         'socks_proxy': 8015,
-        'ssh_pq_tunnel': 8016,
         'ssh_ampere_tunnel': 8017,
         'ssh_jopa_tunnel': 8018,
         'co2_mon': 8019,
@@ -1537,7 +1528,6 @@ def do(code):
         'pf': 1019,
         'ssh_aws_tunnel': 1020,
         'socks_proxy': 1021,
-        'ssh_pq_tunnel': 1022,
         'ssh_ampere_tunnel': 1023,
         'ssh_jopa_tunnel': 1024,
         'mirror_fetch': 1025,
