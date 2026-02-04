@@ -1094,7 +1094,7 @@ class ClusterMap:
         for h in self.conf['hosts']:
             hn = h['hostname']
 
-            for i in range(0, 4):
+            for i in range(0, 8):
                 yield {
                     'host': hn,
                     'serv': Heat(i + 1),
@@ -1557,6 +1557,10 @@ def do(code):
         'heat_2': 1031,
         'heat_3': 1032,
         'heat_4': 1033,
+        'heat_5': 1034,
+        'heat_6': 1035,
+        'heat_7': 1036,
+        'heat_8': 1037,
     }
 
     by_name = dict()
