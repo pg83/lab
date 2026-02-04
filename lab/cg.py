@@ -87,7 +87,7 @@ class Heat:
         self.uniq = num
 
     def run(self):
-        exec_into('timeout', '100s', '/bin/md5sum', '/dev/zero')
+        exec_into('timeout', '100s', 'nice', '-n', '20', 'md5sum', '/dev/zero')
 
     def name(self):
         return f'heat_{self.uniq}'
