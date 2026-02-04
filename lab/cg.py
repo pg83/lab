@@ -82,6 +82,22 @@ class IPerf:
         exec_into('iperf', '-s', '-p', self.port)
 
 
+class Heat:
+    def __init__(self, num):
+        self.uniq = num
+
+    def run(self):
+        exec_into('timeout', '100s', '/bin/md5sum', '/dev/zero')
+
+    def name(self):
+        return f'heat_{self.uniq}'
+
+    def users(self):
+        return [
+            self.name(),
+        ]
+
+
 class WebHooks:
     def __init__(self, port, where):
         self.port = port
@@ -1078,6 +1094,12 @@ class ClusterMap:
         for h in self.conf['hosts']:
             hn = h['hostname']
 
+            for i in range(0, 4):
+                yield {
+                    'host': hn,
+                    'serv': Heat(i + 1),
+                }
+
             yield {
                 'host': hn,
                 'serv': HFSync(),
@@ -1234,6 +1256,7 @@ sys.modules['builtins'].Secrets = Secrets
 sys.modules['builtins'].PersDB = PersDB
 sys.modules['builtins'].HFSync = HFSync
 sys.modules['builtins'].GHCRSync = GHCRSync
+sys.modules['builtins'].Heat = Heat
 
 
 def exec_into(*args, user=None, **kwargs):
@@ -1530,6 +1553,10 @@ def do(code):
         'secrets': 1027,
         'hf_sync': 1028,
         'ghcr_sync': 1029,
+        'heat_1': 1030,
+        'heat_2': 1031,
+        'heat_3': 1032,
+        'heat_4': 1033,
     }
 
     by_name = dict()
