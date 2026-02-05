@@ -1094,7 +1094,7 @@ class ClusterMap:
         for h in self.conf['hosts']:
             hn = h['hostname']
 
-            for i in range(0, 44):
+            for i in range(0, 56):
                 yield {
                     'host': hn,
                     'serv': Heat(i + 1),
