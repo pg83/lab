@@ -779,17 +779,42 @@ class GornSsh:
 
 class Gorn:
     def __init__(self, endpoints, s3):
-        self.v = 1
+        self.v = 2
         self.endpoints = endpoints
         self.s3 = s3
 
     def name(self):
         return 'gorn'
 
+    def user(self):
+        return 'root'
+
+    def users(self):
+        return ['root']
+
+    def std_dir(self):
+        return f'/var/run/{self.name()}/std'
+
     def pkgs(self):
         yield {
             'pkg': 'bin/gorn',
         }
+
+        yield {
+            'pkg': 'bin/su/exec',
+        }
+
+        yield {
+            'pkg': 'lab/etc/user/home',
+            'user': self.name(),
+            'user_home': self.std_dir(),
+        }
+
+    def prepare(self):
+        u = self.name()
+        ssh_dir = f'{self.std_dir()}/.ssh'
+        make_dirs(ssh_dir, owner=u)
+        os.chmod(ssh_dir, 0o700)
 
     def run(self):
         eps = []
@@ -823,7 +848,7 @@ class Gorn:
             with open(fn, 'w') as f:
                 f.write(json.dumps(cfg))
 
-            exec_into('gorn', 'serve', '--config', fn)
+            exec_into('gorn', 'serve', '--config', fn, user=self.name())
 
 
 SECOND_IP = '''
