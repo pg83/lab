@@ -35,6 +35,13 @@ CI_MAP = {
 }
 
 
+GORN_N = {
+    'lab1': 4,
+    'lab2': 4,
+    'lab3': 4,
+}
+
+
 SSH_TUNNELS = [
     {
         'key': 'ssh_jopa_tunnel',
@@ -695,6 +702,68 @@ class DropBear2(DropBear):
         DropBear.__init__(self, '0.0.0.0', port)
 
 
+class GornSsh:
+    def __init__(self, uniq, host, port, nebula_host):
+        self.v = 1
+        self.uniq = uniq
+        self.host = host
+        self.port = port
+        self.nebula_host = nebula_host
+
+    def name(self):
+        return f'gorn_{self.uniq}'
+
+    def user(self):
+        return 'root'
+
+    def users(self):
+        return ['root']
+
+    def std_dir(self):
+        return f'/var/run/{self.name()}/std'
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/dropbear/2024',
+        }
+
+        yield {
+            'pkg': 'lab/etc/user/home',
+            'user': self.name(),
+            'user_home': self.std_dir(),
+        }
+
+    def prepare(self):
+        u = self.name()
+        ssh_dir = f'{self.std_dir()}/.ssh'
+        make_dirs(ssh_dir, owner=u)
+        os.chmod(ssh_dir, 0o700)
+
+    def run(self):
+        u = self.name()
+        ak = f'{self.std_dir()}/.ssh/authorized_keys'
+
+        with open(ak, 'wb') as f:
+            f.write(get_key(f'/gorn/{self.nebula_host}.{u}.pub'))
+
+        os.chmod(ak, 0o600)
+        shutil.chown(ak, user=u, group=u)
+
+        with memfd('pid') as pid:
+            args = [
+                'dropbear',
+                '-p', f'{self.host}:{self.port}',
+                '-s', '-e', '-E', '-F',
+                '-P', pid,
+                '-r', '/etc/keys/dss',
+                '-r', '/etc/keys/rsa',
+                '-r', '/etc/keys/ecdsa',
+                '-r', '/etc/keys/ed25519',
+            ]
+
+            exec_into(*args)
+
+
 SECOND_IP = '''
 set -x
 ip addr del {addr} dev eth0
@@ -1232,6 +1301,16 @@ class ClusterMap:
                 'serv': CI(path),
             }
 
+        for hn, n in GORN_N.items():
+            h = self.conf['by_host'][hn]
+            nb = h['nebula']
+
+            for i in range(n):
+                yield {
+                    'host': hn,
+                    'serv': GornSsh(i, nb['ip'], p[f'gorn_{i}'], nb['hostname']),
+                }
+
 
 sys.modules['builtins'].IPerf = IPerf
 sys.modules['builtins'].WebHooks = WebHooks
@@ -1248,6 +1327,7 @@ sys.modules['builtins'].EtcdPrivate = EtcdPrivate
 sys.modules['builtins'].MinioConsole = MinioConsole
 sys.modules['builtins'].SecondIP = SecondIP
 sys.modules['builtins'].DropBear2 = DropBear2
+sys.modules['builtins'].GornSsh = GornSsh
 sys.modules['builtins'].CI = CI
 sys.modules['builtins'].SshTunnel = SshTunnel
 sys.modules['builtins'].SocksProxy = SocksProxy
@@ -1558,6 +1638,12 @@ def do(code):
 
     for i in range(0, 64):
         users['heat_' + str(i + 1)] = 1030 + i
+
+    gorn_max = max(GORN_N.values(), default=0)
+
+    for i in range(gorn_max):
+        ports[f'gorn_{i}'] = 9000 + i
+        users[f'gorn_{i}'] = 1100 + i
 
     by_name = dict()
 
