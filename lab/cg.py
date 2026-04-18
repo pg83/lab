@@ -882,6 +882,35 @@ class GornCtl(GornBase):
         return cfg
 
 
+class GornWeb:
+    def __init__(self, api, listen):
+        self.v = 1
+        self.api = api
+        self.listen = listen
+
+    def name(self):
+        return 'gorn_web'
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/gorn',
+        }
+
+    def run(self):
+        cfg = {
+            'web': {
+                'api': self.api,
+                'listen': self.listen,
+            },
+        }
+
+        with memfd('conf') as fn:
+            with open(fn, 'w') as f:
+                f.write(json.dumps(cfg))
+
+            exec_into('gorn', 'web', '--config', fn, PATH='/bin')
+
+
 SECOND_IP = '''
 set -x
 ip addr del {addr} dev eth0
@@ -1463,6 +1492,11 @@ class ClusterMap:
                 'serv': GornCtl(gorn_endpoints, s3, f"127.0.0.1:{p['gorn_ctl']}"),
             }
 
+            yield {
+                'host': hn,
+                'serv': GornWeb(f"http://127.0.0.1:{p['gorn_ctl']}", f"127.0.0.1:{p['gorn_web']}"),
+            }
+
 
 sys.modules['builtins'].IPerf = IPerf
 sys.modules['builtins'].WebHooks = WebHooks
@@ -1482,6 +1516,7 @@ sys.modules['builtins'].DropBear2 = DropBear2
 sys.modules['builtins'].GornSsh = GornSsh
 sys.modules['builtins'].Gorn = Gorn
 sys.modules['builtins'].GornCtl = GornCtl
+sys.modules['builtins'].GornWeb = GornWeb
 sys.modules['builtins'].CI = CI
 sys.modules['builtins'].SshTunnel = SshTunnel
 sys.modules['builtins'].SocksProxy = SocksProxy
@@ -1795,7 +1830,9 @@ def do(code):
 
     users['gorn'] = 1099
     users['gorn_ctl'] = 1098
+    users['gorn_web'] = 1097
     ports['gorn_ctl'] = 8025
+    ports['gorn_web'] = 8026
 
     gorn_max = max(GORN_N.values(), default=0)
 
