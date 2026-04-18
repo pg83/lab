@@ -1494,7 +1494,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': GornWeb(f"http://127.0.0.1:{p['gorn_ctl']}", f"127.0.0.1:{p['gorn_web']}"),
+                'serv': GornWeb(f"http://127.0.0.1:{p['gorn_ctl']}", f"{h['nebula']['ip']}:{p['gorn_web']}"),
             }
 
 
