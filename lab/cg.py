@@ -777,15 +777,7 @@ class GornSsh:
             exec_into(*args, user=u)
 
 
-class Gorn:
-    def __init__(self, endpoints, s3):
-        self.v = 3
-        self.endpoints = endpoints
-        self.s3 = s3
-
-    def name(self):
-        return 'gorn'
-
+class GornBase:
     def user(self):
         return 'root'
 
@@ -816,7 +808,7 @@ class Gorn:
         make_dirs(ssh_dir, owner=u)
         os.chmod(ssh_dir, 0o700)
 
-    def run(self):
+    def base_config(self):
         eps = []
 
         for e in self.endpoints:
@@ -829,7 +821,7 @@ class Gorn:
                 'ssh_key': get_key(f"/gorn/{e['nebula_host']}.{e['user']}.priv").decode(),
             })
 
-        cfg = {
+        return {
             'endpoints': eps,
             'etcd': {
                 'endpoints': [],
@@ -844,11 +836,49 @@ class Gorn:
             },
         }
 
+    def run(self):
+        cfg = self.config()
+
         with memfd('conf') as fn:
             with open(fn, 'w') as f:
                 f.write(json.dumps(cfg))
 
-            exec_into('gorn', 'serve', '--config', fn, user=self.name(), PATH='/bin')
+            exec_into('gorn', self.subcommand(), '--config', fn, user=self.name(), PATH='/bin')
+
+
+class Gorn(GornBase):
+    def __init__(self, endpoints, s3):
+        self.v = 3
+        self.endpoints = endpoints
+        self.s3 = s3
+
+    def name(self):
+        return 'gorn'
+
+    def subcommand(self):
+        return 'serve'
+
+    def config(self):
+        return self.base_config()
+
+
+class GornCtl(GornBase):
+    def __init__(self, endpoints, s3, listen):
+        self.v = 1
+        self.endpoints = endpoints
+        self.s3 = s3
+        self.listen = listen
+
+    def name(self):
+        return 'gorn_ctl'
+
+    def subcommand(self):
+        return 'control'
+
+    def config(self):
+        cfg = self.base_config()
+        cfg['control'] = {'listen': self.listen}
+        return cfg
 
 
 SECOND_IP = '''
@@ -1427,6 +1457,11 @@ class ClusterMap:
                 'serv': Gorn(gorn_endpoints, s3),
             }
 
+            yield {
+                'host': hn,
+                'serv': GornCtl(gorn_endpoints, s3, f"127.0.0.1:{p['gorn_ctl']}"),
+            }
+
 
 sys.modules['builtins'].IPerf = IPerf
 sys.modules['builtins'].WebHooks = WebHooks
@@ -1445,6 +1480,7 @@ sys.modules['builtins'].SecondIP = SecondIP
 sys.modules['builtins'].DropBear2 = DropBear2
 sys.modules['builtins'].GornSsh = GornSsh
 sys.modules['builtins'].Gorn = Gorn
+sys.modules['builtins'].GornCtl = GornCtl
 sys.modules['builtins'].CI = CI
 sys.modules['builtins'].SshTunnel = SshTunnel
 sys.modules['builtins'].SocksProxy = SocksProxy
@@ -1757,6 +1793,8 @@ def do(code):
         users['heat_' + str(i + 1)] = 1030 + i
 
     users['gorn'] = 1099
+    users['gorn_ctl'] = 1098
+    ports['gorn_ctl'] = 8025
 
     gorn_max = max(GORN_N.values(), default=0)
 
