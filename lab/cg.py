@@ -704,7 +704,7 @@ class DropBear2(DropBear):
 
 class GornSsh:
     def __init__(self, uniq, host, port, nebula_host):
-        self.v = 1
+        self.v = 2
         self.uniq = uniq
         self.host = host
         self.port = port
@@ -725,6 +725,10 @@ class GornSsh:
     def pkgs(self):
         yield {
             'pkg': 'bin/dropbear/2024',
+        }
+
+        yield {
+            'pkg': 'bin/su/exec',
         }
 
         yield {
@@ -749,19 +753,28 @@ class GornSsh:
         os.chmod(ak, 0o600)
         shutil.chown(ak, user=u, group=u)
 
-        with memfd('pid') as pid:
+        with multi(memfd('pid'), memfd('dss'), memfd('rsa'), memfd('ecdsa'), memfd('ed25519')) as (pid, dss, rsa, ecdsa, ed25519):
+            for src, dst in [
+                ('/etc/keys/dss', dss),
+                ('/etc/keys/rsa', rsa),
+                ('/etc/keys/ecdsa', ecdsa),
+                ('/etc/keys/ed25519', ed25519),
+            ]:
+                with open(src, 'rb') as sf, open(dst, 'wb') as df:
+                    df.write(sf.read())
+
             args = [
                 'dropbear',
                 '-p', f'{self.host}:{self.port}',
                 '-s', '-e', '-E', '-F',
                 '-P', pid,
-                '-r', '/etc/keys/dss',
-                '-r', '/etc/keys/rsa',
-                '-r', '/etc/keys/ecdsa',
-                '-r', '/etc/keys/ed25519',
+                '-r', dss,
+                '-r', rsa,
+                '-r', ecdsa,
+                '-r', ed25519,
             ]
 
-            exec_into(*args)
+            exec_into(*args, user=u)
 
 
 SECOND_IP = '''
