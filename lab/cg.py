@@ -704,7 +704,7 @@ class DropBear2(DropBear):
 
 class GornSsh:
     def __init__(self, uniq, host, port, nebula_host):
-        self.v = 2
+        self.v = 3
         self.uniq = uniq
         self.host = host
         self.port = port
@@ -742,6 +742,7 @@ class GornSsh:
         ssh_dir = f'{self.std_dir()}/.ssh'
         make_dirs(ssh_dir, owner=u)
         os.chmod(ssh_dir, 0o700)
+        make_dirs(f'{self.std_dir()}/log', owner=u)
 
     def run(self):
         u = self.name()
@@ -1438,7 +1439,7 @@ class ClusterMap:
                     'port': port,
                     'user': user,
                     'path': f'/var/run/{user}/std',
-                    'log_path': f'/var/run/{user}/std/agent.log',
+                    'log_path': f'/var/run/{user}/std/log/agent.log',
                     'nebula_host': nb['hostname'],
                 })
 
