@@ -779,7 +779,7 @@ class GornSsh:
 
 class Gorn:
     def __init__(self, endpoints, s3):
-        self.v = 2
+        self.v = 3
         self.endpoints = endpoints
         self.s3 = s3
 
@@ -848,7 +848,7 @@ class Gorn:
             with open(fn, 'w') as f:
                 f.write(json.dumps(cfg))
 
-            exec_into('gorn', 'serve', '--config', fn, user=self.name())
+            exec_into('gorn', 'serve', '--config', fn, user=self.name(), PATH='/bin')
 
 
 SECOND_IP = '''
