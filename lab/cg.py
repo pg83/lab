@@ -800,6 +800,7 @@ class Gorn:
                 'port': e['port'],
                 'user': e['user'],
                 'path': e['path'],
+                'log_path': e['log_path'],
                 'ssh_key': get_key(f"/gorn/{e['nebula_host']}.{e['user']}.priv").decode(),
             })
 
@@ -1382,6 +1383,7 @@ class ClusterMap:
                     'port': port,
                     'user': user,
                     'path': f'/var/run/{user}/std',
+                    'log_path': f'/var/run/{user}/std/agent.log',
                     'nebula_host': nb['hostname'],
                 })
 
