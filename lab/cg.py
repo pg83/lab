@@ -777,6 +777,54 @@ class GornSsh:
             exec_into(*args, user=u)
 
 
+class Gorn:
+    def __init__(self, endpoints, s3):
+        self.v = 1
+        self.endpoints = endpoints
+        self.s3 = s3
+
+    def name(self):
+        return 'gorn'
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/gorn',
+        }
+
+    def run(self):
+        eps = []
+
+        for e in self.endpoints:
+            eps.append({
+                'host': e['host'],
+                'port': e['port'],
+                'user': e['user'],
+                'path': e['path'],
+                'ssh_key': get_key(f"/gorn/{e['nebula_host']}.{e['user']}.priv").decode(),
+            })
+
+        cfg = {
+            'endpoints': eps,
+            'etcd': {
+                'endpoints': [],
+            },
+            's3': {
+                'endpoint': self.s3['endpoint'],
+                'region': self.s3['region'],
+                'bucket': self.s3['bucket'],
+                'access_key': get_key('/s3/user').decode().strip(),
+                'secret_key': get_key('/s3/password').decode().strip(),
+                'use_path_style': self.s3.get('use_path_style', True),
+            },
+        }
+
+        with memfd('conf') as fn:
+            with open(fn, 'w') as f:
+                f.write(json.dumps(cfg))
+
+            exec_into('gorn', 'serve', '--config', fn)
+
+
 SECOND_IP = '''
 set -x
 ip addr del {addr} dev eth0
@@ -1314,15 +1362,43 @@ class ClusterMap:
                 'serv': CI(path),
             }
 
+        gorn_endpoints = []
+
         for hn, n in GORN_N.items():
             h = self.conf['by_host'][hn]
             nb = h['nebula']
 
             for i in range(n):
+                port = p[f'gorn_{i}']
+                user = f'gorn_{i}'
+
                 yield {
                     'host': hn,
-                    'serv': GornSsh(i, nb['ip'], p[f'gorn_{i}'], nb['hostname']),
+                    'serv': GornSsh(i, nb['ip'], port, nb['hostname']),
                 }
+
+                gorn_endpoints.append({
+                    'host': nb['ip'],
+                    'port': port,
+                    'user': user,
+                    'path': f'/var/run/{user}/std',
+                    'nebula_host': nb['hostname'],
+                })
+
+        for hn in GORN_N:
+            h = self.conf['by_host'][hn]
+
+            s3 = {
+                'endpoint': f"http://{h['net'][1]['ip']}:{p['minio']}",
+                'region': 'minio',
+                'bucket': 'gorn',
+                'use_path_style': True,
+            }
+
+            yield {
+                'host': hn,
+                'serv': Gorn(gorn_endpoints, s3),
+            }
 
 
 sys.modules['builtins'].IPerf = IPerf
@@ -1341,6 +1417,7 @@ sys.modules['builtins'].MinioConsole = MinioConsole
 sys.modules['builtins'].SecondIP = SecondIP
 sys.modules['builtins'].DropBear2 = DropBear2
 sys.modules['builtins'].GornSsh = GornSsh
+sys.modules['builtins'].Gorn = Gorn
 sys.modules['builtins'].CI = CI
 sys.modules['builtins'].SshTunnel = SshTunnel
 sys.modules['builtins'].SocksProxy = SocksProxy
@@ -1651,6 +1728,8 @@ def do(code):
 
     for i in range(0, 64):
         users['heat_' + str(i + 1)] = 1030 + i
+
+    users['gorn'] = 1099
 
     gorn_max = max(GORN_N.values(), default=0)
 
