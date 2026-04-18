@@ -44,6 +44,22 @@ Notes for working in this repo. Read `README.md` first for the high-level pictur
 - The IX package manager lives in the `ext/ix` submodule (`https://github.com/stal-ix/ix.git`). If you need something from it (base templates, package definitions), read from there; don't vendor.
 - Builds and CI run on the cluster itself via `lab/services/ci`. Don't expect a local `make test` target.
 
+## Canon test
+
+After any edit to `lab/cg.py` (or anything that changes the cluster config), run:
+
+```sh
+python3 tst/test.py | diff tst/canon.json -
+```
+
+If the diff is expected, re-canonize and commit the updated canon together with the code change:
+
+```sh
+python3 tst/test.py > tst/canon.json
+```
+
+The canon captures the full generated cluster config per host (`extra` as a line list, with long base64 pickle/file blobs shortened to `sha256:<16 hex>` for readability). Review the diff before re-canonizing — unexpected services appearing/disappearing, port or UID shifts, or `runsh_script` hashes changing on services you didn't touch all indicate something slipped.
+
 ## Do / don't
 
 - Do keep service classes small and move shared helpers to module scope (`NEBULA` dict, `memfd`, `get_key`, `make_dirs`, `exec_into` are examples).
