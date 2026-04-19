@@ -9,7 +9,7 @@ cat << EOF > ${out}/bin/ci_cycle
 set -xue
 
 export PATH=/bin:/ix/realm/boot/bin
-export IX_ROOT={{wd}}/ix_root
+export IX_ROOT=/ix
 
 # Dispatch the build via molot → gorn → workers instead of running
 # assemble locally. Artifacts land at
