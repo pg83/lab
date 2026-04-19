@@ -704,7 +704,7 @@ class DropBear2(DropBear):
 
 class GornSsh:
     def __init__(self, uniq, host, port, nebula_host):
-        self.v = 3
+        self.v = 4
         self.uniq = uniq
         self.host = host
         self.port = port
@@ -734,20 +734,23 @@ class GornSsh:
         yield {
             'pkg': 'lab/etc/user/home',
             'user': self.name(),
-            'user_home': self.std_dir(),
+            'user_home': self.home_dir(),
         }
+
+    def home_dir(self):
+        return f'{self.std_dir()}/home'
 
     def prepare(self):
         u = self.name()
-        make_dirs(self.std_dir(), owner=u)
-        ssh_dir = f'{self.std_dir()}/.ssh'
+        make_dirs(self.home_dir(), owner=u)
+        ssh_dir = f'{self.home_dir()}/.ssh'
         make_dirs(ssh_dir, owner=u)
         os.chmod(ssh_dir, 0o700)
         make_dirs(f'{self.std_dir()}/log', owner=u)
 
     def run(self):
         u = self.name()
-        ak = f'{self.std_dir()}/.ssh/authorized_keys'
+        ak = f'{self.home_dir()}/.ssh/authorized_keys'
 
         with open(ak, 'wb') as f:
             f.write(get_key(f'/gorn/{self.nebula_host}.{u}.pub'))
@@ -789,6 +792,9 @@ class GornBase:
     def std_dir(self):
         return f'/var/run/{self.name()}/std'
 
+    def home_dir(self):
+        return f'{self.std_dir()}/home'
+
     def pkgs(self):
         yield {
             'pkg': 'bin/gorn',
@@ -801,12 +807,13 @@ class GornBase:
         yield {
             'pkg': 'lab/etc/user/home',
             'user': self.name(),
-            'user_home': self.std_dir(),
+            'user_home': self.home_dir(),
         }
 
     def prepare(self):
         u = self.name()
-        ssh_dir = f'{self.std_dir()}/.ssh'
+        make_dirs(self.home_dir(), owner=u)
+        ssh_dir = f'{self.home_dir()}/.ssh'
         make_dirs(ssh_dir, owner=u)
         os.chmod(ssh_dir, 0o700)
 
@@ -850,7 +857,7 @@ class GornBase:
 
 class Gorn(GornBase):
     def __init__(self, endpoints, s3):
-        self.v = 3
+        self.v = 4
         self.endpoints = endpoints
         self.s3 = s3
 
@@ -866,7 +873,7 @@ class Gorn(GornBase):
 
 class GornCtl(GornBase):
     def __init__(self, endpoints, s3, listen):
-        self.v = 1
+        self.v = 2
         self.endpoints = endpoints
         self.s3 = s3
         self.listen = listen
@@ -1473,7 +1480,7 @@ class ClusterMap:
                     'host': nb['ip'],
                     'port': port,
                     'user': user,
-                    'path': f'/var/run/{user}/std',
+                    'path': f'/var/run/{user}/std/home',
                     'log_path': f'/var/run/{user}/std/log/agent.log',
                     'nebula_host': nb['hostname'],
                 })
