@@ -882,6 +882,11 @@ class GornCtl(GornBase):
         return cfg
 
 
+class GornCtlNebula(GornCtl):
+    def name(self):
+        return 'gorn_ctl_nb'
+
+
 class GornWeb:
     def __init__(self, api, listen):
         self.v = 1
@@ -1494,6 +1499,11 @@ class ClusterMap:
 
             yield {
                 'host': hn,
+                'serv': GornCtlNebula(gorn_endpoints, s3, f"{h['nebula']['ip']}:{p['gorn_ctl_nb']}"),
+            }
+
+            yield {
+                'host': hn,
                 'serv': GornWeb(f"http://127.0.0.1:{p['gorn_ctl']}", f"{h['nebula']['ip']}:{p['gorn_web']}"),
             }
 
@@ -1516,6 +1526,7 @@ sys.modules['builtins'].DropBear2 = DropBear2
 sys.modules['builtins'].GornSsh = GornSsh
 sys.modules['builtins'].Gorn = Gorn
 sys.modules['builtins'].GornCtl = GornCtl
+sys.modules['builtins'].GornCtlNebula = GornCtlNebula
 sys.modules['builtins'].GornWeb = GornWeb
 sys.modules['builtins'].CI = CI
 sys.modules['builtins'].SshTunnel = SshTunnel
@@ -1831,8 +1842,10 @@ def do(code):
     users['gorn'] = 1099
     users['gorn_ctl'] = 1098
     users['gorn_web'] = 1097
+    users['gorn_ctl_nb'] = 1096
     ports['gorn_ctl'] = 8025
     ports['gorn_web'] = 8026
+    ports['gorn_ctl_nb'] = 8027
 
     gorn_max = max(GORN_N.values(), default=0)
 
