@@ -18,6 +18,7 @@ export IX_ROOT=/ix
 # GORN_API, S3_ENDPOINT, AWS_* come from the CI service env.
 export IX_EXEC_KIND=molot
 export S3_BUCKET=gorn
+export MOLOT_CACHE=./cache
 
 sleep 10
 
