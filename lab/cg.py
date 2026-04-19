@@ -1052,7 +1052,6 @@ CI_SCRIPT = '''
 set -xue
 chown {user}:{user} /var/run/{user}
 mkdir -p {wd}
-/bin/mount_ci {wd}
 mkdir -p {wd}/ix_root
 chown {user}:{user} {wd}/ix_root
 rm -rf {wd}/ix_root/tmpfs
