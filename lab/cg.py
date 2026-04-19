@@ -1071,6 +1071,7 @@ exec su-exec {user} /bin/ci_cycle
 
 class CI:
     def __init__(self, targets, gorn_api, s3_endpoint):
+        self.v = 1
         self.targets = targets
         self.gorn_api = gorn_api
         self.s3_endpoint = s3_endpoint
@@ -1113,6 +1114,7 @@ class CI:
                 *args,
                 GORN_API=self.gorn_api,
                 S3_ENDPOINT=self.s3_endpoint,
+                MOLOT_CACHE=self.wd() + '/molot.cache',
                 AWS_ACCESS_KEY_ID=get_key('/s3/user').decode().strip(),
                 AWS_SECRET_ACCESS_KEY=get_key('/s3/password').decode().strip(),
             )
@@ -1469,7 +1471,7 @@ class ClusterMap:
                 'serv': CI(
                     path,
                     gorn_api=f"http://127.0.0.1:{p['gorn_ctl']}",
-                    s3_endpoint=f"http://localhost:{p['minio']}",
+                    s3_endpoint=f"http://{hn}.eth1:{p['minio']}",
                 ),
             }
 
