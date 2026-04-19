@@ -36,9 +36,9 @@ CI_MAP = {
 
 
 GORN_N = {
-    'lab1': 4,
-    'lab2': 4,
-    'lab3': 4,
+    'lab1': 8,
+    'lab2': 8,
+    'lab3': 8,
 }
 
 
