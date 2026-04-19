@@ -14,12 +14,10 @@
 
 set -eu
 
-cd "$(dirname "$0")"
-
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
-pairs=$(python3 - <<'PY'
+cat > "$TMP/parse.py" <<'PY'
 import ast, sys
 for node in ast.parse(open('lab/cg.py').read()).body:
     if isinstance(node, ast.Assign):
@@ -30,7 +28,7 @@ for node in ast.parse(open('lab/cg.py').read()).body:
                 sys.exit(0)
 sys.exit('GORN_N not found in lab/cg.py')
 PY
-)
+pairs=$(python3 "$TMP/parse.py")
 
 echo "$pairs" | while read -r host n; do
     i=0
