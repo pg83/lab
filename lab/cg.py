@@ -739,6 +739,7 @@ class GornSsh:
 
     def prepare(self):
         u = self.name()
+        make_dirs(self.std_dir(), owner=u)
         ssh_dir = f'{self.std_dir()}/.ssh'
         make_dirs(ssh_dir, owner=u)
         os.chmod(ssh_dir, 0o700)
