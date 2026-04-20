@@ -832,7 +832,10 @@ class GornBase:
 
         return {
             'endpoints': eps,
-            'hosts': {h: {'cpus_per_slot': CPUS_PER_SLOT} for h in GORN_N},
+            'hosts': {
+                ep['host']: {'cpus_per_slot': CPUS_PER_SLOT}
+                for ep in self.endpoints
+            },
             'etcd': {
                 'endpoints': [],
             },
