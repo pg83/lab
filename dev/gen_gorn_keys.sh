@@ -18,15 +18,14 @@ TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
 cat > "$TMP/parse.py" <<'PY'
-import ast, sys
-for node in ast.parse(open('lab/cg.py').read()).body:
-    if isinstance(node, ast.Assign):
-        for t in node.targets:
-            if isinstance(t, ast.Name) and t.id == 'GORN_N':
-                for k, v in ast.literal_eval(node.value).items():
-                    print(k, v)
-                sys.exit(0)
-sys.exit('GORN_N not found in lab/cg.py')
+import runpy, sys
+mod = runpy.run_path('lab/cg.py', run_name='gen_gorn_keys')
+try:
+    gn = mod['GORN_N']
+except KeyError:
+    sys.exit('GORN_N not found in lab/cg.py')
+for k, v in gn.items():
+    print(k, v)
 PY
 pairs=$(python3 "$TMP/parse.py")
 
