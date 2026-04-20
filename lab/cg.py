@@ -993,7 +993,7 @@ def it_nebula_reals(lh, h, port):
 
 class EtcdPrivate:
     def __init__(self, peers, port_peer, port_client, hostname, etcid, addr, user_name):
-        self.v = 1
+        self.v = 2
         self.etcid = etcid
         self.peers = peers
         self.port_peer = port_peer
@@ -1048,6 +1048,14 @@ class EtcdPrivate:
             ','.join(self.it_all()),
             '--initial-cluster-state',
             'existing',
+            # Drop revisions older than 1h so MVCC history doesn't
+            # balloon past the 2GiB quota during long build runs.
+            '--auto-compaction-mode', 'periodic',
+            '--auto-compaction-retention', '1h',
+            # Give 8GiB of headroom; compaction keeps the live set
+            # small, this is only so a burst won't trip the alarm
+            # before the next compaction tick.
+            '--quota-backend-bytes', str(8 * 1024 * 1024 * 1024),
         ]
 
         exec_into(*args)
