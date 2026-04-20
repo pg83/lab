@@ -1124,6 +1124,7 @@ class CI:
             '/bin/ci_cycle',
             GORN_API=self.gorn_api,
             S3_ENDPOINT=self.s3_endpoint,
+            MOLOT_FULL_SLOTS='10',
             AWS_ACCESS_KEY_ID=get_key('/s3/user').decode().strip(),
             AWS_SECRET_ACCESS_KEY=get_key('/s3/password').decode().strip(),
         )
