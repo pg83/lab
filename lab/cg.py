@@ -20,20 +20,17 @@ DISABLE_ALL = [
     #'drop_bear_2',
 ]
 
-
 DISABLE = {
     'lab1': DISABLE_ALL + [],
     'lab2': DISABLE_ALL + [],
     'lab3': DISABLE_ALL + [],
 }
 
-
 CI_MAP = {
-    'lab1': 'set/ci/tier/2',
-    'lab2': 'set/ci/tier/0',
-    'lab3': 'set/ci/tier/0',
+    'lab1': 'set/ci/tier/0',
+    'lab2': 'set/ci/tier/1',
+    'lab3': 'set/ci/tier/2',
 }
-
 
 CPUS_PER_SLOT = 4
 
@@ -44,7 +41,6 @@ HOST_CPUS = {
 }
 
 GORN_N = {h: c // CPUS_PER_SLOT for h, c in HOST_CPUS.items()}
-
 
 SSH_TUNNELS = [
     {
