@@ -78,3 +78,10 @@ The canon captures the full generated cluster config per host (`extra` as a line
 - Runit service template: `lab/services/sh/runit/ix.sh`.
 - Auto-update loop: `lab/services/autoupdate/`.
 - CI loop: `lab/services/ci/`.
+
+## Runtime layout
+
+- Services land at `/etc/services/<self.name()>` under `bin/runsrv` (not runit — no `sv`); runtime dir is `/var/run/<name>/std/`, live log is `std/current` (tinylog), rotated into `_<ts>.s`.
+- `gorn_ctl` is localhost-only on 8025; for cross-host API calls use the nebula sibling `gorn_ctl_nb` on `<host>.nebula:8027`. Hosts resolve each other as `<host>.eth1` / `<host>.nebula` via generated `/etc/hosts.d/01-locals`.
+- `ext/ix/` (stal-ix submodule) often lags local `ix/`; when a package is missing upstream, shadow it under `lab/bin/<pkg>/ix.sh` — local wins on IX_PATH.
+- Gotchas: stalix `python3` only takes argv[1] as a script path (no `-c`, no stdin), BusyBox `timeout` is `timeout [-k KILL_SECS] SECS prog...` (no suffixes), `etcdctl defrag` needs `--command-timeout=5m` per-endpoint (default 5s kills on multi-GiB DBs).
