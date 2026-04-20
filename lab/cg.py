@@ -907,6 +907,28 @@ class GornCtlNebula(GornCtl):
         return 'gorn_ctl_nb'
 
 
+class GornProm(GornBase):
+    def __init__(self, endpoints, s3, port):
+        self.v = 1
+        self.endpoints = endpoints
+        self.s3 = s3
+        self.port = port
+
+    def name(self):
+        return 'gorn_prom'
+
+    def subcommand(self):
+        return 'prom'
+
+    def config(self):
+        cfg = self.base_config()
+        cfg['prom'] = {'listen': f'127.0.0.1:{self.port}'}
+        return cfg
+
+    def prom_port(self):
+        return self.port
+
+
 class GornWeb:
     def __init__(self, api, listen):
         self.v = 1
@@ -1518,6 +1540,11 @@ class ClusterMap:
                 'serv': GornWeb(f"http://127.0.0.1:{p['gorn_ctl']}", f"{h['nebula']['ip']}:{p['gorn_web']}"),
             }
 
+            yield {
+                'host': hn,
+                'serv': GornProm(gorn_endpoints, s3, p['gorn_prom']),
+            }
+
 
 sys.modules['builtins'].IPerf = IPerf
 sys.modules['builtins'].WebHooks = WebHooks
@@ -1539,6 +1566,7 @@ sys.modules['builtins'].Gorn = Gorn
 sys.modules['builtins'].GornCtl = GornCtl
 sys.modules['builtins'].GornCtlNebula = GornCtlNebula
 sys.modules['builtins'].GornWeb = GornWeb
+sys.modules['builtins'].GornProm = GornProm
 sys.modules['builtins'].CI = CI
 sys.modules['builtins'].SshTunnel = SshTunnel
 sys.modules['builtins'].SocksProxy = SocksProxy
@@ -1857,9 +1885,11 @@ def do(code):
     users['gorn_ctl'] = 1098
     users['gorn_web'] = 1097
     users['gorn_ctl_nb'] = 1096
+    users['gorn_prom'] = 1095
     ports['gorn_ctl'] = 8025
     ports['gorn_web'] = 8026
     ports['gorn_ctl_nb'] = 8027
+    ports['gorn_prom'] = 8028
 
     gorn_max = max(GORN_N.values(), default=0)
 
