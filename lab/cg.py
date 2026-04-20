@@ -1060,26 +1060,6 @@ class EtcdPrivate:
         exec_into(*args)
 
 
-CI_SCRIPT = '''
-set -xue
-chown {user}:{user} /var/run/{user}
-mkdir -p {wd}
-mkdir -p {wd}/ix_root
-chown {user}:{user} {wd}/ix_root
-rm -rf {wd}/ix_root/tmpfs
-rm -rf {wd}/ix_root/trash
-mkdir {wd}/ix_root/trash
-chown {user}:{user} {wd}/ix_root/trash
-rm -rf {wd}/ix_root/build
-mkdir {wd}/ix_root/build
-chown {user}:{user} {wd}/ix_root/build
-ls -la {wd}/ix_root
-ulimit -s unlimited
-ulimit -a
-exec su-exec {user} /bin/ci_cycle
-'''
-
-
 class CI:
     def __init__(self, idx, targets, gorn_api, s3_endpoint):
         self.v = 2
@@ -1091,44 +1071,20 @@ class CI:
     def name(self):
         return f'ci_{self.idx}'
 
-    def users(self):
-        return [
-            'root',
-            self.name(),
-        ]
-
-    def wd(self):
-        return '/var/run/' + self.name() + '/mount'
-
     def pkgs(self):
         yield {
             'pkg': 'lab/services/ci',
-            'wd': self.wd(),
             'ci_targets': self.targets,
         }
 
     def run(self):
-        s = CI_SCRIPT
-
-        s = s.replace('{user}', self.name())
-        s = s.replace('{wd}', self.wd())
-
-        with memfd('script') as ss:
-            with open(ss, 'w') as f:
-                f.write(s)
-
-            args = [
-                '/bin/unshare', '-m',
-                '/bin/sh', ss
-            ]
-
-            exec_into(
-                *args,
-                GORN_API=self.gorn_api,
-                S3_ENDPOINT=self.s3_endpoint,
-                AWS_ACCESS_KEY_ID=get_key('/s3/user').decode().strip(),
-                AWS_SECRET_ACCESS_KEY=get_key('/s3/password').decode().strip(),
-            )
+        exec_into(
+            '/bin/ci_cycle',
+            GORN_API=self.gorn_api,
+            S3_ENDPOINT=self.s3_endpoint,
+            AWS_ACCESS_KEY_ID=get_key('/s3/user').decode().strip(),
+            AWS_SECRET_ACCESS_KEY=get_key('/s3/password').decode().strip(),
+        )
 
 
 class Secrets:
@@ -1806,7 +1762,7 @@ def it_srvs(srvs, code, flags):
 
 
 def do(code):
-    hosts = [gen_host(h) for h in (1, 2, 3)]
+    hosts = [gen_host(h) for h in (1, 2, 3, 4)]
 
     for x in hosts:
         x['ip'] = x['net'][0]['ip']
