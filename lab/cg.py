@@ -629,9 +629,17 @@ class MinIO:
                 'MINIO_ROOT_USER': get_key('/s3/user').decode().strip(),
                 'MINIO_ROOT_PASSWORD': get_key('/s3/password').decode().strip(),
                 'MINIO_BROWSER': 'off',
+                'MINIO_PROMETHEUS_AUTH_TYPE': 'public',
             }
 
             exec_into(*args, **kwargs)
+
+    def prom_jobs(self):
+        yield {
+            'job_name': self.name(),
+            'metrics_path': '/minio/v2/metrics/cluster',
+            'static_configs': [{'targets': [self.addr]}],
+        }
 
 
 class MinioConsole:
@@ -960,8 +968,9 @@ class SecondIP:
 
 
 class BalancerHttp:
-    def __init__(self, port, real):
+    def __init__(self, port, mgmt_port, real):
         self.port = port
+        self.mgmt_port = mgmt_port
         self.real = real
 
     def pkgs(self):
@@ -969,9 +978,14 @@ class BalancerHttp:
             'pkg': 'bin/reproxy',
         }
 
+    def prom_port(self):
+        return self.mgmt_port
+
     def it_args(self):
         yield 'reproxy'
         yield f'--listen=0.0.0.0:{self.port}'
+        yield '--mgmt.enabled'
+        yield f'--mgmt.listen=127.0.0.1:{self.mgmt_port}'
         yield '--static.enabled'
         yield '--logger.enabled'
         yield '--logger.stdout'
@@ -1022,6 +1036,12 @@ class EtcdPrivate:
     def it_all(self):
         for x in self.peers:
             yield f'{x["hostname"]}=http://{x["ip"]}:{self.port_peer}'
+
+    def prom_jobs(self):
+        yield {
+            'job_name': self.name(),
+            'static_configs': [{'targets': [f'{self.addr}:{self.port_client}']}],
+        }
 
     def run(self):
         os.makedirs(self.data_dir, exist_ok=True)
@@ -1354,7 +1374,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': BalancerHttp(p['proxy_http'], bal_map),
+                'serv': BalancerHttp(p['proxy_http'], p['proxy_http_mgmt'], bal_map),
             }
 
             yield {
@@ -1790,6 +1810,7 @@ def do(code):
         'ssh_jopa_tunnel': 8018,
         'co2_mon': 8019,
         'proxy_http': 8080,
+        'proxy_http_mgmt': 8081,
         'proxy_https': 8090,
         'etcd_client_private': 8020,
         'etcd_peer_private': 8021,
@@ -1862,6 +1883,7 @@ def do(code):
     by_addr = dict()
 
     py_modules = []
+    hndl_by_host = []
 
     for rec in ClusterMap(cconf).it_cluster():
         hndl = Service(rec['serv'])
@@ -1873,7 +1895,11 @@ def do(code):
 
         by_host[host].append(hndl)
         by_addr[addr] = hndl
+        hndl_by_host.append((host, hndl))
 
+    # Second pass — routing/registration lookups need by_addr fully populated
+    # (e.g. EtcdPrivate is yielded before Collector, but has prom_jobs now).
+    for host, hndl in hndl_by_host:
         for job in hndl.prom_jobs():
             by_addr[f'{host}:collector'].srv.jobs.append(job)
 
