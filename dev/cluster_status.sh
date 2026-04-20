@@ -116,6 +116,23 @@ for h in $HOSTS; do
     ssh -o BatchMode=yes -o ConnectTimeout=5 "root@$h.nebula" 'sh -s' <<'REMOTE' || echo "  ssh $h failed"
 set -u
 
+# /bin/runpy is the generated pickled service runner — its content
+# changes whenever cg.py regenerates, so it's a fingerprint of "what
+# code this host is actually running right now". Comparing sha256
+# between hosts tells us if the deploy is in sync; the realm path
+# tells us which store object it resolves to.
+echo '-- /bin/runpy deploy fingerprint --'
+if [ -e /bin/runpy ]; then
+    printf '  sha256=%s\n' "$(sha256sum /bin/runpy | awk '{print $1}')"
+    printf '  realm=%s\n' "$(readlink -f /bin/runpy 2>/dev/null)"
+    printf '  cg markers: '
+    grep -Eo 'cpus_per_slot|CpusPerSlot|CPUS_PER_SLOT' /bin/runpy 2>/dev/null | sort -u | tr '\n' ' '
+    echo
+else
+    echo "  /bin/runpy missing"
+fi
+echo
+
 # Services are under /var/run/<srv>/std/ (runsrv). "out" and "err" are
 # the live stdout/stderr append streams; rotated archives live as
 # sibling _*.s files.
@@ -146,8 +163,13 @@ ps -eo user,pid,etime,comm,args 2>/dev/null | awk '
 echo
 echo '-- gorn leader current (tail) --'
 # runsrv pipes service stdout+stderr through tinylog into ./current.
-tail -n 30 /var/run/gorn/std/current 2>/dev/null | tail -n 15 \
-    || echo "  (no gorn leader log)"
+# Grab both the raw tail (panic traces live here) and dispatch-relevant
+# lines so we can tell if the scheduler is actually doing anything.
+tail -n 60 /var/run/gorn/std/current 2>/dev/null || echo "  (no gorn leader log)"
+echo
+echo '-- gorn leader dispatch activity (last 10 dispatch/scheduler lines) --'
+grep -aE 'dispatch:|scheduler|task [a-z0-9-]+ on ' /var/run/gorn/std/current 2>/dev/null \
+    | tail -n 10 || echo "  (no dispatch lines)"
 
 echo
 echo '-- ci current (tail) --'
