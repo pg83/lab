@@ -26,11 +26,11 @@ DISABLE = {
     'lab3': DISABLE_ALL + [],
 }
 
-CI_MAP = {
-    'lab1': 'set/ci/tier/0',
-    'lab2': 'set/ci/tier/1',
-    'lab3': 'set/ci/tier/2',
-}
+CI_TIERS = [
+    'set/ci/tier/0',
+    'set/ci/tier/1',
+    'set/ci/tier/2',
+]
 
 CPUS_PER_SLOT = 4
 
@@ -1081,14 +1081,15 @@ exec su-exec {user} /bin/ci_cycle
 
 
 class CI:
-    def __init__(self, targets, gorn_api, s3_endpoint):
+    def __init__(self, idx, targets, gorn_api, s3_endpoint):
         self.v = 2
+        self.idx = idx
         self.targets = targets
         self.gorn_api = gorn_api
         self.s3_endpoint = s3_endpoint
 
     def name(self):
-        return 'ci'
+        return f'ci_{self.idx}'
 
     def users(self):
         return [
@@ -1475,15 +1476,17 @@ class ClusterMap:
                     'serv': NebulaLh(lh['name'], lh_port, neb_map, p['nebula_lh_prom'], pm),
                 }
 
-        for hn, path in CI_MAP.items():
-            yield {
-                'host': hn,
-                'serv': CI(
-                    path,
-                    gorn_api=f"http://127.0.0.1:{p['gorn_ctl']}",
-                    s3_endpoint=f"http://{hn}.eth1:{p['minio']}",
-                ),
-            }
+        for hn in self.conf['by_host']:
+            for i, path in enumerate(CI_TIERS):
+                yield {
+                    'host': hn,
+                    'serv': CI(
+                        i,
+                        path,
+                        gorn_api=f"http://127.0.0.1:{p['gorn_ctl']}",
+                        s3_endpoint=f"http://{hn}.eth1:{p['minio']}",
+                    ),
+                }
 
         gorn_endpoints = []
 
@@ -1803,7 +1806,7 @@ def it_srvs(srvs, code, flags):
 
 
 def do(code):
-    hosts = [gen_host(h) for h in (1, 2, 3, 4)]
+    hosts = [gen_host(h) for h in (1, 2, 3)]
 
     for x in hosts:
         x['ip'] = x['net'][0]['ip']
@@ -1855,7 +1858,6 @@ def do(code):
         'minio_2': 1014,
         'minio_3': 1015,
         'mirror': 1016,
-        'ci': 1017,
         'minio_console': 1018,
         'pf': 1019,
         'socks_proxy': 1021,
@@ -1870,6 +1872,9 @@ def do(code):
 
     for i in range(0, 64):
         users['heat_' + str(i + 1)] = 1030 + i
+
+    for i in range(len(CI_TIERS)):
+        users[f'ci_{i}'] = 1200 + i
 
     users['gorn'] = 1099
     users['gorn_ctl'] = 1098

@@ -35,7 +35,7 @@ Notes for working in this repo. Read `README.md` first for the high-level pictur
 - `exec_into(..., user='foo')` wraps with `su-exec foo`; don't double-wrap.
 - Configs are passed to binaries via `memfd()` (`/proc/self/fd/N`) — never write to `/etc` at runtime.
 - Secrets: call `get_key('/path')` (HTTP GET against `localhost:8022`). Do not hard-code material or read from files outside `/etc/keys/` (which is pre-populated by `lab/etc/keys`).
-- Hosts are fixed: `lab1`, `lab2`, `lab3` (lab4 exists only as metadata in `gen_host`). Code that assumes 3 hosts is fine.
+- Hosts are fixed: `lab1`, `lab2`, `lab3`. Code that assumes 3 hosts is fine.
 - `DISABLE` / `DISABLE_ALL` / `CI_MAP` near the top of `cg.py` are the per-host knobs — prefer them over conditionals inside classes.
 
 ## Running
