@@ -1129,6 +1129,55 @@ class CI:
         )
 
 
+class Perses:
+    def __init__(self, port):
+        self.v = 1
+        self.port = port
+
+    def name(self):
+        return 'perses'
+
+    def home_dir(self):
+        return f'/var/run/{self.name()}/std/home'
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/perses',
+        }
+
+        yield {
+            'pkg': 'lab/etc/user/home',
+            'user': self.name(),
+            'user_home': self.home_dir(),
+        }
+
+    def prepare(self):
+        make_dirs(f'{self.home_dir()}/data', owner=self.name())
+
+    def prom_port(self):
+        return self.port
+
+    def config(self):
+        return {
+            'database': {
+                'file': {
+                    'folder': f'{self.home_dir()}/data',
+                    'extension': 'json',
+                },
+            },
+            'security': {
+                'enable_auth': False,
+            },
+        }
+
+    def run(self):
+        with memfd('config.yaml') as fn:
+            with open(fn, 'w') as f:
+                f.write(json.dumps(self.config()))
+
+            exec_into('perses', '-config', fn, f'-web.listen-address=:{self.port}')
+
+
 class Secrets:
     def __init__(self, port):
         self.v = 5
@@ -1376,6 +1425,11 @@ class ClusterMap:
 
             yield {
                 'host': hn,
+                'serv': Perses(p['perses']),
+            }
+
+            yield {
+                'host': hn,
                 'serv': CO2Mon(p['co2_mon']),
             }
 
@@ -1567,6 +1621,7 @@ sys.modules['builtins'].GornCtl = GornCtl
 sys.modules['builtins'].GornCtlNebula = GornCtlNebula
 sys.modules['builtins'].GornWeb = GornWeb
 sys.modules['builtins'].GornProm = GornProm
+sys.modules['builtins'].Perses = Perses
 sys.modules['builtins'].CI = CI
 sys.modules['builtins'].SshTunnel = SshTunnel
 sys.modules['builtins'].SocksProxy = SocksProxy
@@ -1837,6 +1892,7 @@ def do(code):
         'ssh_cz_tunnel': 8017,
         'ssh_jopa_tunnel': 8018,
         'co2_mon': 8019,
+        'perses': 8014,
         'proxy_http': 8080,
         'proxy_http_mgmt': 8081,
         'proxy_https': 8090,
@@ -1873,6 +1929,7 @@ def do(code):
         'secrets': 1027,
         'hf_sync': 1028,
         'ghcr_sync': 1029,
+        'perses': 1017,
     }
 
     for i in range(0, 64):
