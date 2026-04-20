@@ -35,11 +35,15 @@ CI_MAP = {
 }
 
 
-GORN_N = {
-    'lab1': 8,
-    'lab2': 8,
-    'lab3': 8,
+CPUS_PER_SLOT = 4
+
+HOST_CPUS = {
+    'lab1': 88,
+    'lab2': 80,
+    'lab3': 56,
 }
+
+GORN_N = {h: c // CPUS_PER_SLOT for h, c in HOST_CPUS.items()}
 
 
 SSH_TUNNELS = [
@@ -832,6 +836,7 @@ class GornBase:
 
         return {
             'endpoints': eps,
+            'hosts': {h: {'cpus_per_slot': CPUS_PER_SLOT} for h in GORN_N},
             'etcd': {
                 'endpoints': [],
             },
