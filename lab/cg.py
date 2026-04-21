@@ -1221,10 +1221,14 @@ class Grafana:
         )
 
     def run(self):
-        # GRAFANA_HOMEPATH from bin/grafana/ui's env block doesn't propagate
-        # through our runit wrapper; the path it would point at is stable
-        # via the realm symlink, so resolve it directly.
-        homepath = '/ix/realm/system/share/grafana'
+        # Grafana's plugin loader does a symlink-escape containment check
+        # (filepath.Rel against realpath) and rejects anything whose
+        # canonical path escapes the homepath. If we hand it the realm
+        # symlink, every plugin file resolves back to /ix/store/... and
+        # looks like "../../.../store/..." relative to realm, so
+        # Grafana's walker declares it "not inside of plugin directory"
+        # and refuses to load core plugins. Resolve the symlink here.
+        homepath = os.path.realpath('/ix/realm/system/share/grafana')
 
         with memfd('grafana.ini') as fn:
             with open(fn, 'w') as f:
