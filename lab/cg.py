@@ -1188,8 +1188,8 @@ class Grafana:
     def name(self):
         return 'grafana'
 
-    def home_dir(self):
-        return f'/var/run/{self.name()}/std/home'
+    def state_dir(self):
+        return f'/var/run/{self.name()}'
 
     def pkgs(self):
         yield {
@@ -1197,46 +1197,22 @@ class Grafana:
         }
 
         yield {
-            'pkg': 'lab/etc/user/home',
-            'user': self.name(),
-            'user_home': self.home_dir(),
+            'pkg': 'lab/aux/grafana',
+            'collector_port': str(self.collector_port),
         }
 
-    def prepare(self):
-        u = self.name()
-
-        for sub in ('data', 'logs', 'plugins', 'provisioning', 'provisioning/datasources', 'provisioning/dashboards'):
-            make_dirs(f'{self.home_dir()}/{sub}', owner=u)
-
-        # Pin Prometheus as the default datasource via file-based
-        # provisioning. Written here (root) and chown'd to grafana so
-        # the first run sees it.
-        ds_yaml = 'apiVersion: 1\ndatasources:\n'
-        ds_yaml += '  - name: Prometheus\n'
-        ds_yaml += '    type: prometheus\n'
-        ds_yaml += '    access: proxy\n'
-        ds_yaml += f'    url: http://127.0.0.1:{self.collector_port}\n'
-        ds_yaml += '    isDefault: true\n'
-
-        ds_path = f'{self.home_dir()}/provisioning/datasources/prometheus.yaml'
-
-        with open(ds_path, 'w') as f:
-            f.write(ds_yaml)
-
-        shutil.chown(ds_path, user=u, group=u)
-
     def ini(self):
-        h = self.home_dir()
+        s = self.state_dir()
 
         return (
             '[server]\n'
             'http_addr = 0.0.0.0\n'
             f'http_port = {self.port}\n'
             '[paths]\n'
-            f'data = {h}/data\n'
-            f'logs = {h}/logs\n'
-            f'plugins = {h}/plugins\n'
-            f'provisioning = {h}/provisioning\n'
+            f'data = {s}/data\n'
+            f'logs = {s}/logs\n'
+            f'plugins = {s}/plugins\n'
+            'provisioning = /ix/realm/system/share/grafana-provisioning\n'
             '[analytics]\n'
             'reporting_enabled = false\n'
             'check_for_updates = false\n'
