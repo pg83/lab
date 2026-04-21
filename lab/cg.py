@@ -2,6 +2,7 @@
 
 import os
 import sys
+import ast
 import zlib
 import time
 import json
@@ -9,6 +10,8 @@ import shutil
 import pickle
 import base64
 import random
+import inspect
+import hashlib
 import contextlib
 import subprocess
 import collections
@@ -1879,9 +1882,40 @@ def exec_into(*args, user=None, **kwargs):
 
 def gen_runner(srv):
     ctx = base64.b64encode(pickle.dumps(srv)).decode()
-    scr = 'exec runpy ' + ctx + ' ${@}'
+
+    # Mix an AST-normalized hash of the class source into the runit
+    # script. Without it, pickle only captures self.* fields — a
+    # bare code change inside run()/prepare()/... leaves the package
+    # derivation identical, and the service keeps running the old
+    # logic until something else forces a redeploy. With it, any
+    # non-cosmetic edit (ast.dump ignores whitespace/comments)
+    # bumps the hash, invalidates the package, and triggers the
+    # service restart on next cycle.
+    code_hash = _class_src_hash(type(srv))
+    scr = '# code-hash: ' + code_hash + '\nexec runpy ' + ctx + ' ${@}'
 
     return base64.b64encode(scr.encode()).decode()
+
+
+def _class_src_hash(cls):
+    # Walk the MRO and hash each class's source. ast.dump gives us
+    # a canonical form that ignores whitespace/comments, so cosmetic
+    # edits don't churn every service's derivation; real code
+    # changes do.
+    parts = []
+
+    for c in cls.__mro__:
+        if c is object:
+            continue
+
+        try:
+            src = inspect.getsource(c)
+        except (OSError, TypeError):
+            continue
+
+        parts.append(ast.dump(ast.parse(src)))
+
+    return hashlib.sha256('\n'.join(parts).encode()).hexdigest()[:16]
 
 
 def it_norm(n):
