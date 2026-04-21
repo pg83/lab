@@ -1,0 +1,84 @@
+{
+  "uid": "cluster",
+  "title": "Cluster Overview",
+  "tags": ["cluster"],
+  "schemaVersion": 39,
+  "version": 1,
+  "time": {"from": "now-1h", "to": "now"},
+  "refresh": "30s",
+  "templating": {
+    "list": [
+      {
+        "name": "host",
+        "label": "host",
+        "type": "query",
+        "datasource": {"type": "prometheus", "uid": "prom"},
+        "query": {"query": "label_values(node_load1, host)", "refId": "StandardVariableQuery"},
+        "refresh": 1,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Load — $host",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 0},
+      "repeat": "host",
+      "repeatDirection": "h",
+      "maxPerRow": 3,
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "targets": [
+        {"expr": "node_load1{host=\"$host\"}",  "legendFormat": "1m",  "refId": "A"},
+        {"expr": "node_load5{host=\"$host\"}",  "legendFormat": "5m",  "refId": "B"},
+        {"expr": "node_load15{host=\"$host\"}", "legendFormat": "15m", "refId": "C"}
+      ]
+    },
+    {
+      "id": 2,
+      "title": "CPU % — $host",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 6},
+      "repeat": "host",
+      "repeatDirection": "h",
+      "maxPerRow": 3,
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}},
+      "targets": [
+        {"expr": "100 - (avg without (cpu) (rate(node_cpu_seconds_total{host=\"$host\",mode=\"idle\"}[1m])) * 100)", "legendFormat": "used", "refId": "A"}
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Memory % — $host",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 12},
+      "repeat": "host",
+      "repeatDirection": "h",
+      "maxPerRow": 3,
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}},
+      "targets": [
+        {"expr": "(1 - node_memory_MemAvailable_bytes{host=\"$host\"} / node_memory_MemTotal_bytes{host=\"$host\"}) * 100", "legendFormat": "used", "refId": "A"}
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Procs — $host",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 18},
+      "repeat": "host",
+      "repeatDirection": "h",
+      "maxPerRow": 3,
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "targets": [
+        {"expr": "node_procs_running{host=\"$host\"}", "legendFormat": "running", "refId": "A"},
+        {"expr": "node_procs_blocked{host=\"$host\"}", "legendFormat": "blocked", "refId": "B"}
+      ]
+    }
+  ]
+}

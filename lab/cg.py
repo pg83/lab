@@ -172,8 +172,9 @@ def make_dirs(path, owner=None):
 
 
 class Collector:
-    def __init__(self, port):
+    def __init__(self, port, host):
         self.port = port
+        self.host = host
         self.jobs = []
 
     def prom_port(self):
@@ -189,6 +190,11 @@ class Collector:
             'global': {
                 'scrape_interval': '15s',
                 'evaluation_interval': '15s',
+                # Stamped on every sample so federation preserves
+                # per-host origin; without this, all three Collectors
+                # would produce {instance="localhost:<port>", ...} and
+                # the federator would dedupe them into one series.
+                'external_labels': {'host': self.host},
             },
             'scrape_configs': self.jobs,
         }
@@ -1545,7 +1551,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': Collector(p['collector']),
+                'serv': Collector(p['collector'], hn),
             }
 
             yield {
