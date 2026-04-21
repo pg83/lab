@@ -1179,6 +1179,81 @@ class Perses:
             exec_into('perses', '-config', fn, f'-web.listen-address=:{self.port}')
 
 
+class Grafana:
+    def __init__(self, port, collector_port):
+        self.v = 1
+        self.port = port
+        self.collector_port = collector_port
+
+    def name(self):
+        return 'grafana'
+
+    def home_dir(self):
+        return f'/var/run/{self.name()}/std/home'
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/grafana',
+        }
+
+        yield {
+            'pkg': 'lab/etc/user/home',
+            'user': self.name(),
+            'user_home': self.home_dir(),
+        }
+
+    def prepare(self):
+        u = self.name()
+
+        for sub in ('data', 'logs', 'plugins', 'provisioning', 'provisioning/datasources', 'provisioning/dashboards'):
+            make_dirs(f'{self.home_dir()}/{sub}', owner=u)
+
+        # Pin Prometheus as the default datasource via file-based
+        # provisioning. Written here (root) and chown'd to grafana so
+        # the first run sees it.
+        ds_yaml = 'apiVersion: 1\ndatasources:\n'
+        ds_yaml += '  - name: Prometheus\n'
+        ds_yaml += '    type: prometheus\n'
+        ds_yaml += '    access: proxy\n'
+        ds_yaml += f'    url: http://127.0.0.1:{self.collector_port}\n'
+        ds_yaml += '    isDefault: true\n'
+
+        ds_path = f'{self.home_dir()}/provisioning/datasources/prometheus.yaml'
+
+        with open(ds_path, 'w') as f:
+            f.write(ds_yaml)
+
+        shutil.chown(ds_path, user=u, group=u)
+
+    def ini(self):
+        h = self.home_dir()
+
+        return (
+            '[server]\n'
+            'http_addr = 0.0.0.0\n'
+            f'http_port = {self.port}\n'
+            '[paths]\n'
+            f'data = {h}/data\n'
+            f'logs = {h}/logs\n'
+            f'plugins = {h}/plugins\n'
+            f'provisioning = {h}/provisioning\n'
+            '[analytics]\n'
+            'reporting_enabled = false\n'
+            'check_for_updates = false\n'
+            '[security]\n'
+            'disable_gravatar = true\n'
+        )
+
+    def run(self):
+        homepath = os.environ['GRAFANA_HOMEPATH']
+
+        with memfd('grafana.ini') as fn:
+            with open(fn, 'w') as f:
+                f.write(self.ini())
+
+            exec_into('grafana', 'server', '--config', fn, '--homepath', homepath)
+
+
 class Secrets:
     def __init__(self, port):
         self.v = 5
@@ -1431,6 +1506,11 @@ class ClusterMap:
 
             yield {
                 'host': hn,
+                'serv': Grafana(p['grafana'], p['collector']),
+            }
+
+            yield {
+                'host': hn,
                 'serv': CO2Mon(p['co2_mon']),
             }
 
@@ -1623,6 +1703,7 @@ sys.modules['builtins'].GornCtlNebula = GornCtlNebula
 sys.modules['builtins'].GornWeb = GornWeb
 sys.modules['builtins'].GornProm = GornProm
 sys.modules['builtins'].Perses = Perses
+sys.modules['builtins'].Grafana = Grafana
 sys.modules['builtins'].CI = CI
 sys.modules['builtins'].SshTunnel = SshTunnel
 sys.modules['builtins'].SocksProxy = SocksProxy
@@ -1902,6 +1983,7 @@ def do(code):
         'secrets': 8022,
         'sshd_rec': 8023,
         'pers_db': 8024,
+        'grafana': 8029,
     }
 
     users = {
@@ -1931,6 +2013,7 @@ def do(code):
         'hf_sync': 1028,
         'ghcr_sync': 1029,
         'perses': 1017,
+        'grafana': 1094,
     }
 
     for i in range(0, 64):
