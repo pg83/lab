@@ -4,8 +4,15 @@
   "tags": ["minio", "s3"],
   "schemaVersion": 39,
   "version": 1,
+  "editable": true,
+  "graphTooltip": 0,
   "time": {"from": "now-15m", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
   "refresh": "10s",
+  "annotations": {"list": []},
+  "templating": {"list": []},
+  "links": [],
   "panels": [
     {
       "id": 1,
