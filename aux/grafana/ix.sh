@@ -33,4 +33,8 @@ EOF
 base64 -d << EOF > ${out}/share/grafana-provisioning/dashboards-json/cluster.json
 {% include 'cluster.json/base64' %}
 EOF
+
+base64 -d << EOF > ${out}/share/grafana-provisioning/dashboards-json/minio.json
+{% include 'minio.json/base64' %}
+EOF
 {% endblock %}

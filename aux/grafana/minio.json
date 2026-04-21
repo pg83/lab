@@ -1,0 +1,102 @@
+{
+  "uid": "minio",
+  "title": "MinIO",
+  "tags": ["minio", "s3"],
+  "schemaVersion": 39,
+  "version": 1,
+  "time": {"from": "now-15m", "to": "now"},
+  "refresh": "10s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Request rate by API",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "ops", "custom": {"stacking": {"mode": "normal"}}}},
+      "targets": [
+        {"expr": "sum by (api) (rate(minio_s3_requests_total{job=~\"minio_.+\"}[1m]))", "legendFormat": "{{api}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Request rate by host",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "ops"}},
+      "targets": [
+        {"expr": "sum by (host) (rate(minio_s3_requests_total{job=~\"minio_.+\"}[1m]))", "legendFormat": "{{host}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Request latency (TTFB)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 6},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "s"}},
+      "targets": [
+        {"expr": "histogram_quantile(0.50, sum by (le) (rate(minio_s3_requests_ttfb_seconds_distribution_bucket{job=~\"minio_.+\"}[1m])))", "legendFormat": "p50", "refId": "A"},
+        {"expr": "histogram_quantile(0.95, sum by (le) (rate(minio_s3_requests_ttfb_seconds_distribution_bucket{job=~\"minio_.+\"}[1m])))", "legendFormat": "p95", "refId": "B"},
+        {"expr": "histogram_quantile(0.99, sum by (le) (rate(minio_s3_requests_ttfb_seconds_distribution_bucket{job=~\"minio_.+\"}[1m])))", "legendFormat": "p99", "refId": "C"}
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Inflight + waiting",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 6},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "targets": [
+        {"expr": "sum by (host) (minio_s3_requests_waiting_total{job=~\"minio_.+\"})", "legendFormat": "waiting {{host}}", "refId": "A"},
+        {"expr": "sum by (host) (minio_s3_requests_inflight_total{job=~\"minio_.+\"})", "legendFormat": "inflight {{host}}", "refId": "B"}
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Bytes received (in)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 12},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "Bps"}},
+      "targets": [
+        {"expr": "sum by (host) (rate(minio_s3_traffic_received_bytes{job=~\"minio_.+\"}[1m]))", "legendFormat": "{{host}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Bytes sent (out)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 12},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "Bps"}},
+      "targets": [
+        {"expr": "sum by (host) (rate(minio_s3_traffic_sent_bytes{job=~\"minio_.+\"}[1m]))", "legendFormat": "{{host}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Errors",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 18},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "ops"}},
+      "targets": [
+        {"expr": "sum by (host, api) (rate(minio_s3_requests_errors_total{job=~\"minio_.+\"}[1m]))", "legendFormat": "{{host}} {{api}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Capacity",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 18},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "bytes"}},
+      "targets": [
+        {"expr": "sum by (host) (minio_cluster_capacity_usable_total_bytes{job=~\"minio_.+\"})", "legendFormat": "total {{host}}", "refId": "A"},
+        {"expr": "sum by (host) (minio_cluster_capacity_usable_free_bytes{job=~\"minio_.+\"})",  "legendFormat": "free {{host}}",  "refId": "B"}
+      ]
+    }
+  ]
+}
