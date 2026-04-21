@@ -1309,6 +1309,54 @@ class Grafana:
             exec_into('grafana', 'server', '--config', fn, '--homepath', homepath)
 
 
+class Samogon:
+    # SFTP daemon over a MinIO-backed content-addressable store.
+    # /torrents/torrents/<infohash> holds the .torrent blob, pieces
+    # land at /torrents/pieces/<piece-hash>. Read-only — fetches are
+    # kicked from elsewhere via `gorn ignite -- samogon fetch <b64>`.
+    def __init__(self, port, s3_endpoint):
+        self.v = 1
+        self.port = port
+        self.s3_endpoint = s3_endpoint
+
+    def name(self):
+        return 'samogon'
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/samogon',
+        }
+
+    def prepare(self):
+        u = self.name()
+        make_dirs(f'/home/{u}', owner=u)
+
+    def run(self):
+        # Host key goes through memfd so samogon doesn't care whether
+        # its uid can read /etc/keys directly; matches SftpD's shape.
+        with memfd('host_key') as hk:
+            with open(hk, 'w') as f:
+                f.write(open('/etc/keys/ssh_ed25519').read())
+
+            args = [
+                'samogon', 'serve',
+                '--listen', f'0.0.0.0:{self.port}',
+                '--user', 'tv',
+                '--pass', 'tv',
+                '--host-key', hk,
+            ]
+
+            env = {
+                'AWS_ACCESS_KEY_ID': get_key('/s3/user').decode().strip(),
+                'AWS_SECRET_ACCESS_KEY': get_key('/s3/password').decode().strip(),
+                'S3_ENDPOINT': self.s3_endpoint,
+                'S3_BUCKET': 'samogon',
+                'SAMOGON_S3_ROOT': 'torrents',
+            }
+
+            exec_into(*args, **env)
+
+
 class Secrets:
     def __init__(self, port):
         self.v = 5
@@ -1581,6 +1629,14 @@ class ClusterMap:
 
             yield {
                 'host': hn,
+                'serv': Samogon(
+                    p['samogon'],
+                    s3_endpoint=f"http://{hn}.eth1:{p['minio']}",
+                ),
+            }
+
+            yield {
+                'host': hn,
                 'serv': PersDB(p['pers_db']),
             }
 
@@ -1770,6 +1826,7 @@ sys.modules['builtins'].SshTunnel = SshTunnel
 sys.modules['builtins'].SocksProxy = SocksProxy
 sys.modules['builtins'].CO2Mon = CO2Mon
 sys.modules['builtins'].MirrorFetch = MirrorFetch
+sys.modules['builtins'].Samogon = Samogon
 sys.modules['builtins'].Secrets = Secrets
 sys.modules['builtins'].PersDB = PersDB
 sys.modules['builtins'].HFSync = HFSync
@@ -2046,6 +2103,7 @@ def do(code):
         'pers_db': 8024,
         'grafana': 8029,
         'federator': 8030,
+        'samogon': 8031,
     }
 
     users = {
@@ -2077,6 +2135,7 @@ def do(code):
         'perses': 1017,
         'grafana': 1094,
         'federator': 2000,
+        'samogon': 2001,
     }
 
     for i in range(0, 64):
