@@ -593,13 +593,6 @@ class MinIO:
         self.port = port
         self.uniq = uniq
         self.cmap = cmap
-        # Experimental: automatic class-source hash. If run()/etc.
-        # change without self.v bump, this shifts and forces a
-        # redeploy. Added first on MinIO as a sentinel; we'll roll
-        # out wider if it proves stable (ast.dump is deterministic
-        # within a Python version but can drift across major
-        # upgrades — one-time churn then).
-        self.hash = _class_src_hash(type(self))
 
     @property
     def addr(self):
@@ -1263,6 +1256,11 @@ class Grafana:
         self.v = 1
         self.port = port
         self.collector_port = collector_port
+        # Experimental: class-source AST hash so method-body edits
+        # auto-invalidate the service without needing a self.v bump.
+        # Trialed on grafana+samogon where "accidentally kept
+        # running old code" is cheap to diagnose.
+        self.hash = _class_src_hash(type(self))
 
     def name(self):
         return 'grafana'
@@ -1334,6 +1332,8 @@ class Samogon:
         self.v = 1
         self.port = port
         self.s3_endpoint = s3_endpoint
+        # Experimental: class-source AST hash. See Grafana above.
+        self.hash = _class_src_hash(type(self))
 
     def name(self):
         return 'samogon'
