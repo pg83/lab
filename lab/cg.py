@@ -1245,7 +1245,10 @@ class Grafana:
         )
 
     def run(self):
-        homepath = os.environ['GRAFANA_HOMEPATH']
+        # GRAFANA_HOMEPATH from bin/grafana/ui's env block doesn't propagate
+        # through our runit wrapper; the path it would point at is stable
+        # via the realm symlink, so resolve it directly.
+        homepath = '/ix/realm/system/share/grafana'
 
         with memfd('grafana.ini') as fn:
             with open(fn, 'w') as f:
