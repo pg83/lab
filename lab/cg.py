@@ -1135,6 +1135,12 @@ class CI:
             GORN_API=self.gorn_api,
             S3_ENDPOINT=self.s3_endpoint,
             MOLOT_FULL_SLOTS='10',
+            # Quiet molot — suppresses per-node build stdout/stderr from
+            # the dispatcher log. Everything still lands in
+            # s3://gorn/molot/<uid>/{stdout,stderr} and can be pulled
+            # on demand via dev/molot_trace.sh. CI's own log stays
+            # readable.
+            MOLOT_QUIET='1',
             AWS_ACCESS_KEY_ID=get_key('/s3/user').decode().strip(),
             AWS_SECRET_ACCESS_KEY=get_key('/s3/password').decode().strip(),
         )
