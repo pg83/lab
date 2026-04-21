@@ -1308,6 +1308,15 @@ class Grafana:
             'check_for_updates = false\n'
             '[security]\n'
             'disable_gravatar = true\n'
+            # Grafana 13's new unified-storage datasource path has a
+            # provisioning bug: the datasources module starts before
+            # the datasource API server is ready, so every
+            # provisioning run fails with "Datasource provisioning
+            # error: data source not found" and the service enters a
+            # crash loop. Disable the kubernetes-backed datasource
+            # APIs and fall back to the classic in-DB path.
+            '[feature_toggles]\n'
+            'disable = kubernetesDatasources,kubernetesDashboards\n'
         )
 
     def run(self):

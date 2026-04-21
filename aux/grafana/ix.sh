@@ -5,7 +5,7 @@ mkdir -p ${out}/share/grafana-provisioning/datasources
 mkdir -p ${out}/share/grafana-provisioning/dashboards
 mkdir -p ${out}/share/grafana-provisioning/dashboards-json
 
-cat << EOF > ${out}/share/grafana-provisioning/datasources/prometheus.yaml
+cat << EOF > ${out}/share/grafana-provisioning/datasources/datasources.yaml
 apiVersion: 1
 datasources:
   - name: Prometheus
@@ -13,17 +13,16 @@ datasources:
     type: prometheus
     access: proxy
     url: http://127.0.0.1:{{collector_port | defined('collector_port')}}
+    orgId: 1
     isDefault: true
-EOF
-
-cat << EOF > ${out}/share/grafana-provisioning/datasources/loki.yaml
-apiVersion: 1
-datasources:
+    editable: false
   - name: Loki
     uid: loki
     type: loki
     access: proxy
     url: http://127.0.0.1:{{loki_port | defined('loki_port')}}
+    orgId: 1
+    editable: false
 EOF
 
 cat << EOF > ${out}/share/grafana-provisioning/dashboards/cluster.yaml
