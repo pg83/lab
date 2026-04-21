@@ -1337,10 +1337,6 @@ class Samogon:
         }
 
         yield {
-            'pkg': 'bin/minio/patched/client',
-        }
-
-        yield {
             'pkg': 'lab/etc/user/home',
             'user': 'samogon',
             'user_home': self.home_dir(),
