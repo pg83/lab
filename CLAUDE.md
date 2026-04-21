@@ -86,29 +86,53 @@ The canon captures the full generated cluster config per host (`extra` as a line
 - `ext/ix/` (stal-ix submodule) often lags local `ix/`; when a package is missing upstream, shadow it under `lab/bin/<pkg>/ix.sh` — local wins on IX_PATH.
 - Gotchas: stalix `python3` only takes argv[1] as a script path (no `-c`, no stdin), BusyBox `timeout` is `timeout [-k KILL_SECS] SECS prog...` (no suffixes), `etcdctl defrag` needs `--command-timeout=5m` per-endpoint (default 5s kills on multi-GiB DBs).
 
-## Querying cluster logs
+## Querying cluster logs + metrics
 
-All services' stdout/stderr is shipped into Loki by a per-host Promtail (see `Promtail` / `Loki` in cg.py). Log into Loki from the assistant sandbox via `logcli`:
+wirez (`/home/pg/claude.sh`) forwards per-host Loki and Federator endpoints to local ports:
+
+| Service    | lab1 | lab2 | lab3 |
+|------------|------|------|------|
+| Loki       | 8032 | 8132 | 8232 |
+| Federator  | 8030 | 8130 | 8230 |
+
+Lokis are HA (memberlist gossip, shared minio `loki` bucket), Federator on each host scrapes all collectors — any single lab port gives the full cluster view. Default: lab1 (`:8032` / `:8030`); fall through to `:8132` / `:8130` etc. if lab1 is unreachable.
+
+**Logs via `logcli`:**
 
 ```sh
-# Entire service, last 10 minutes, tailed:
+# Service over last 10 minutes:
 LOKI_ADDR=http://localhost:8032 logcli query '{service="samogon"}' --since=10m --limit=500
 
-# Filter by host + substring:
+# Host + substring filter:
 logcli query '{host="lab2", service=~"gorn.*"} |~ "error"' --since=30m
 
-# Count over time (metric query returning prom-like samples):
+# Count-over-time (returns prom-like metric samples):
 logcli query 'sum by (service) (count_over_time({job="runit"} |~ "panic" [1h]))'
 
-# Show instance labels of the metric (which services actually logged):
+# List label values (what services are currently logging):
 logcli labels service
 
-# Tail live — like tail -f but across the cluster:
+# Live tail across the cluster:
 logcli query '{service="samogon"}' --tail
 ```
 
-Key labels: `host=lab{1,2,3}`, `service=<cg.py-name>`, `stream=tinylog` (default) or custom. Custom streams come from a service's `log_sources()` method if it defines one — see `Service.iter_log_sources()`.
+Log labels: `host` ∈ {lab1,lab2,lab3}, `service` = `cg.py`-registered name, `stream` = "tinylog" default or custom from service's `log_sources()` (see `Service.iter_log_sources()`).
 
-Endpoint: `http://localhost:8032` — `wirez` / `claude.sh` must have `-L 8032:lab1.nebula:8032` (or whichever lab host you pick) in the port-forward list. If `logcli query` returns connection refused, that forward is missing.
+**Metrics via direct Prometheus API** (Federator is Prometheus-compatible):
 
-Useful flags: `--since=10m`, `--to=15m`, `--limit=N`, `--output=raw` (strip timestamp+labels), `-o jsonl` (structured), `--forward` (oldest first).
+```sh
+# Instant:
+curl -sG 'http://localhost:8030/api/v1/query' \
+    --data-urlencode 'query=rate(minio_s3_requests_total[1m])' | jq
+
+# Range:
+curl -sG 'http://localhost:8030/api/v1/query_range' \
+    --data-urlencode 'query=rate(minio_s3_requests_total[1m])' \
+    --data-urlencode "start=$(date -d '10 min ago' +%s)" \
+    --data-urlencode "end=$(date +%s)" \
+    --data-urlencode "step=15s" | jq
+```
+
+Metric labels: `job` (service name), `host` (from Collector `external_labels`), `instance` (scrape target).
+
+Useful `logcli` flags: `--since=10m`, `--to=15m`, `--limit=N`, `--output=raw`, `-o jsonl`, `--forward`. If connection refused on all three lab ports, wirez forwards aren't up.
