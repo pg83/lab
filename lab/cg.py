@@ -1322,18 +1322,25 @@ class Samogon:
     def name(self):
         return 'samogon'
 
+    def users(self):
+        # First element is the uid runit starts the service as; keeping
+        # root there lets run() read /etc/keys before dropping to the
+        # service user via su-exec. Same dance as SftpD.
+        return ['root', 'samogon']
+
     def pkgs(self):
         yield {
             'pkg': 'bin/samogon',
         }
 
     def prepare(self):
-        u = self.name()
+        u = 'samogon'
         make_dirs(f'/home/{u}', owner=u)
 
     def run(self):
-        # Host key goes through memfd so samogon doesn't care whether
-        # its uid can read /etc/keys directly; matches SftpD's shape.
+        # Copy host key into a memfd while still root; the memfd fd
+        # is inherited across su-exec, so the samogon user reads key
+        # material it couldn't touch on disk.
         with memfd('host_key') as hk:
             with open(hk, 'w') as f:
                 f.write(open('/etc/keys/ssh_ed25519').read())
@@ -1354,7 +1361,7 @@ class Samogon:
                 'SAMOGON_S3_ROOT': 'torrents',
             }
 
-            exec_into(*args, **env)
+            exec_into(*args, user='samogon', **env)
 
 
 class Secrets:
