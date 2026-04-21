@@ -1328,14 +1328,22 @@ class Samogon:
         # service user via su-exec. Same dance as SftpD.
         return ['root', 'samogon']
 
+    def home_dir(self):
+        return f'/var/run/{self.name()}/std/home'
+
     def pkgs(self):
         yield {
             'pkg': 'bin/samogon',
         }
 
+        yield {
+            'pkg': 'lab/etc/user/home',
+            'user': 'samogon',
+            'user_home': self.home_dir(),
+        }
+
     def prepare(self):
-        u = 'samogon'
-        make_dirs(f'/home/{u}', owner=u)
+        make_dirs(self.home_dir(), owner='samogon')
 
     def run(self):
         # Copy host key into a memfd while still root; the memfd fd
@@ -1344,6 +1352,12 @@ class Samogon:
         with memfd('host_key') as hk:
             with open(hk, 'w') as f:
                 f.write(open('/etc/keys/ssh_ed25519').read())
+
+            # cwd becomes samogon's writable scratch — storage.go
+            # does `mkdtemp(".", "mc-samogon-")` for the mc config
+            # dir, and /var/run/<name>/std (the default runsrv cwd)
+            # is root-owned tinylog space.
+            os.chdir(self.home_dir())
 
             args = [
                 'samogon', 'serve',
@@ -1354,6 +1368,7 @@ class Samogon:
             ]
 
             env = {
+                'HOME': self.home_dir(),
                 'AWS_ACCESS_KEY_ID': get_key('/s3/user').decode().strip(),
                 'AWS_SECRET_ACCESS_KEY': get_key('/s3/password').decode().strip(),
                 'S3_ENDPOINT': self.s3_endpoint,
