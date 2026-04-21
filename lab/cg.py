@@ -1223,15 +1223,15 @@ class Grafana:
     def run(self):
         # Grafana's plugin loader does a symlink-escape containment check
         # (filepath.Rel against realpath) and rejects anything whose
-        # canonical path escapes the homepath. The realm has two layers
-        # of symlinks: /ix/realm/system/share/grafana -> rlm-system/...,
-        # and its children -> bin-grafana-ui/... . realpath() on the top
-        # dir only collapses the first layer, so Grafana still walks
-        # into bin-grafana-ui via child symlinks and errors with
-        # "not inside of plugin directory". Resolving a child dir and
-        # stripping one component gives us the concrete bin-grafana-ui
-        # store path with no symlinks left to chase.
-        homepath = os.path.dirname(os.path.realpath('/ix/realm/system/share/grafana/public'))
+        # canonical path escapes the homepath. In the realm, only files
+        # are symlinked (directories are real) — so realpath() on any
+        # dir stops at the rlm-system store, while every leaf inside
+        # still links back to bin-grafana-ui and escapes containment.
+        # Resolve a known leaf (conf/sample.ini) and strip the two
+        # trailing components to land on the concrete bin-grafana-ui
+        # share/grafana dir.
+        sample = os.path.realpath('/ix/realm/system/share/grafana/conf/sample.ini')
+        homepath = os.path.dirname(os.path.dirname(sample))
 
         with memfd('grafana.ini') as fn:
             with open(fn, 'w') as f:
