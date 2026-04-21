@@ -140,3 +140,13 @@ curl -sG 'http://10.1.1.2:8030/api/v1/query_range' \
 Metric labels: `job` (service name), `host` (from Collector `external_labels`), `instance` (scrape target).
 
 Useful `logcli` flags: `--since=10m`, `--to=15m`, `--limit=N`, `--output=raw`, `-o jsonl`, `--forward`. If connection refused on all three lab ports, wirez forwards aren't up.
+
+### Checking deploy rollout
+
+`autoupdate_cycle` logs `autoupdate_ix: deployed runpy-sha256=<hex>` after every successful `ix mut`. /bin/runpy is a deterministic function of cg.py, so same sha across all three hosts = fully deployed.
+
+```sh
+logcli query '{service="autoupdate_ix"} |~ "runpy-sha256="' --since=30m -o raw
+```
+
+Differing shas or stale timestamp on a host → partial rollout.
