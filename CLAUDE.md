@@ -85,3 +85,30 @@ The canon captures the full generated cluster config per host (`extra` as a line
 - `gorn_ctl` is localhost-only on 8025; for cross-host API calls use the nebula sibling `gorn_ctl_nb` on `<host>.nebula:8027`. Hosts resolve each other as `<host>.eth1` / `<host>.nebula` via generated `/etc/hosts.d/01-locals`.
 - `ext/ix/` (stal-ix submodule) often lags local `ix/`; when a package is missing upstream, shadow it under `lab/bin/<pkg>/ix.sh` — local wins on IX_PATH.
 - Gotchas: stalix `python3` only takes argv[1] as a script path (no `-c`, no stdin), BusyBox `timeout` is `timeout [-k KILL_SECS] SECS prog...` (no suffixes), `etcdctl defrag` needs `--command-timeout=5m` per-endpoint (default 5s kills on multi-GiB DBs).
+
+## Querying cluster logs
+
+All services' stdout/stderr is shipped into Loki by a per-host Promtail (see `Promtail` / `Loki` in cg.py). Log into Loki from the assistant sandbox via `logcli`:
+
+```sh
+# Entire service, last 10 minutes, tailed:
+LOKI_ADDR=http://localhost:8032 logcli query '{service="samogon"}' --since=10m --limit=500
+
+# Filter by host + substring:
+logcli query '{host="lab2", service=~"gorn.*"} |~ "error"' --since=30m
+
+# Count over time (metric query returning prom-like samples):
+logcli query 'sum by (service) (count_over_time({job="runit"} |~ "panic" [1h]))'
+
+# Show instance labels of the metric (which services actually logged):
+logcli labels service
+
+# Tail live — like tail -f but across the cluster:
+logcli query '{service="samogon"}' --tail
+```
+
+Key labels: `host=lab{1,2,3}`, `service=<cg.py-name>`, `stream=tinylog` (default) or custom. Custom streams come from a service's `log_sources()` method if it defines one — see `Service.iter_log_sources()`.
+
+Endpoint: `http://localhost:8032` — `wirez` / `claude.sh` must have `-L 8032:lab1.nebula:8032` (or whichever lab host you pick) in the port-forward list. If `logcli query` returns connection refused, that forward is missing.
+
+Useful flags: `--since=10m`, `--to=15m`, `--limit=N`, `--output=raw` (strip timestamp+labels), `-o jsonl` (structured), `--forward` (oldest first).
