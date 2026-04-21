@@ -143,10 +143,11 @@ Useful `logcli` flags: `--since=10m`, `--to=15m`, `--limit=N`, `--output=raw`, `
 
 ### Checking deploy rollout
 
-`autoupdate_cycle` logs `autoupdate_ix: deployed runpy-sha256=<hex>` after every successful `ix mut`. /bin/runpy is a deterministic function of cg.py, so same sha across all three hosts = fully deployed.
+`/bin/runpy` is a byte-for-byte copy of `lab/lab/cg.py`. After every `ix mut`, `autoupdate_cycle` logs `autoupdate_ix: deployed runpy-sha256=<hex>`. Compare against local to confirm rollout:
 
 ```sh
+sha256sum lab/cg.py
 logcli query '{service="autoupdate_ix"} |~ "runpy-sha256="' --since=30m -o raw
 ```
 
-Differing shas or stale timestamp on a host → partial rollout.
+Same sha across host={lab1,lab2,lab3} AND equal to local sha = fully deployed.
