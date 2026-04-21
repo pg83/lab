@@ -3,7 +3,7 @@
   "title": "MinIO",
   "tags": ["minio", "s3"],
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "editable": true,
   "graphTooltip": 0,
   "time": {"from": "now-15m", "to": "now"},
@@ -16,20 +16,9 @@
   "panels": [
     {
       "id": 1,
-      "title": "Request rate by API",
-      "type": "timeseries",
-      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 0},
-      "datasource": {"type": "prometheus", "uid": "prom"},
-      "fieldConfig": {"defaults": {"unit": "ops", "custom": {"stacking": {"mode": "normal"}}}},
-      "targets": [
-        {"expr": "sum by (api) (rate(minio_s3_requests_total{job=~\"minio_.+\"}[1m]))", "legendFormat": "{{api}}", "refId": "A"}
-      ]
-    },
-    {
-      "id": 2,
       "title": "Request rate by host",
       "type": "timeseries",
-      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 0},
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 0},
       "datasource": {"type": "prometheus", "uid": "prom"},
       "fieldConfig": {"defaults": {"unit": "ops"}},
       "targets": [
@@ -37,16 +26,29 @@
       ]
     },
     {
+      "id": 2,
+      "title": "Error rate (4xx / 5xx / total)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "ops"}},
+      "targets": [
+        {"expr": "sum (rate(minio_s3_requests_4xx_errors_total{job=~\"minio_.+\"}[1m]))", "legendFormat": "4xx", "refId": "A"},
+        {"expr": "sum (rate(minio_s3_requests_5xx_errors_total{job=~\"minio_.+\"}[1m]))", "legendFormat": "5xx", "refId": "B"},
+        {"expr": "sum (rate(minio_s3_requests_errors_total{job=~\"minio_.+\"}[1m]))", "legendFormat": "total", "refId": "C"}
+      ]
+    },
+    {
       "id": 3,
-      "title": "Request latency (TTFB)",
+      "title": "Request TTFB (p50/p95/p99)",
       "type": "timeseries",
       "gridPos": {"h": 6, "w": 12, "x": 0, "y": 6},
       "datasource": {"type": "prometheus", "uid": "prom"},
       "fieldConfig": {"defaults": {"unit": "s"}},
       "targets": [
-        {"expr": "histogram_quantile(0.50, sum by (le) (rate(minio_s3_requests_ttfb_seconds_distribution_bucket{job=~\"minio_.+\"}[1m])))", "legendFormat": "p50", "refId": "A"},
-        {"expr": "histogram_quantile(0.95, sum by (le) (rate(minio_s3_requests_ttfb_seconds_distribution_bucket{job=~\"minio_.+\"}[1m])))", "legendFormat": "p95", "refId": "B"},
-        {"expr": "histogram_quantile(0.99, sum by (le) (rate(minio_s3_requests_ttfb_seconds_distribution_bucket{job=~\"minio_.+\"}[1m])))", "legendFormat": "p99", "refId": "C"}
+        {"expr": "histogram_quantile(0.50, sum by (le) (rate(minio_s3_requests_ttfb_seconds_distribution{job=~\"minio_.+\"}[1m])))", "legendFormat": "p50", "refId": "A"},
+        {"expr": "histogram_quantile(0.95, sum by (le) (rate(minio_s3_requests_ttfb_seconds_distribution{job=~\"minio_.+\"}[1m])))", "legendFormat": "p95", "refId": "B"},
+        {"expr": "histogram_quantile(0.99, sum by (le) (rate(minio_s3_requests_ttfb_seconds_distribution{job=~\"minio_.+\"}[1m])))", "legendFormat": "p99", "refId": "C"}
       ]
     },
     {
@@ -56,8 +58,8 @@
       "gridPos": {"h": 6, "w": 12, "x": 12, "y": 6},
       "datasource": {"type": "prometheus", "uid": "prom"},
       "targets": [
-        {"expr": "sum by (host) (minio_s3_requests_waiting_total{job=~\"minio_.+\"})", "legendFormat": "waiting {{host}}", "refId": "A"},
-        {"expr": "sum by (host) (minio_s3_requests_inflight_total{job=~\"minio_.+\"})", "legendFormat": "inflight {{host}}", "refId": "B"}
+        {"expr": "sum by (host) (minio_s3_requests_inflight_total{job=~\"minio_.+\"})", "legendFormat": "inflight {{host}}", "refId": "A"},
+        {"expr": "sum by (host) (minio_s3_requests_waiting_total{job=~\"minio_.+\"})", "legendFormat": "waiting {{host}}", "refId": "B"}
       ]
     },
     {
@@ -84,25 +86,27 @@
     },
     {
       "id": 7,
-      "title": "Errors",
+      "title": "Request rejections",
       "type": "timeseries",
       "gridPos": {"h": 6, "w": 12, "x": 0, "y": 18},
       "datasource": {"type": "prometheus", "uid": "prom"},
       "fieldConfig": {"defaults": {"unit": "ops"}},
       "targets": [
-        {"expr": "sum by (host, api) (rate(minio_s3_requests_errors_total{job=~\"minio_.+\"}[1m]))", "legendFormat": "{{host}} {{api}}", "refId": "A"}
+        {"expr": "sum (rate(minio_s3_requests_rejected_auth_total{job=~\"minio_.+\"}[1m]))", "legendFormat": "auth", "refId": "A"},
+        {"expr": "sum (rate(minio_s3_requests_rejected_header_total{job=~\"minio_.+\"}[1m]))", "legendFormat": "header", "refId": "B"},
+        {"expr": "sum (rate(minio_s3_requests_rejected_invalid_total{job=~\"minio_.+\"}[1m]))", "legendFormat": "invalid", "refId": "C"},
+        {"expr": "sum (rate(minio_s3_requests_rejected_timestamp_total{job=~\"minio_.+\"}[1m]))", "legendFormat": "timestamp", "refId": "D"}
       ]
     },
     {
       "id": 8,
-      "title": "Capacity",
+      "title": "Nodes online / offline",
       "type": "timeseries",
       "gridPos": {"h": 6, "w": 12, "x": 12, "y": 18},
       "datasource": {"type": "prometheus", "uid": "prom"},
-      "fieldConfig": {"defaults": {"unit": "bytes"}},
       "targets": [
-        {"expr": "sum by (host) (minio_cluster_capacity_usable_total_bytes{job=~\"minio_.+\"})", "legendFormat": "total {{host}}", "refId": "A"},
-        {"expr": "sum by (host) (minio_cluster_capacity_usable_free_bytes{job=~\"minio_.+\"})",  "legendFormat": "free {{host}}",  "refId": "B"}
+        {"expr": "sum by (host) (minio_cluster_nodes_online_total{job=~\"minio_.+\"})", "legendFormat": "online {{host}}", "refId": "A"},
+        {"expr": "sum by (host) (minio_cluster_nodes_offline_total{job=~\"minio_.+\"})", "legendFormat": "offline {{host}}", "refId": "B"}
       ]
     }
   ]
