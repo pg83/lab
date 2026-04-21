@@ -1236,7 +1236,7 @@ class Federator:
                 'prometheus',
                 f'--config.file={fn}',
                 f'--storage.tsdb.path=/home/{self.name()}/',
-                f'--web.listen-address=0.0.0.0:{self.port}',
+                f'--web.listen-address=127.0.0.1:{self.port}',
             ]
 
             exec_into(*args)
