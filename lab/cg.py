@@ -1512,15 +1512,21 @@ class Loki:
 
 
 class Promtail:
-    # One per host; tails /var/run/*/std/current, ships each line
-    # to the local Loki with labels {host, service}. Running as root
-    # because service dirs have various owners. Talks to localhost
-    # Loki only — keeps log-ship off the nebula dependency chain.
+    # One per host; runs under root so it can read any service's log
+    # dir regardless of uid. Ships to localhost Loki only — keeps
+    # log-ship off the nebula dependency chain.
+    #
+    # self.sources is filled after construction by do()'s second pass:
+    # each Service.iter_log_sources() contribution lands as a scrape
+    # config entry. An implicit tinylog source is emitted by every
+    # Service; custom sources (app-managed log files) come from the
+    # service class's own log_sources() if it defines one.
     def __init__(self, port, loki_port, me):
         self.v = 1
         self.port = port
         self.loki_port = loki_port
         self.me = me
+        self.sources = []
         self.hash = _class_src_hash(type(self))
 
     def name(self):
@@ -1541,6 +1547,23 @@ class Promtail:
         return self.port
 
     def config(self):
+        scrape_configs = []
+
+        for s in self.sources:
+            labels = {**s.get('labels', {})}
+            labels['host'] = self.me
+            labels['__path__'] = s['path']
+
+            sc = {
+                'job_name': s['job_name'],
+                'static_configs': [{'targets': ['localhost'], 'labels': labels}],
+            }
+
+            if 'pipeline_stages' in s:
+                sc['pipeline_stages'] = s['pipeline_stages']
+
+            scrape_configs.append(sc)
+
         return {
             'server': {
                 'http_listen_port': self.port,
@@ -1552,34 +1575,7 @@ class Promtail:
             'clients': [
                 {'url': f'http://localhost:{self.loki_port}/loki/api/v1/push'},
             ],
-            'scrape_configs': [
-                {
-                    'job_name': 'runit',
-                    'static_configs': [
-                        {
-                            'targets': ['localhost'],
-                            'labels': {
-                                'host': self.me,
-                                'job': 'runit',
-                                '__path__': '/var/run/*/std/current',
-                            },
-                        },
-                    ],
-                    'pipeline_stages': [
-                        {
-                            'regex': {
-                                'source': 'filename',
-                                'expression': '/var/run/(?P<service>[^/]+)/std/current',
-                            },
-                        },
-                        {
-                            'labels': {
-                                'service': None,
-                            },
-                        },
-                    ],
-                },
-            ],
+            'scrape_configs': scrape_configs,
         }
 
     def run(self):
@@ -2206,6 +2202,36 @@ class Service:
                 ],
             }
 
+    def iter_log_sources(self):
+        # Every service gets a default tinylog source for free. Services
+        # can yield additional dicts from srv.log_sources() to declare
+        # custom files (e.g. app-managed logs outside /var/run/<name>/std).
+        # Each source dict carries:
+        #   job_name         — unique within promtail
+        #   path             — file path on the host (or glob)
+        #   labels           — dict merged into the target's labels
+        #                      (service+stream defaulted if absent)
+        #   pipeline_stages  — optional list of promtail stages
+        name = self.name()
+
+        yield {
+            'job_name': f'{name}/tinylog',
+            'path': f'/var/run/{name}/std/current',
+            'labels': {'service': name, 'stream': 'tinylog'},
+        }
+
+        try:
+            extras = self.srv.log_sources()
+        except AttributeError:
+            return
+
+        for s in extras:
+            lbl = dict(s.get('labels', {}))
+            lbl.setdefault('service', name)
+            lbl.setdefault('stream', 'custom')
+
+            yield {**s, 'labels': lbl}
+
     def enabled(self):
         return not self.disabled()
 
@@ -2475,6 +2501,12 @@ def do(code):
     for host, hndl in hndl_by_host:
         for job in hndl.prom_jobs():
             by_addr[f'{host}:collector'].srv.jobs.append(job)
+
+        promtail_key = f'{host}:promtail'
+
+        if promtail_key in by_addr:
+            for src in hndl.iter_log_sources():
+                by_addr[promtail_key].srv.sources.append(src)
 
         for bal in hndl.l7_balancer():
             proto = bal['proto']
