@@ -90,10 +90,12 @@ The canon captures the full generated cluster config per host (`extra` as a line
 
 wirez (`/home/pg/claude.sh`) forwards per-host Loki and Federator endpoints to local ports:
 
-| Service    | lab1 | lab2 | lab3 |
-|------------|------|------|------|
-| Loki       | 8032 | 8132 | 8232 |
-| Federator  | 8030 | 8130 | 8230 |
+| Service                         | lab1 | lab2 | lab3 |
+|---------------------------------|------|------|------|
+| Loki (LogQL)                    | 8032 | 8132 | 8232 |
+| Federator (PromQL)              | 8030 | 8130 | 8230 |
+| gorn_ctl_nb (task API)          | 8027 | 8127 | 8227 |
+| minio (S3)                      | 8012 | 8112 | 8212 |
 
 Lokis are HA (memberlist gossip, shared minio `loki` bucket), Federator on each host scrapes all collectors — any single lab port gives the full cluster view. Default: lab1 (`:8032` / `:8030`); fall through to `:8132` / `:8130` etc. if lab1 is unreachable.
 
