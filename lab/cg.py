@@ -593,6 +593,13 @@ class MinIO:
         self.port = port
         self.uniq = uniq
         self.cmap = cmap
+        # Experimental: automatic class-source hash. If run()/etc.
+        # change without self.v bump, this shifts and forces a
+        # redeploy. Added first on MinIO as a sentinel; we'll roll
+        # out wider if it proves stable (ast.dump is deterministic
+        # within a Python version but can drift across major
+        # upgrades — one-time churn then).
+        self.hash = _class_src_hash(type(self))
 
     @property
     def addr(self):
@@ -1882,17 +1889,7 @@ def exec_into(*args, user=None, **kwargs):
 
 def gen_runner(srv):
     ctx = base64.b64encode(pickle.dumps(srv)).decode()
-
-    # Mix an AST-normalized hash of the class source into the runit
-    # script. Without it, pickle only captures self.* fields — a
-    # bare code change inside run()/prepare()/... leaves the package
-    # derivation identical, and the service keeps running the old
-    # logic until something else forces a redeploy. With it, any
-    # non-cosmetic edit (ast.dump ignores whitespace/comments)
-    # bumps the hash, invalidates the package, and triggers the
-    # service restart on next cycle.
-    code_hash = _class_src_hash(type(srv))
-    scr = '# code-hash: ' + code_hash + '\nexec runpy ' + ctx + ' ${@}'
+    scr = 'exec runpy ' + ctx + ' ${@}'
 
     return base64.b64encode(scr.encode()).decode()
 
