@@ -1,10 +1,10 @@
 {% extends '//die/hub.sh' %}
 
 {% block run_deps %}
-bin/python
 bin/curl
-bin/openssh/client
+bin/python
 bin/etcd/ctl
-bin/minio/patched/client
 bin/dev/scripts
+bin/openssh/client
+bin/minio/patched/client
 {% endblock %}
