@@ -1272,7 +1272,7 @@ class Grafana:
 
         yield {
             'pkg': 'bin/sched/grafana/reload',
-            'delay': '100',
+            'delay': '10',
             'port': str(self.port),
         }
 
