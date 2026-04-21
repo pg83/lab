@@ -1337,6 +1337,10 @@ class Samogon:
         }
 
         yield {
+            'pkg': 'bin/minio/patched/client',
+        }
+
+        yield {
             'pkg': 'lab/etc/user/home',
             'user': 'samogon',
             'user_home': self.home_dir(),
@@ -1368,6 +1372,7 @@ class Samogon:
             ]
 
             env = {
+                'PATH': '/bin',
                 'HOME': self.home_dir(),
                 'AWS_ACCESS_KEY_ID': get_key('/s3/user').decode().strip(),
                 'AWS_SECRET_ACCESS_KEY': get_key('/s3/password').decode().strip(),
