@@ -1179,6 +1179,69 @@ class Perses:
             exec_into('perses', '-config', fn, f'-web.listen-address=:{self.port}')
 
 
+class Federator:
+    # Cluster-wide aggregator: scrapes /federate on every host's local
+    # Collector and serves a unified view. Grafana points here instead
+    # of at its local Collector so dashboards see the whole cluster,
+    # and cross-host queries (sum by host, compare latency, etc.) work
+    # directly. One per host — no SPOF.
+    def __init__(self, port, collector_port, hosts):
+        self.v = 1
+        self.port = port
+        self.collector_port = collector_port
+        self.hosts = list(hosts)
+
+    def name(self):
+        return 'federator'
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/prometheus',
+        }
+
+    def prom_port(self):
+        return self.port
+
+    def prepare(self):
+        u = self.name()
+        make_dirs(f'/home/{u}', owner=u)
+
+    def config(self):
+        return {
+            'global': {
+                'scrape_interval': '15s',
+                'evaluation_interval': '15s',
+            },
+            'scrape_configs': [
+                {
+                    'job_name': 'federate',
+                    'honor_labels': True,
+                    'metrics_path': '/federate',
+                    'params': {'match[]': ['{job=~".+"}']},
+                    'static_configs': [
+                        {
+                            'targets': [f'{h}.nebula:{self.collector_port}' for h in self.hosts],
+                        },
+                    ],
+                },
+            ],
+        }
+
+    def run(self):
+        with memfd('prometheus.conf') as fn:
+            with open(fn, 'w') as f:
+                f.write(json.dumps(self.config(), sort_keys=True, indent=4))
+
+            args = [
+                'prometheus',
+                f'--config.file={fn}',
+                f'--storage.tsdb.path=/home/{self.name()}/',
+                f'--web.listen-address=0.0.0.0:{self.port}',
+            ]
+
+            exec_into(*args)
+
+
 class Grafana:
     def __init__(self, port, collector_port):
         self.v = 1
@@ -1492,7 +1555,12 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': Grafana(p['grafana'], p['collector']),
+                'serv': Federator(p['federator'], p['collector'], [x['hostname'] for x in self.conf['hosts']]),
+            }
+
+            yield {
+                'host': hn,
+                'serv': Grafana(p['grafana'], p['federator']),
             }
 
             yield {
@@ -1690,6 +1758,7 @@ sys.modules['builtins'].GornWeb = GornWeb
 sys.modules['builtins'].GornProm = GornProm
 sys.modules['builtins'].Perses = Perses
 sys.modules['builtins'].Grafana = Grafana
+sys.modules['builtins'].Federator = Federator
 sys.modules['builtins'].CI = CI
 sys.modules['builtins'].SshTunnel = SshTunnel
 sys.modules['builtins'].SocksProxy = SocksProxy
@@ -1970,6 +2039,7 @@ def do(code):
         'sshd_rec': 8023,
         'pers_db': 8024,
         'grafana': 8029,
+        'federator': 8030,
     }
 
     users = {
@@ -2000,6 +2070,7 @@ def do(code):
         'ghcr_sync': 1029,
         'perses': 1017,
         'grafana': 1094,
+        'federator': 2000,
     }
 
     for i in range(0, 64):
