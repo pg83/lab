@@ -8,6 +8,7 @@ lab/services/autoupdate(user=ix)
 
 bin/mc
 bin/htop
+bin/dev
 bin/ix/tmpfs
 etc/host/keys
 bin/lm/sensors
