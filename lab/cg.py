@@ -1279,6 +1279,10 @@ class Grafana:
         }
 
         yield {
+            'pkg': 'aux/grafana/gen',
+        }
+
+        yield {
             'pkg': 'bin/sched/grafana/reload',
             'delay': '10',
             'port': str(self.port),
