@@ -1408,7 +1408,7 @@ class Loki:
     # to be pre-created). Grafana picks Loki up as a datasource; the
     # on-host Promtail ships /var/run/*/std/current lines here.
     def __init__(self, port, memberlist_port, s3_endpoint, peers, me):
-        self.v = 1
+        self.v = 2
         self.port = port
         self.memberlist_port = memberlist_port
         self.s3_endpoint = s3_endpoint
@@ -1487,13 +1487,7 @@ class Loki:
                 ],
             },
             'limits_config': {
-                'retention_period': '720h',
                 'allow_structured_metadata': True,
-            },
-            'compactor': {
-                'retention_enabled': True,
-                'delete_request_store': 's3',
-                'working_directory': f'{self.home_dir()}/compactor',
             },
         }
 
