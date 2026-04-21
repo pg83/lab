@@ -1252,10 +1252,11 @@ class Federator:
 
 
 class Grafana:
-    def __init__(self, port, collector_port):
+    def __init__(self, port, collector_port, loki_port):
         self.v = 1
         self.port = port
         self.collector_port = collector_port
+        self.loki_port = loki_port
         # Experimental: class-source AST hash so method-body edits
         # auto-invalidate the service without needing a self.v bump.
         # Trialed on grafana+samogon where "accidentally kept
@@ -1276,6 +1277,7 @@ class Grafana:
         yield {
             'pkg': 'aux/grafana',
             'collector_port': str(self.collector_port),
+            'loki_port': str(self.loki_port),
         }
 
         yield {
@@ -1398,6 +1400,194 @@ class Samogon:
             }
 
             exec_into(*args, user='samogon', **env)
+
+
+class Loki:
+    # HA log aggregator, one per host, joined via memberlist gossip
+    # over nebula. Chunks + index land in MinIO (bucket "loki" has
+    # to be pre-created). Grafana picks Loki up as a datasource; the
+    # on-host Promtail ships /var/run/*/std/current lines here.
+    def __init__(self, port, memberlist_port, s3_endpoint, peers, me):
+        self.v = 1
+        self.port = port
+        self.memberlist_port = memberlist_port
+        self.s3_endpoint = s3_endpoint
+        self.peers = list(peers)
+        self.me = me
+        self.hash = _class_src_hash(type(self))
+
+    def name(self):
+        return 'loki'
+
+    def users(self):
+        return ['root', 'loki']
+
+    def home_dir(self):
+        return f'/var/run/{self.name()}/std/home'
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/loki',
+        }
+
+        yield {
+            'pkg': 'lab/etc/user/home',
+            'user': 'loki',
+            'user_home': self.home_dir(),
+        }
+
+    def prepare(self):
+        make_dirs(self.home_dir(), owner='loki')
+
+    def prom_port(self):
+        return self.port
+
+    def config(self):
+        scheme, rest = self.s3_endpoint.split('://', 1)
+
+        return {
+            'auth_enabled': False,
+            'server': {
+                'http_listen_port': self.port,
+                'grpc_listen_port': 9095,
+                'log_level': 'info',
+            },
+            'common': {
+                'path_prefix': self.home_dir(),
+                'storage': {
+                    's3': {
+                        'endpoint': rest,
+                        'bucketnames': 'loki',
+                        'access_key_id': get_key('/s3/user').decode().strip(),
+                        'secret_access_key': get_key('/s3/password').decode().strip(),
+                        's3forcepathstyle': True,
+                        'insecure': scheme == 'http',
+                    },
+                },
+                'replication_factor': min(3, max(1, len(self.peers))),
+                'ring': {
+                    'instance_addr': f'{self.me}.nebula',
+                    'kvstore': {'store': 'memberlist'},
+                },
+            },
+            'memberlist': {
+                'bind_port': self.memberlist_port,
+                'abort_if_cluster_join_fails': False,
+                'join_members': [f'{p}.nebula:{self.memberlist_port}' for p in self.peers],
+            },
+            'schema_config': {
+                'configs': [
+                    {
+                        'from': '2026-01-01',
+                        'store': 'tsdb',
+                        'object_store': 's3',
+                        'schema': 'v13',
+                        'index': {'prefix': 'index_', 'period': '24h'},
+                    },
+                ],
+            },
+            'limits_config': {
+                'retention_period': '720h',
+                'allow_structured_metadata': True,
+            },
+            'compactor': {
+                'retention_enabled': True,
+                'delete_request_store': 's3',
+                'working_directory': f'{self.home_dir()}/compactor',
+            },
+        }
+
+    def run(self):
+        with memfd('loki.yaml') as fn:
+            with open(fn, 'w') as f:
+                # Loki YAML parser accepts JSON as valid YAML.
+                f.write(json.dumps(self.config(), indent=2, sort_keys=True))
+
+            exec_into(
+                'loki', '-config.file', fn,
+                user='loki',
+                PATH='/bin',
+                HOME=self.home_dir(),
+            )
+
+
+class Promtail:
+    # One per host; tails /var/run/*/std/current, ships each line
+    # to the local Loki with labels {host, service}. Running as root
+    # because service dirs have various owners. Talks to localhost
+    # Loki only — keeps log-ship off the nebula dependency chain.
+    def __init__(self, port, loki_port, me):
+        self.v = 1
+        self.port = port
+        self.loki_port = loki_port
+        self.me = me
+        self.hash = _class_src_hash(type(self))
+
+    def name(self):
+        return 'promtail'
+
+    def user(self):
+        return 'root'
+
+    def users(self):
+        return ['root']
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/promtail',
+        }
+
+    def prom_port(self):
+        return self.port
+
+    def config(self):
+        return {
+            'server': {
+                'http_listen_port': self.port,
+                'grpc_listen_port': 9096,
+            },
+            'positions': {
+                'filename': f'/var/run/{self.name()}/std/positions.yaml',
+            },
+            'clients': [
+                {'url': f'http://localhost:{self.loki_port}/loki/api/v1/push'},
+            ],
+            'scrape_configs': [
+                {
+                    'job_name': 'runit',
+                    'static_configs': [
+                        {
+                            'targets': ['localhost'],
+                            'labels': {
+                                'host': self.me,
+                                'job': 'runit',
+                                '__path__': '/var/run/*/std/current',
+                            },
+                        },
+                    ],
+                    'pipeline_stages': [
+                        {
+                            'regex': {
+                                'source': 'filename',
+                                'expression': '/var/run/(?P<service>[^/]+)/std/current',
+                            },
+                        },
+                        {
+                            'labels': {
+                                'service': None,
+                            },
+                        },
+                    ],
+                },
+            ],
+        }
+
+    def run(self):
+        with memfd('promtail.yaml') as fn:
+            with open(fn, 'w') as f:
+                f.write(json.dumps(self.config(), indent=2, sort_keys=True))
+
+            exec_into('promtail', '-config.file', fn, PATH='/bin')
 
 
 class Secrets:
@@ -1657,7 +1847,27 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': Grafana(p['grafana'], p['federator']),
+                'serv': Grafana(p['grafana'], p['federator'], p['loki']),
+            }
+
+            yield {
+                'host': hn,
+                'serv': Loki(
+                    port=p['loki'],
+                    memberlist_port=p['loki_memberlist'],
+                    s3_endpoint=f"http://{hn}.eth1:{p['minio']}",
+                    peers=[x['hostname'] for x in self.conf['hosts']],
+                    me=hn,
+                ),
+            }
+
+            yield {
+                'host': hn,
+                'serv': Promtail(
+                    port=p['promtail'],
+                    loki_port=p['loki'],
+                    me=hn,
+                ),
             }
 
             yield {
@@ -1870,6 +2080,8 @@ sys.modules['builtins'].SocksProxy = SocksProxy
 sys.modules['builtins'].CO2Mon = CO2Mon
 sys.modules['builtins'].MirrorFetch = MirrorFetch
 sys.modules['builtins'].Samogon = Samogon
+sys.modules['builtins'].Loki = Loki
+sys.modules['builtins'].Promtail = Promtail
 sys.modules['builtins'].Secrets = Secrets
 sys.modules['builtins'].PersDB = PersDB
 sys.modules['builtins'].HFSync = HFSync
@@ -2168,6 +2380,9 @@ def do(code):
         'grafana': 8029,
         'federator': 8030,
         'samogon': 8031,
+        'loki': 8032,
+        'promtail': 8033,
+        'loki_memberlist': 7946,
     }
 
     users = {
@@ -2200,6 +2415,7 @@ def do(code):
         'grafana': 1094,
         'federator': 2000,
         'samogon': 2001,
+        'loki': 2002,
     }
 
     for i in range(0, 64):

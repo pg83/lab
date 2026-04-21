@@ -16,6 +16,16 @@ datasources:
     isDefault: true
 EOF
 
+cat << EOF > ${out}/share/grafana-provisioning/datasources/loki.yaml
+apiVersion: 1
+datasources:
+  - name: Loki
+    uid: loki
+    type: loki
+    access: proxy
+    url: http://127.0.0.1:{{loki_port | defined('loki_port')}}
+EOF
+
 cat << EOF > ${out}/share/grafana-provisioning/dashboards/cluster.yaml
 apiVersion: 1
 providers:
