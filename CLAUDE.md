@@ -97,11 +97,13 @@ wirez (`/home/pg/claude.sh`) forwards per-host Loki and Federator endpoints to l
 
 Lokis are HA (memberlist gossip, shared minio `loki` bucket), Federator on each host scrapes all collectors — any single lab port gives the full cluster view. Default: lab1 (`:8032` / `:8030`); fall through to `:8132` / `:8130` etc. if lab1 is unreachable.
 
+Note: use `http://10.1.1.2:<port>` in URLs from this sandbox, not `http://localhost:<port>`. wirez binds forwards to `10.1.1.2` (its inside-namespace gateway); glibc's `localhost` resolution shortcuts to `127.0.0.1`/`::1` regardless of `/etc/hosts`, where nothing listens.
+
 **Logs via `logcli`:**
 
 ```sh
 # Service over last 10 minutes:
-LOKI_ADDR=http://localhost:8032 logcli query '{service="samogon"}' --since=10m --limit=500
+LOKI_ADDR=http://10.1.1.2:8032 logcli query '{service="samogon"}' --since=10m --limit=500
 
 # Host + substring filter:
 logcli query '{host="lab2", service=~"gorn.*"} |~ "error"' --since=30m
@@ -122,11 +124,11 @@ Log labels: `host` ∈ {lab1,lab2,lab3}, `service` = `cg.py`-registered name, `s
 
 ```sh
 # Instant:
-curl -sG 'http://localhost:8030/api/v1/query' \
+curl -sG 'http://10.1.1.2:8030/api/v1/query' \
     --data-urlencode 'query=rate(minio_s3_requests_total[1m])' | jq
 
 # Range:
-curl -sG 'http://localhost:8030/api/v1/query_range' \
+curl -sG 'http://10.1.1.2:8030/api/v1/query_range' \
     --data-urlencode 'query=rate(minio_s3_requests_total[1m])' \
     --data-urlencode "start=$(date -d '10 min ago' +%s)" \
     --data-urlencode "end=$(date +%s)" \
