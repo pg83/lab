@@ -55,7 +55,7 @@
                 "aux/grafana/gen(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "bin/sched/grafana/reload(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,delay=10,port=8029)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=grafana)",
-                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=grafana,runsh_script=sha256:5668f1c67534ea81,srv_user=grafana)",
+                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=grafana,runsh_script=sha256:d52c141f8b9eee2a,srv_user=grafana)",
                 "bin/loki(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=loki,user_home=/var/run/loki/std/home)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=loki)",
@@ -265,7 +265,7 @@
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:71c1a3091b9b1004,srv_user=root)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:cce847a0d073435b)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:4cb22c3b60106c3a)"
             ],
             "hostname": "lab1",
             "ip": "10.0.0.64",
@@ -361,7 +361,7 @@
                 "aux/grafana/gen(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "bin/sched/grafana/reload(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,delay=10,port=8029)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=grafana)",
-                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=grafana,runsh_script=sha256:5668f1c67534ea81,srv_user=grafana)",
+                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=grafana,runsh_script=sha256:d52c141f8b9eee2a,srv_user=grafana)",
                 "bin/loki(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=loki,user_home=/var/run/loki/std/home)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=loki)",
@@ -561,7 +561,7 @@
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:2c89bda5bf2419d7,srv_user=root)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:cce847a0d073435b)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:4cb22c3b60106c3a)"
             ],
             "hostname": "lab2",
             "ip": "10.0.0.68",
@@ -657,7 +657,7 @@
                 "aux/grafana/gen(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "bin/sched/grafana/reload(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,delay=10,port=8029)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=grafana)",
-                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=grafana,runsh_script=sha256:5668f1c67534ea81,srv_user=grafana)",
+                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=grafana,runsh_script=sha256:d52c141f8b9eee2a,srv_user=grafana)",
                 "bin/loki(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=loki,user_home=/var/run/loki/std/home)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=loki)",
@@ -827,7 +827,7 @@
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:74f8cb4cf24abae3,srv_user=root)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:cce847a0d073435b)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:4cb22c3b60106c3a)"
             ],
             "hostname": "lab3",
             "ip": "10.0.0.72",
@@ -901,7 +901,7 @@
                 "aux/grafana/gen(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "bin/sched/grafana/reload(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,delay=10,port=8029)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=grafana)",
-                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=grafana,runsh_script=sha256:5668f1c67534ea81,srv_user=grafana)",
+                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=grafana,runsh_script=sha256:d52c141f8b9eee2a,srv_user=grafana)",
                 "bin/loki(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=loki,user_home=/var/run/loki/std/home)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=loki)",
@@ -978,7 +978,7 @@
                 "lab/services/ci(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,ci_targets=set/ci/tier/2)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=ci_2)",
                 "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=ci_2,runsh_script=sha256:d1eb60724fdfd2e9,srv_user=ci_2)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:cce847a0d073435b)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:4cb22c3b60106c3a)"
             ],
             "hostname": "lab4",
             "ip": "10.0.0.76",
@@ -1076,7 +1076,7 @@
                 "aux/grafana/gen(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "bin/sched/grafana/reload(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,delay=10,port=8029)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=grafana)",
-                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=grafana,runsh_script=sha256:5668f1c67534ea81,srv_user=grafana)",
+                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=grafana,runsh_script=sha256:d52c141f8b9eee2a,srv_user=grafana)",
                 "bin/loki(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=loki,user_home=/var/run/loki/std/home)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=loki)",
@@ -1286,7 +1286,7 @@
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:71c1a3091b9b1004,srv_user=root)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:cce847a0d073435b)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:4cb22c3b60106c3a)"
             ],
             "hostname": "lab1",
             "ip": "10.0.0.64",
@@ -1382,7 +1382,7 @@
                 "aux/grafana/gen(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "bin/sched/grafana/reload(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,delay=10,port=8029)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=grafana)",
-                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=grafana,runsh_script=sha256:5668f1c67534ea81,srv_user=grafana)",
+                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=grafana,runsh_script=sha256:d52c141f8b9eee2a,srv_user=grafana)",
                 "bin/loki(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=loki,user_home=/var/run/loki/std/home)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=loki)",
@@ -1582,7 +1582,7 @@
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:2c89bda5bf2419d7,srv_user=root)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:cce847a0d073435b)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:4cb22c3b60106c3a)"
             ],
             "hostname": "lab2",
             "ip": "10.0.0.68",
@@ -1678,7 +1678,7 @@
                 "aux/grafana/gen(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "bin/sched/grafana/reload(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,delay=10,port=8029)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=grafana)",
-                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=grafana,runsh_script=sha256:5668f1c67534ea81,srv_user=grafana)",
+                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=grafana,runsh_script=sha256:d52c141f8b9eee2a,srv_user=grafana)",
                 "bin/loki(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=loki,user_home=/var/run/loki/std/home)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=loki)",
@@ -1848,7 +1848,7 @@
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:74f8cb4cf24abae3,srv_user=root)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:cce847a0d073435b)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:4cb22c3b60106c3a)"
             ],
             "hostname": "lab3",
             "ip": "10.0.0.72",
@@ -1922,7 +1922,7 @@
                 "aux/grafana/gen(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "bin/sched/grafana/reload(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,delay=10,port=8029)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=grafana)",
-                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=grafana,runsh_script=sha256:5668f1c67534ea81,srv_user=grafana)",
+                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=grafana,runsh_script=sha256:d52c141f8b9eee2a,srv_user=grafana)",
                 "bin/loki(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=loki,user_home=/var/run/loki/std/home)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=loki)",
@@ -1999,7 +1999,7 @@
                 "lab/services/ci(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,ci_targets=set/ci/tier/2)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=ci_2)",
                 "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=ci_2,runsh_script=sha256:d1eb60724fdfd2e9,srv_user=ci_2)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:cce847a0d073435b)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:4cb22c3b60106c3a)"
             ],
             "hostname": "lab4",
             "ip": "10.0.0.76",

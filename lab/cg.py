@@ -1321,8 +1321,12 @@ class Grafana:
             # error: data source not found" and the service enters a
             # crash loop. Disable the kubernetes-backed datasource
             # APIs and fall back to the classic in-DB path.
+            # ini grammar is per-flag `key = true|false`, not
+            # `disable = <list>` (silently ignored).
             '[feature_toggles]\n'
-            'disable = kubernetesDatasources,kubernetesDashboards\n'
+            'kubernetesDatasources = false\n'
+            'kubernetesDashboards = false\n'
+            'kubernetesFolders = false\n'
         )
 
     def run(self):
