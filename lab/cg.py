@@ -1270,6 +1270,12 @@ class Grafana:
             'collector_port': str(self.collector_port),
         }
 
+        yield {
+            'pkg': 'bin/sched/grafana/reload',
+            'delay': '100',
+            'port': str(self.port),
+        }
+
     def ini(self):
         s = self.state_dir()
 
