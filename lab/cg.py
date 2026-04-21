@@ -1197,7 +1197,7 @@ class Grafana:
         }
 
         yield {
-            'pkg': 'lab/aux/grafana',
+            'pkg': 'aux/grafana',
             'collector_port': str(self.collector_port),
         }
 
