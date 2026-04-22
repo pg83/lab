@@ -4,4 +4,5 @@
 bin/sched(delay={{delay}})
 bin/sched/sock/stat/scripts(delay={{delay}})
 bin/add/prefix
+bin/ix/timeout
 {% endblock %}
