@@ -314,12 +314,25 @@ class Nebula:
 
 
 class NebulaNode(Nebula):
-    def __init__(self, host, port, smap, prom, advr):
+    def __init__(self, host, port, smap, prom, advr, self_vip):
         self.host = host
         self.port = port
         self.smap = smap
         self.prom = prom
         self.advr = advr
+        self.self_vip = self_vip
+
+    def run(self):
+        # Strip self-entry so nebula doesn't endlessly try to handshake
+        # with itself. smap was a shared dict ref populated with every
+        # host's VIP → LAN IPs (commit 45656c074), including our own.
+        # Without this filter nebula logs "Refusing to handshake with
+        # myself" ~1/sec per local NIC forever. Filter at run-time (not
+        # at __init__) so the ref has already accumulated lighthouse
+        # entries from the later iterations of the host loop at the
+        # moment pickle ran.
+        self.smap = {k: v for k, v in self.smap.items() if k != self.self_vip}
+        super().run()
 
     def prom_port(self):
         return self.prom
@@ -2078,7 +2091,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': NebulaNode(hn, nn_port, neb_map, p['nebula_node_prom'], nn_adv),
+                'serv': NebulaNode(hn, nn_port, neb_map, p['nebula_node_prom'], nn_adv, nb['ip']),
             }
 
             if lh := h.get('nebula', {}).get('lh', None):

@@ -118,7 +118,7 @@
                 "bin/xiaomi(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,upnp_ip=10.0.0.65,upnp_port=4243,upnp_ext_port=4308,upnp_proto=UDP,xiaomi_gw=10.0.0.1,xiaomi_passwd=,xiaomi_name=4308_UDP,xiaomi_proto=2,delay=100)",
                 "bin/xiaomi(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,upnp_ip=10.0.0.66,upnp_port=4243,upnp_ext_port=4309,upnp_proto=UDP,xiaomi_gw=10.0.0.1,xiaomi_passwd=,xiaomi_name=4309_UDP,xiaomi_proto=2,delay=100)",
                 "bin/xiaomi(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,upnp_ip=10.0.0.67,upnp_port=4243,upnp_ext_port=4310,upnp_proto=UDP,xiaomi_gw=10.0.0.1,xiaomi_passwd=,xiaomi_name=4310_UDP,xiaomi_proto=2,delay=100)",
-                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=nebula_node,runsh_script=sha256:44b627b061a4191f,srv_user=root)",
+                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=nebula_node,runsh_script=sha256:08dc57e508bd3e88,srv_user=root)",
                 "bin/nebula/daemon(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=nebula_lh)",
                 "bin/xiaomi(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,upnp_ip=10.0.0.64,upnp_port=4242,upnp_ext_port=4242,upnp_proto=UDP,xiaomi_gw=10.0.0.1,xiaomi_passwd=,xiaomi_name=4242_UDP,xiaomi_proto=2,delay=100)",
@@ -265,7 +265,7 @@
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:a6a643b1c01816dc,srv_user=root)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:65391334fa62bb37)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:926eb7bf54a21213)"
             ],
             "hostname": "lab1",
             "ip": "10.0.0.64",
@@ -424,7 +424,7 @@
                 "bin/xiaomi(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,upnp_ip=10.0.0.69,upnp_port=4243,upnp_ext_port=4312,upnp_proto=UDP,xiaomi_gw=10.0.0.1,xiaomi_passwd=,xiaomi_name=4312_UDP,xiaomi_proto=2,delay=100)",
                 "bin/xiaomi(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,upnp_ip=10.0.0.70,upnp_port=4243,upnp_ext_port=4313,upnp_proto=UDP,xiaomi_gw=10.0.0.1,xiaomi_passwd=,xiaomi_name=4313_UDP,xiaomi_proto=2,delay=100)",
                 "bin/xiaomi(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,upnp_ip=10.0.0.71,upnp_port=4243,upnp_ext_port=4314,upnp_proto=UDP,xiaomi_gw=10.0.0.1,xiaomi_passwd=,xiaomi_name=4314_UDP,xiaomi_proto=2,delay=100)",
-                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=nebula_node,runsh_script=sha256:6810e6c29bb02707,srv_user=root)",
+                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=nebula_node,runsh_script=sha256:0b5598c90c1deeee,srv_user=root)",
                 "bin/nebula/daemon(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=nebula_lh)",
                 "bin/xiaomi(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,upnp_ip=10.0.0.68,upnp_port=4242,upnp_ext_port=4243,upnp_proto=UDP,xiaomi_gw=10.0.0.1,xiaomi_passwd=,xiaomi_name=4243_UDP,xiaomi_proto=2,delay=100)",
@@ -561,7 +561,7 @@
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:105cb0c99c0c74f5,srv_user=root)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:65391334fa62bb37)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:926eb7bf54a21213)"
             ],
             "hostname": "lab2",
             "ip": "10.0.0.68",
@@ -720,7 +720,7 @@
                 "bin/xiaomi(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,upnp_ip=10.0.0.73,upnp_port=4243,upnp_ext_port=4316,upnp_proto=UDP,xiaomi_gw=10.0.0.1,xiaomi_passwd=,xiaomi_name=4316_UDP,xiaomi_proto=2,delay=100)",
                 "bin/xiaomi(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,upnp_ip=10.0.0.74,upnp_port=4243,upnp_ext_port=4317,upnp_proto=UDP,xiaomi_gw=10.0.0.1,xiaomi_passwd=,xiaomi_name=4317_UDP,xiaomi_proto=2,delay=100)",
                 "bin/xiaomi(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,upnp_ip=10.0.0.75,upnp_port=4243,upnp_ext_port=4318,upnp_proto=UDP,xiaomi_gw=10.0.0.1,xiaomi_passwd=,xiaomi_name=4318_UDP,xiaomi_proto=2,delay=100)",
-                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=nebula_node,runsh_script=sha256:16e20e4cdf92219d,srv_user=root)",
+                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=nebula_node,runsh_script=sha256:55e2956cdb1a6303,srv_user=root)",
                 "bin/nebula/daemon(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=nebula_lh)",
                 "bin/xiaomi(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,upnp_ip=10.0.0.72,upnp_port=4242,upnp_ext_port=4244,upnp_proto=UDP,xiaomi_gw=10.0.0.1,xiaomi_passwd=,xiaomi_name=4244_UDP,xiaomi_proto=2,delay=100)",
@@ -827,7 +827,7 @@
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:739bbad63c65a3e2,srv_user=root)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:65391334fa62bb37)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:926eb7bf54a21213)"
             ],
             "hostname": "lab3",
             "ip": "10.0.0.72",
@@ -988,7 +988,7 @@
                 "bin/xiaomi(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,upnp_ip=10.0.0.65,upnp_port=4243,upnp_ext_port=4308,upnp_proto=UDP,xiaomi_gw=10.0.0.1,xiaomi_passwd=,xiaomi_name=4308_UDP,xiaomi_proto=2,delay=100)",
                 "bin/xiaomi(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,upnp_ip=10.0.0.66,upnp_port=4243,upnp_ext_port=4309,upnp_proto=UDP,xiaomi_gw=10.0.0.1,xiaomi_passwd=,xiaomi_name=4309_UDP,xiaomi_proto=2,delay=100)",
                 "bin/xiaomi(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,upnp_ip=10.0.0.67,upnp_port=4243,upnp_ext_port=4310,upnp_proto=UDP,xiaomi_gw=10.0.0.1,xiaomi_passwd=,xiaomi_name=4310_UDP,xiaomi_proto=2,delay=100)",
-                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=nebula_node,runsh_script=sha256:44b627b061a4191f,srv_user=root)",
+                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=nebula_node,runsh_script=sha256:08dc57e508bd3e88,srv_user=root)",
                 "bin/nebula/daemon(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=nebula_lh)",
                 "bin/xiaomi(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,upnp_ip=10.0.0.64,upnp_port=4242,upnp_ext_port=4242,upnp_proto=UDP,xiaomi_gw=10.0.0.1,xiaomi_passwd=,xiaomi_name=4242_UDP,xiaomi_proto=2,delay=100)",
@@ -1135,7 +1135,7 @@
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:a6a643b1c01816dc,srv_user=root)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:65391334fa62bb37)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:926eb7bf54a21213)"
             ],
             "hostname": "lab1",
             "ip": "10.0.0.64",
@@ -1294,7 +1294,7 @@
                 "bin/xiaomi(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,upnp_ip=10.0.0.69,upnp_port=4243,upnp_ext_port=4312,upnp_proto=UDP,xiaomi_gw=10.0.0.1,xiaomi_passwd=,xiaomi_name=4312_UDP,xiaomi_proto=2,delay=100)",
                 "bin/xiaomi(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,upnp_ip=10.0.0.70,upnp_port=4243,upnp_ext_port=4313,upnp_proto=UDP,xiaomi_gw=10.0.0.1,xiaomi_passwd=,xiaomi_name=4313_UDP,xiaomi_proto=2,delay=100)",
                 "bin/xiaomi(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,upnp_ip=10.0.0.71,upnp_port=4243,upnp_ext_port=4314,upnp_proto=UDP,xiaomi_gw=10.0.0.1,xiaomi_passwd=,xiaomi_name=4314_UDP,xiaomi_proto=2,delay=100)",
-                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=nebula_node,runsh_script=sha256:6810e6c29bb02707,srv_user=root)",
+                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=nebula_node,runsh_script=sha256:0b5598c90c1deeee,srv_user=root)",
                 "bin/nebula/daemon(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=nebula_lh)",
                 "bin/xiaomi(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,upnp_ip=10.0.0.68,upnp_port=4242,upnp_ext_port=4243,upnp_proto=UDP,xiaomi_gw=10.0.0.1,xiaomi_passwd=,xiaomi_name=4243_UDP,xiaomi_proto=2,delay=100)",
@@ -1431,7 +1431,7 @@
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:105cb0c99c0c74f5,srv_user=root)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:65391334fa62bb37)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:926eb7bf54a21213)"
             ],
             "hostname": "lab2",
             "ip": "10.0.0.68",
@@ -1590,7 +1590,7 @@
                 "bin/xiaomi(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,upnp_ip=10.0.0.73,upnp_port=4243,upnp_ext_port=4316,upnp_proto=UDP,xiaomi_gw=10.0.0.1,xiaomi_passwd=,xiaomi_name=4316_UDP,xiaomi_proto=2,delay=100)",
                 "bin/xiaomi(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,upnp_ip=10.0.0.74,upnp_port=4243,upnp_ext_port=4317,upnp_proto=UDP,xiaomi_gw=10.0.0.1,xiaomi_passwd=,xiaomi_name=4317_UDP,xiaomi_proto=2,delay=100)",
                 "bin/xiaomi(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,upnp_ip=10.0.0.75,upnp_port=4243,upnp_ext_port=4318,upnp_proto=UDP,xiaomi_gw=10.0.0.1,xiaomi_passwd=,xiaomi_name=4318_UDP,xiaomi_proto=2,delay=100)",
-                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=nebula_node,runsh_script=sha256:16e20e4cdf92219d,srv_user=root)",
+                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=nebula_node,runsh_script=sha256:55e2956cdb1a6303,srv_user=root)",
                 "bin/nebula/daemon(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=nebula_lh)",
                 "bin/xiaomi(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,upnp_ip=10.0.0.72,upnp_port=4242,upnp_ext_port=4244,upnp_proto=UDP,xiaomi_gw=10.0.0.1,xiaomi_passwd=,xiaomi_name=4244_UDP,xiaomi_proto=2,delay=100)",
@@ -1697,7 +1697,7 @@
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:739bbad63c65a3e2,srv_user=root)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:65391334fa62bb37)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:926eb7bf54a21213)"
             ],
             "hostname": "lab3",
             "ip": "10.0.0.72",
