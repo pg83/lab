@@ -273,6 +273,13 @@ def get_key(k):
     return ur.urlopen('http://localhost:8022' + k).read()
 
 
+def get_key_v2(k):
+    # Opt-in sibling of get_key that hits secrets_v2 instead. Kept
+    # separate so we can migrate one caller at a time — no cascade
+    # fallback to avoid hiding v2 bugs behind the old service.
+    return ur.urlopen('http://localhost:8034' + k).read()
+
+
 class Nebula:
     def pkgs(self):
         yield {
@@ -1736,6 +1743,35 @@ class Secrets:
         exec_into(*args)
 
 
+class SecretsV2:
+    # Git-shipped encrypted store, decrypted once on startup with a
+    # passphrase fetched from pers_db's /master.key. No TTL-recycle,
+    # no backend fan-out, no bootstrap deadlock — everything stays
+    # in-process until next ix mut replaces the store and pid1
+    # respawns us via _hash rotation.
+    def __init__(self, port, persdb_port):
+        self.port = port
+        self.persdb_port = persdb_port
+        self._hash = _class_src_hash(type(self))
+
+    def name(self):
+        return 'secrets_v2'
+
+    def user(self):
+        return 'root'
+
+    def pkgs(self):
+        yield {'pkg': 'bin/secrets/v2'}
+
+    def run(self):
+        exec_into(
+            'ix_serve_secrets_v2',
+            str(self.port),
+            str(self.persdb_port),
+            '/ix/realm/system/share/secrets-v2/store',
+        )
+
+
 class PersDB:
     def __init__(self, port):
         self.v = 4
@@ -2016,6 +2052,11 @@ class ClusterMap:
 
             yield {
                 'host': hn,
+                'serv': SecretsV2(p['secrets_v2'], p['pers_db']),
+            }
+
+            yield {
+                'host': hn,
                 'serv': MirrorFetch(),
             }
 
@@ -2217,6 +2258,7 @@ sys.modules['builtins'].Samogon = Samogon
 sys.modules['builtins'].Loki = Loki
 sys.modules['builtins'].Promtail = Promtail
 sys.modules['builtins'].Secrets = Secrets
+sys.modules['builtins'].SecretsV2 = SecretsV2
 sys.modules['builtins'].PersDB = PersDB
 sys.modules['builtins'].HFSync = HFSync
 sys.modules['builtins'].GHCRSync = GHCRSync
@@ -2541,6 +2583,7 @@ def do(code):
         'secrets': 8022,
         'sshd_rec': 8023,
         'pers_db': 8024,
+        'secrets_v2': 8034,
         'grafana': 8029,
         'federator': 8030,
         'samogon': 8031,
