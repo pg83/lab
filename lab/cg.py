@@ -2061,6 +2061,13 @@ class ClusterMap:
 
             nn_port = p['nebula_node']
             nn_adv = [x['ip'] + f':{nn_port}' for x in h['net']]
+            # Register this host's nebula VIP → all LAN NIC endpoints in
+            # the static_host_map. Without this, peer discovery goes
+            # through the lighthouse which may hand out a public IP via
+            # UPnP — flaky and lossy. Giving every peer direct LAN
+            # fallbacks lets nebula form tunnels on the healthy
+            # 10.0.0.0/24 path first.
+            neb_map[nb['ip']] = list(nn_adv)
 
             yield {
                 'host': hn,
