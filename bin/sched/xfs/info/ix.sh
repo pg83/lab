@@ -2,7 +2,7 @@
 
 {% block run_deps %}
 bin/sched(delay={{delay}})
-lab/bin/sched/xfs/info/scripts(delay={{delay}})
-lab/bin/add/prefix
+bin/sched/xfs/info/scripts(delay={{delay}})
+bin/add/prefix
 bin/xfsprogs
 {% endblock %}

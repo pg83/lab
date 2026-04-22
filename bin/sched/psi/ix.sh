@@ -2,6 +2,6 @@
 
 {% block run_deps %}
 bin/sched(delay={{delay}})
-lab/bin/sched/psi/scripts(delay={{delay}})
-lab/bin/add/prefix
+bin/sched/psi/scripts(delay={{delay}})
+bin/add/prefix
 {% endblock %}

@@ -9,9 +9,9 @@
 #}
 
 {% block run_deps %}
-lab/bin/sched/psi(delay=100)
-lab/bin/sched/net/stat(delay=100)
-lab/bin/sched/sock/stat(delay=100)
-lab/bin/sched/load(delay=100)
-lab/bin/sched/iostat(delay=100)
+bin/sched/psi(delay=100)
+bin/sched/net/stat(delay=100)
+bin/sched/sock/stat(delay=100)
+bin/sched/load(delay=100)
+bin/sched/iostat(delay=100)
 {% endblock %}
