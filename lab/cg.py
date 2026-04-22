@@ -2424,7 +2424,7 @@ def it_srvs(srvs, code, flags):
 
 
 def do(code):
-    hosts = [gen_host(h) for h in (1, 2, 3, 4)]
+    hosts = [gen_host(h) for h in (1, 2, 3)]
 
     for x in hosts:
         x['ip'] = x['net'][0]['ip']
