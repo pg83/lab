@@ -26,6 +26,11 @@ gpull https://github.com/pg83/ix ix
 
 cd ix
 
+# molot leaves mc-molot-<N> workdirs in cwd; owning processes are
+# long gone, their mount namespaces reaped with them. Sweep before
+# the fresh build starts, or they accumulate indefinitely.
+rm -rf mc-molot-*
+
 ./ix build {{ci_targets}} --seed=1
 
 timeout 60s etcdctl watch --prefix /git/logs/git_ci | gnugrep --line-buffered 'PUT' | head -n 1
