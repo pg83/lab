@@ -18,6 +18,8 @@ bin/lm/sensors
 bin/kernel/6/14
 bin/kernel/6/16
 bin/smart/mon/tools
+bin/mtr
+bin/traceroute
 bin/fixits(delay=10)
 bin/kernel/gengrub(kernel_boot_flags=rootdelay=20)
 
