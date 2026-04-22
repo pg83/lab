@@ -251,6 +251,64 @@
      "fieldConfig": {"defaults": {"unit": "ms"}},
      "targets": [
        {"expr": "1000 * (sum(rate(node_disk_read_time_seconds_total{host=\"lab3\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m])) + sum(rate(node_disk_write_time_seconds_total{host=\"lab3\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m]))) / clamp_min(sum(rate(node_disk_reads_completed_total{host=\"lab3\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m])) + sum(rate(node_disk_writes_completed_total{host=\"lab3\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m])), 1)", "legendFormat": "avg", "refId": "A"}
+     ]},
+
+    {"id": 33, "title": "Net RX — cluster sum by NIC", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 0, "y": 48},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "bps"}},
+     "targets": [
+       {"expr": "8 * sum by (device) (rate(node_network_receive_bytes_total{device=~\"eth[0-3]\"}[1m]))", "legendFormat": "{{device}}", "refId": "A"}
+     ]},
+    {"id": 34, "title": "Net RX — lab1 by NIC", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 6, "y": 48},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "bps"}},
+     "targets": [
+       {"expr": "8 * sum by (device) (rate(node_network_receive_bytes_total{host=\"lab1\",device=~\"eth[0-3]\"}[1m]))", "legendFormat": "{{device}}", "refId": "A"}
+     ]},
+    {"id": 35, "title": "Net RX — lab2 by NIC", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 12, "y": 48},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "bps"}},
+     "targets": [
+       {"expr": "8 * sum by (device) (rate(node_network_receive_bytes_total{host=\"lab2\",device=~\"eth[0-3]\"}[1m]))", "legendFormat": "{{device}}", "refId": "A"}
+     ]},
+    {"id": 36, "title": "Net RX — lab3 by NIC", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 18, "y": 48},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "bps"}},
+     "targets": [
+       {"expr": "8 * sum by (device) (rate(node_network_receive_bytes_total{host=\"lab3\",device=~\"eth[0-3]\"}[1m]))", "legendFormat": "{{device}}", "refId": "A"}
+     ]},
+
+    {"id": 37, "title": "Net TX — cluster sum by NIC", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 0, "y": 54},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "bps"}},
+     "targets": [
+       {"expr": "8 * sum by (device) (rate(node_network_transmit_bytes_total{device=~\"eth[0-3]\"}[1m]))", "legendFormat": "{{device}}", "refId": "A"}
+     ]},
+    {"id": 38, "title": "Net TX — lab1 by NIC", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 6, "y": 54},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "bps"}},
+     "targets": [
+       {"expr": "8 * sum by (device) (rate(node_network_transmit_bytes_total{host=\"lab1\",device=~\"eth[0-3]\"}[1m]))", "legendFormat": "{{device}}", "refId": "A"}
+     ]},
+    {"id": 39, "title": "Net TX — lab2 by NIC", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 12, "y": 54},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "bps"}},
+     "targets": [
+       {"expr": "8 * sum by (device) (rate(node_network_transmit_bytes_total{host=\"lab2\",device=~\"eth[0-3]\"}[1m]))", "legendFormat": "{{device}}", "refId": "A"}
+     ]},
+    {"id": 40, "title": "Net TX — lab3 by NIC", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 18, "y": 54},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "bps"}},
+     "targets": [
+       {"expr": "8 * sum by (device) (rate(node_network_transmit_bytes_total{host=\"lab3\",device=~\"eth[0-3]\"}[1m]))", "legendFormat": "{{device}}", "refId": "A"}
      ]}
 
   ]
