@@ -321,6 +321,7 @@ class NebulaNode(Nebula):
         self.prom = prom
         self.advr = advr
         self.self_vip = self_vip
+        self._hash = _class_src_hash(type(self))
 
     def run(self):
         # Strip self-entry so nebula doesn't endlessly try to handshake
