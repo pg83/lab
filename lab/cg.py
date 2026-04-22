@@ -1058,8 +1058,8 @@ def it_nebula_reals(lh, h, port):
 
 
 class EtcdPrivate:
-    def __init__(self, peers, port_peer, port_client, hostname, etcid, addr, user_name):
-        self.v = 3
+    def __init__(self, peers, port_peer, port_client, hostname, etcid, addr, user_name, cluster_state):
+        self.v = 4
         self.etcid = etcid
         self.peers = peers
         self.port_peer = port_peer
@@ -1067,6 +1067,9 @@ class EtcdPrivate:
         self.hostname = hostname
         self.addr = addr
         self.user_name = user_name
+        # `new` on first boot to bootstrap; flip to `existing` once
+        # all members are up.
+        self.cluster_state = cluster_state
 
     def name(self):
         return self.user_name
@@ -1119,7 +1122,7 @@ class EtcdPrivate:
             '--initial-cluster',
             ','.join(self.it_all()),
             '--initial-cluster-state',
-            'existing',
+            self.cluster_state,
             # Drop revisions older than 1h so MVCC history doesn't
             # balloon past the 2GiB quota during long build runs.
             '--auto-compaction-mode', 'periodic',
@@ -1940,6 +1943,7 @@ class ClusterMap:
                     'secrets',
                     nb['ip'],
                     'etcd_private',
+                    'existing',
                 ),
             }
 
@@ -1957,6 +1961,7 @@ class ClusterMap:
                     'etcd_2',
                     nb['ip'],
                     'etcd_2',
+                    'new',
                 ),
             }
 
