@@ -1486,7 +1486,7 @@ class Loki:
         self.s3_endpoint = s3_endpoint
         self.peers = list(peers)
         self.me = me
-        self.hash = _class_src_hash(type(self))
+        self._hash = _class_src_hash(type(self))
 
     def name(self):
         return 'loki'
