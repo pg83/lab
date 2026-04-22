@@ -100,25 +100,40 @@ for line in "1013 eth1 1" "1014 eth2 2" "1015 eth3 3"; do
     case "$MODE" in
         apply)
             ip route replace 10.0.0.0/24 dev "$NIC" src "$IP" table "$TBL"
-            # Don't silence errors blindly — "File exists" on re-apply
-            # is fine, anything else means syntax/kernel mismatch.
-            ERR=$(ip rule add uidrange "$U-$U" lookup "$TBL" priority 1000 2>&1 1>/dev/null) || true
-            case "$ERR" in
-                '') ;;
-                *'File exists'*) ;;
-                *) echo "  ip rule add FAILED: $ERR" ;;
-            esac
+
+            # Two routing rules per instance, both pointing at the same
+            # per-NIC table:
+            # - uidrange: catches minio_N's own outbound without needing
+            #   an explicit src bind (identity-based).
+            # - from <src>: catches any process (iperf, mc, etc.) that
+            #   bound to this NIC's IP, regardless of uid — the
+            #   general-purpose multi-home rule. Without it, root
+            #   sockets hit the main table default and egress via eth0
+            #   even when bound to a non-eth0 src IP.
+            # File exists on re-apply is fine; anything else is a real
+            # syntax/kernel mismatch and needs to be visible.
+            for RULE in "uidrange $U-$U priority 1000" \
+                        "from $IP priority 1001"; do
+                ERR=$(ip rule add $RULE lookup "$TBL" 2>&1 1>/dev/null) || true
+                case "$ERR" in
+                    '') ;;
+                    *'File exists'*) ;;
+                    *) echo "  ip rule add $RULE FAILED: $ERR" ;;
+                esac
+            done
             echo "applied: uid=$U nic=$NIC src=$IP table=$TBL"
             ;;
         rollback)
             ip rule del uidrange "$U-$U" lookup "$TBL" priority 1000 2>/dev/null || true
+            ip rule del from "$IP" lookup "$TBL" priority 1001 2>/dev/null || true
             ip route flush table "$TBL" 2>/dev/null || true
             echo "rolled back: uid=$U table=$TBL"
             ;;
         status)
             echo "-- uid=$U (expected: nic=$NIC src=$IP) --"
-            echo "  rule:   $(ip rule show | grep "uidrange $U-$U" || echo '(none)')"
-            echo "  table:  $(ip route show table "$TBL" 2>/dev/null | tr '\n' ';' | sed 's/;$//' || echo '(none)')"
+            echo "  uid rule:  $(ip rule show | grep "uidrange $U-$U" || echo '(none)')"
+            echo "  src rule:  $(ip rule show | grep "from $IP " | head -1 || echo '(none)')"
+            echo "  table:     $(ip route show table "$TBL" 2>/dev/null | tr '\n' ';' | sed 's/;$//' || echo '(none)')"
             # Impersonate the uid so the kernel runs the full rule chain.
             # Stalix iproute2 doesn't accept `ip route get ... uid N`;
             # su-exec works by giving the child real effective uid.
