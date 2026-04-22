@@ -1595,7 +1595,7 @@ class Loki:
                     # enough that a genuinely dead ingester drops out
                     # of the rate store within one update cycle, long
                     # enough to absorb the nebula jitter.
-                    'ingester_req_timeout': '2s',
+                    'ingester_request_timeout': '2s',
                 },
             },
         }
