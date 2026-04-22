@@ -32,8 +32,8 @@ set -eu
 MODE="${1:-}"
 
 case "$MODE" in
-    apply|rollback|status) ;;
-    *) echo "usage: $0 apply|rollback|status [host...]" >&2; exit 2 ;;
+    apply|rollback|status|verify) ;;
+    *) echo "usage: $0 apply|rollback|status|verify [host...]" >&2; exit 2 ;;
 esac
 
 shift
@@ -66,6 +66,17 @@ set -u
 export PATH=/ix/realm/ip/bin:$PATH
 
 printf '\n====================  %s  (%s)  ====================\n' "$HN" "$MODE"
+
+if [ "$MODE" = "verify" ]; then
+    echo "-- sysctl (rp_filter: 0=off, 1=strict, 2=loose; arp_ignore: 0=any, 1=only-if-target) --"
+    for k in net.ipv4.conf.all.rp_filter net.ipv4.conf.default.rp_filter \
+             net.ipv4.conf.eth0.rp_filter net.ipv4.conf.eth1.rp_filter \
+             net.ipv4.conf.eth2.rp_filter net.ipv4.conf.eth3.rp_filter \
+             net.ipv4.conf.all.arp_ignore net.ipv4.conf.all.arp_announce; do
+        v=$(sysctl -n "$k" 2>/dev/null || echo '?')
+        printf '    %-42s %s\n' "$k" "$v"
+    done
+fi
 
 # (uid, nic, octet_offset) per minio instance.
 for line in "1013 eth1 1" "1014 eth2 2" "1015 eth3 3"; do
@@ -113,6 +124,44 @@ for line in "1013 eth1 1" "1014 eth2 2" "1015 eth3 3"; do
             # su-exec works by giving the child real effective uid.
             echo "  route get $PROBE as uid=$U:"
             su-exec "$U" ip route get "$PROBE" 2>&1 | sed 's/^/    /'
+            ;;
+
+        verify)
+            # Empirical check: which local IP is actually being used for
+            # outbound peer:8012 connections owned by this uid? If
+            # policy routing is genuinely working, every row matches $IP.
+            # If kernel is still picking eth0 (rp_filter reject on peer,
+            # ARP flux, rule not applied for this path), we will see
+            # 10.0.0.<eth0-octet> instead.
+            #
+            # Stalix ss `dport` filter catches both directions; and
+            # column ordering varies. Pull all IPv4:port tokens from
+            # the line, pick the one that does NOT end in :8012 as
+            # local. Skip rows where no side ends in :8012 or where
+            # both sides do.
+            echo "-- uid=$U (expected local_src=$IP) --"
+            ss -tnpe state established "( dport = :8012 )" 2>/dev/null \
+                | awk -v u=$U "
+                    NR>1 && match(\$0, /uid:[0-9]+/) {
+                        got = substr(\$0, RSTART+4, RLENGTH-4)
+                        if (got != u) next
+                        local = \"\"; peer = \"\"
+                        n = split(\$0, f, /[ \t]+/)
+                        for (i = 1; i <= n; i++) {
+                            if (f[i] ~ /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+$/) {
+                                if (local == \"\") local = f[i]
+                                else if (peer == \"\") peer = f[i]
+                            }
+                        }
+                        if (peer !~ /:8012$/) next
+                        if (local ~ /:8012$/) next
+                        sub(/:[0-9]+$/, \"\", local)
+                        by[local]++; total++
+                    }
+                    END {
+                        if (total == 0) print \"    (no outbound established to :8012)\"
+                        else for (ip in by) printf \"    %5d outbound from %s\n\", by[ip], ip
+                    }" | sort -rn
             ;;
     esac
 done
