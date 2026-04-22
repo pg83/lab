@@ -1503,18 +1503,25 @@ class Samogon:
 
 
 class Loki:
-    # HA log aggregator, one per host, joined via memberlist gossip
-    # over nebula. Chunks + index land in MinIO (bucket "loki" has
-    # to be pre-created). Grafana picks Loki up as a datasource; the
-    # on-host Promtail ships /var/run/*/std/current lines here.
-    def __init__(self, port, memberlist_port, s3_endpoint, peers, me, me_nebula_ip):
-        self.v = 2
+    # HA log aggregator, one per host. Ring kvstore lives in the
+    # secondary etcd_2 cluster (separate from gorn's etcd_private to
+    # isolate ring heartbeats from gorn's traffic). Chunks + index
+    # land in MinIO (bucket "loki" has to be pre-created). Grafana
+    # picks Loki up as a datasource; the on-host Promtail ships
+    # /var/run/*/std/current lines here.
+    #
+    # Previously ran on memberlist gossip — it kept collapsing after
+    # ~15min (grafana/loki#14019: no rejoin_interval, dead peers never
+    # reclaimed). Etcd kvstore sidesteps the whole gossip convergence
+    # dance: ring forms on first contact, stale entries don't survive
+    # past the lease.
+    def __init__(self, port, s3_endpoint, peers, me, etcd_endpoints):
+        self.v = 3
         self.port = port
-        self.memberlist_port = memberlist_port
         self.s3_endpoint = s3_endpoint
         self.peers = list(peers)
         self.me = me
-        self.me_nebula_ip = me_nebula_ip
+        self.etcd_endpoints = list(etcd_endpoints)
         self._hash = _class_src_hash(type(self))
 
     def name(self):
@@ -1538,13 +1545,12 @@ class Loki:
         }
 
     def prepare(self):
-        # Wipe state on every boot — same idea as Grafana. memberlist
-        # KV (collectors/ring etc) and compactor WAL get reset so a
-        # fresh gossip exchange rebuilds the ring from the peers
-        # currently reachable on nebula. Unflushed in-memory chunks
-        # (<~5m old) are lost, which we accept for the observability
-        # tier. Class-source changes already invalidate the pickle
-        # via self._hash = _class_src_hash(type(self)); the wipe is
+        # Wipe state on every boot — same idea as Grafana. Compactor
+        # WAL and local ring cache get reset; the authoritative ring
+        # is in etcd so recovery is instant on first connect.
+        # Unflushed in-memory chunks (<~5m old) are lost, which we
+        # accept for the observability tier. Class-source changes
+        # already invalidate the pickle via self._hash; the wipe is
         # the counterpart on the state side.
         shutil.rmtree(self.home_dir(), ignore_errors=True)
         make_dirs(self.home_dir(), owner='loki')
@@ -1577,26 +1583,14 @@ class Loki:
                 'replication_factor': min(3, max(1, len(self.peers))),
                 'ring': {
                     'instance_addr': f'{self.me}.nebula',
-                    'kvstore': {'store': 'memberlist'},
+                    'kvstore': {
+                        'store': 'etcd',
+                        'etcd': {
+                            'endpoints': self.etcd_endpoints,
+                            'dial_timeout': '5s',
+                        },
+                    },
                 },
-            },
-            'memberlist': {
-                'bind_port': self.memberlist_port,
-                'abort_if_cluster_join_fails': False,
-                'join_members': [f'{p}.nebula:{self.memberlist_port}' for p in self.peers],
-                # Without an explicit bind/advertise the hashicorp
-                # memberlist picks the default-route source IP, which
-                # on these hosts lands on eth3 (10.0.0.{67,71,75}) —
-                # LAN, not nebula. When the LAN flapped at 23:05 UTC
-                # the ring fragmented and never recovered because
-                # heartbeats never reached peers via nebula. Pin
-                # both bind and advertise to the nebula address so
-                # gossip stays on the VPN mesh.
-                # memberlist needs literal IPs (it passes through
-                # net.ParseIP, not a resolver), so use the nebula IP
-                # directly rather than the .nebula hostname.
-                'bind_addr': [self.me_nebula_ip],
-                'advertise_addr': self.me_nebula_ip,
             },
             'schema_config': {
                 'configs': [
@@ -1920,12 +1914,18 @@ class ClusterMap:
         neb_map = {}
         bal_map = []
         all_etc_private = []
+        all_etc_2 = []
 
         for hn in ['lab1', 'lab2', 'lab3']:
             h = self.conf['by_host'][hn]
             nb = h['nebula']
 
             all_etc_private.append({
+                'hostname': hn,
+                'ip': nb['ip'],
+            })
+
+            all_etc_2.append({
                 'hostname': hn,
                 'ip': nb['ip'],
             })
@@ -1940,6 +1940,23 @@ class ClusterMap:
                     'secrets',
                     nb['ip'],
                     'etcd_private',
+                ),
+            }
+
+            # Secondary etcd — holds loki's ring kvstore today; reusable
+            # for any future tenant that wants a coordination store
+            # outside etcd_private (gorn's queue_v2 is heavy enough that
+            # we keep rings/leases off it).
+            yield {
+                'host': hn,
+                'serv': EtcdPrivate(
+                    all_etc_2,
+                    p['etcd_2_peer'],
+                    p['etcd_2_client'],
+                    hn,
+                    'etcd_2',
+                    nb['ip'],
+                    'etcd_2',
                 ),
             }
 
@@ -2022,11 +2039,13 @@ class ClusterMap:
                 'host': hn,
                 'serv': Loki(
                     port=p['loki'],
-                    memberlist_port=p['loki_memberlist'],
                     s3_endpoint=f"http://{hn}.eth1:{p['minio']}",
                     peers=[x['hostname'] for x in self.conf['hosts']],
                     me=hn,
-                    me_nebula_ip=h['nebula']['ip'],
+                    etcd_endpoints=[
+                        f"{x['hostname']}.nebula:{p['etcd_2_client']}"
+                        for x in self.conf['hosts']
+                    ],
                 ),
             }
 
@@ -2596,6 +2615,8 @@ def do(code):
         'proxy_https': 8090,
         'etcd_client_private': 8020,
         'etcd_peer_private': 8021,
+        'etcd_2_client': 8036,
+        'etcd_2_peer': 8037,
         'secrets': 8022,
         'sshd_rec': 8023,
         'secrets_v2': 8034,
@@ -2605,7 +2626,6 @@ def do(code):
         'loki': 8032,
         'promtail': 8033,
         'tail_log': 8040,
-        'loki_memberlist': 7946,
     }
 
     users = {
@@ -2631,6 +2651,7 @@ def do(code):
         'ssh_jopa_tunnel': 1024,
         'mirror_fetch': 1025,
         'etcd_private': 1026,
+        'etcd_2': 2003,
         'secrets': 1027,
         'hf_sync': 1028,
         'ghcr_sync': 1029,
