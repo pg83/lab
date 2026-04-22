@@ -1584,6 +1584,20 @@ class Loki:
             'limits_config': {
                 'allow_structured_metadata': True,
             },
+            'distributor': {
+                'rate_store': {
+                    # Default is 500ms, which is tighter than the
+                    # peer-to-peer nebula jitter between lab1 and
+                    # lab3 (4-5 packets/sec lost on the underlay),
+                    # so every 1s poll timed out and flooded the log
+                    # with "unable to get stream rates from ingester
+                    # … DeadlineExceeded". Bump to 2s — still short
+                    # enough that a genuinely dead ingester drops out
+                    # of the rate store within one update cycle, long
+                    # enough to absorb the nebula jitter.
+                    'ingester_req_timeout': '2s',
+                },
+            },
         }
 
     def run(self):
