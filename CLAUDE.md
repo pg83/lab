@@ -101,6 +101,15 @@ Lokis are HA (memberlist gossip, shared minio `loki` bucket), Federator on each 
 
 Note: use `http://10.1.1.2:<port>` in URLs from this sandbox, not `http://localhost:<port>`. wirez binds forwards to `10.1.1.2` (its inside-namespace gateway); glibc's `localhost` resolution shortcuts to `127.0.0.1`/`::1` regardless of `/etc/hosts`, where nothing listens.
 
+### MinIO is read-only from this sandbox
+
+The `8012/8112/8212` forwards reach the live distributed MinIO ensemble that stores `gorn` (CI artifacts, molot stdout/stderr), `loki` (log chunks + index), `samogon` (torrent blobs + pieces), and `geesefs` (SFTP files). **Never run mutating operations from here.**
+
+- Allowed: `GET` / `HEAD`, `mc ls` / `stat` / `du` / `cat`, `mc cp minio/... local/...` (download), `/minio/v2/metrics/cluster`, `/minio/health/*`, `s3api list-*` / `get-*` / `head-*`.
+- Banned: `PUT` / `POST` / `DELETE`, `mc cp local/... minio/...` (upload), `mc rm` / `mv` / `mb` / `rb` / `mirror`, `mc admin *`, `s3api put-*` / `delete-*` / `copy-*` / `create-*`, policy / lifecycle / versioning / replication edits, bucket create/delete.
+
+If a task appears to need a write, stop and ask — don't find a "safer" mutation.
+
 **Logs via `logcli`:**
 
 ```sh
