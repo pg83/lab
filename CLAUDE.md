@@ -96,6 +96,7 @@ wirez (`/home/pg/claude.sh`) forwards per-host Loki and Federator endpoints to l
 | Federator (PromQL)              | 8030 | 8130 | 8230 |
 | gorn_ctl_nb (task API)          | 8027 | 8127 | 8227 |
 | minio (S3)                      | 8012 | 8112 | 8212 |
+| tail_log (loki-free fallback)   | 8040 | 8140 | 8240 |
 
 Lokis are HA (memberlist gossip, shared minio `loki` bucket), Federator on each host scrapes all collectors — any single lab port gives the full cluster view. Default: lab1 (`:8032` / `:8030`); fall through to `:8132` / `:8130` etc. if lab1 is unreachable.
 
@@ -149,6 +150,26 @@ curl -sG 'http://10.1.1.2:8030/api/v1/query_range' \
 Metric labels: `job` (service name), `host` (from Collector `external_labels`), `instance` (scrape target).
 
 Useful `logcli` flags: `--since=10m`, `--to=15m`, `--limit=N`, `--output=raw`, `-o jsonl`, `--forward`. If connection refused on all three lab ports, wirez forwards aren't up.
+
+### Loki-free fallback: `tail_log`
+
+`lab/bin/tail/log` runs on every host (port 8040, bound to nebula IP only). It shells out `tail -F` across every service's tinylog plus any custom `log_sources()` paths, keeps the last 50k lines in a deque, serves them as JSONL. Use when loki is down, its ring is split, or you want a per-host view that bypasses the gossip cluster entirely.
+
+```sh
+# last 50 lines, any path, from lab1:
+curl -sG 'http://10.1.1.2:8040/?n=50'
+
+# path regex (matches the on-disk filename, e.g. /var/run/<service>/std/current):
+curl -sG 'http://10.1.1.2:8040/' --data-urlencode 'path=loki' --data-urlencode 'n=100'
+
+# body regex:
+curl -sG 'http://10.1.1.2:8040/' --data-urlencode 'q=panic|error' --data-urlencode 'n=200'
+
+# time-sliced:
+curl -sG 'http://10.1.1.2:8040/' --data-urlencode "since=$(date -d '5 min ago' +%s)"
+```
+
+Response is `application/jsonl`: one `{"path":..., "ts":float, "line":str}` per line. Buffer starts empty on service boot (`tail -n 0`, no replay); silent services won't appear until they log.
 
 ### Checking deploy rollout
 
