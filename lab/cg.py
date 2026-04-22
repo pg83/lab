@@ -1297,6 +1297,12 @@ class Grafana:
     def state_dir(self):
         return f'/var/run/{self.name()}'
 
+    def prom_port(self):
+        # Grafana serves /metrics on its main HTTP port. Default ini
+        # has `[metrics] enabled = true` and no basic_auth_username,
+        # so the Collector scrape is anonymous.
+        return self.port
+
     def pkgs(self):
         yield {
             'pkg': 'bin/grafana',
