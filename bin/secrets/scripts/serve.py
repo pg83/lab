@@ -1,58 +1,16 @@
 #!/usr/bin/env python3
 
 import sys
-import json
-import time
-import base64
 import subprocess
 
 import http.server as hs
-import urllib.request as ur
 
 
 CACHE = {}
 
 
-def call_persdb(req):
-    return ur.urlopen('http://localhost:8024/' + base64.b64encode(json.dumps(req).encode()).decode()).read()
-
-
-def get_secret_0(path):
-    res = ur.urlopen('http://192.168.100.64:8022/' + path[1:]).read()
-
-    req = {
-        'type': 'put',
-        'key': path,
-        'val': base64.b64encode(res).decode(),
-    }
-
-    call_persdb(req)
-
-    return res
-
-
-def get_secret_1(path):
-    req = {
-        'type': 'get',
-        'key': path,
-    }
-
-    return call_persdb(req)
-
-
-def get_secret_2(path):
-    return subprocess.check_output(['etcdctl', 'get', '--print-value-only', path])
-
-
 def get_secret_impl(path):
-    for f in [get_secret_0, get_secret_1, get_secret_2]:
-        try:
-            if res := f(path):
-                return res
-        except Exception as e:
-            print(f'while get {path}: {e}', file=sys.stderr)
-
-    raise Exception(f'no such secret {path}')
+    return subprocess.check_output(['etcdctl', 'get', '--print-value-only', path])
 
 
 def get_secret(path):
