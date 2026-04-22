@@ -108,6 +108,16 @@
         {"expr": "sum by (host) (minio_cluster_nodes_online_total{job=~\"minio_.+\"})", "legendFormat": "online {{host}}", "refId": "A"},
         {"expr": "sum by (host) (minio_cluster_nodes_offline_total{job=~\"minio_.+\"})", "legendFormat": "offline {{host}}", "refId": "B"}
       ]
+    },
+    {
+      "id": 9,
+      "title": "Recent minio errors (via Loki)",
+      "type": "logs",
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 24},
+      "datasource": {"type": "loki", "uid": "loki"},
+      "targets": [
+        {"expr": "{service=~\"minio_.+\"} |~ \"(?i)error|fatal|panic|fail|corrupt|broken pipe|offline\"", "refId": "A"}
+      ]
     }
   ]
 }
