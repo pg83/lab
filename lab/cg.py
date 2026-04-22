@@ -1383,7 +1383,16 @@ class Grafana:
             with open(fn, 'w') as f:
                 f.write(self.ini())
 
-            exec_into('grafana', 'server', '--config', fn, '--homepath', homepath)
+            exec_into(
+                'grafana', 'server', '--config', fn, '--homepath', homepath,
+                # Belt-and-suspenders: ini `[security] admin_password = ...`
+                # should already set the initial admin password on fresh
+                # DB, but observed behavior was admin being created with
+                # the default "admin" despite the ini override. The env
+                # var takes the same override path from a different
+                # direction and is the documented "always wins" knob.
+                GF_SECURITY_ADMIN_PASSWORD=GRAFANA_ADMIN_PASSWORD,
+            )
 
 
 class Samogon:
