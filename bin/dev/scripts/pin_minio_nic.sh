@@ -61,6 +61,10 @@ for h in $HOSTS; do
         "MODE='$MODE' BASE='$BASE' HN='$h' sh -s" <<'REMOTE'
 set -u
 
+# Prepend full iproute2 so `ip` resolves to it, not busybox-ip
+# (which has no `uidrange`). Applies to su-exec children too.
+export PATH=/ix/realm/ip/bin:$PATH
+
 printf '\n====================  %s  (%s)  ====================\n' "$HN" "$MODE"
 
 # (uid, nic, octet_offset) per minio instance.
