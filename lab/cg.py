@@ -1232,6 +1232,16 @@ class Federator:
                 {
                     'job_name': 'federate',
                     'honor_labels': True,
+                    # Each host's Collector federates cluster-shaped
+                    # metrics (e.g. minio_cluster_* — any MinIO peer
+                    # returns the whole cluster view), so the same
+                    # series lands in this Federator from all three
+                    # upstreams with different scrape timestamps —
+                    # Prometheus then drops ~all-but-the-first as
+                    # out-of-order (~48/scrape). Dropping the source
+                    # timestamps makes every sample land at our own
+                    # scrape time and eliminates the collision.
+                    'honor_timestamps': False,
                     'metrics_path': '/federate',
                     'params': {'match[]': ['{job=~".+"}']},
                     'static_configs': [
@@ -2053,7 +2063,7 @@ class ClusterMap:
                     # been flaking back to root-owned (EACCES spam in the
                     # gorn service log every dispatch). Put the agent log
                     # under home to dodge it entirely.
-                    'log_path': f'/var/run/{user}/std/home/.gorn-wrap.log',
+                    'log_path': f'/var/run/{user}/std/home/gorn-wrap.log',
                     'nebula_host': nb['hostname'],
                 })
 
