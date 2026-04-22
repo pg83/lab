@@ -2047,7 +2047,13 @@ class ClusterMap:
                     'port': port,
                     'user': user,
                     'path': f'/var/run/{user}/std/home',
-                    'log_path': f'/var/run/{user}/std/log/agent.log',
+                    # Wrap runs as the endpoint user (gorn_<N>), not root.
+                    # `std/home` is the only subdir prepare() reliably
+                    # chowns to that uid — `std/log` we tried earlier has
+                    # been flaking back to root-owned (EACCES spam in the
+                    # gorn service log every dispatch). Put the agent log
+                    # under home to dodge it entirely.
+                    'log_path': f'/var/run/{user}/std/home/.gorn-wrap.log',
                     'nebula_host': nb['hostname'],
                 })
 
