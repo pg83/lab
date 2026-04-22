@@ -85,24 +85,24 @@
     },
     {
       "id": 7,
-      "title": "Query latency p95 (engine)",
+      "title": "Query latency p99 by slice (engine)",
       "type": "timeseries",
       "gridPos": {"h": 6, "w": 12, "x": 0, "y": 18},
       "datasource": {"type": "prometheus", "uid": "prom"},
       "fieldConfig": {"defaults": {"unit": "s"}},
       "targets": [
-        {"expr": "histogram_quantile(0.95, sum by (le, job) (rate(prometheus_engine_query_duration_seconds_bucket{job=~\"collector|federator\"}[5m])))", "legendFormat": "{{job}}", "refId": "A"}
+        {"expr": "max by (slice, job) (prometheus_engine_query_duration_seconds{quantile=\"0.99\",job=~\"collector|federator\"})", "legendFormat": "{{job}} {{slice}}", "refId": "A"}
       ]
     },
     {
       "id": 8,
-      "title": "Rule evaluation duration p95",
+      "title": "Rule evaluation duration p99",
       "type": "timeseries",
       "gridPos": {"h": 6, "w": 12, "x": 12, "y": 18},
       "datasource": {"type": "prometheus", "uid": "prom"},
       "fieldConfig": {"defaults": {"unit": "s"}},
       "targets": [
-        {"expr": "histogram_quantile(0.95, sum by (le, rule_group) (rate(prometheus_rule_evaluation_duration_seconds_bucket{job=~\"collector|federator\"}[5m])))", "legendFormat": "{{rule_group}}", "refId": "A"}
+        {"expr": "max by (host, job) (prometheus_rule_evaluation_duration_seconds{quantile=\"0.99\",job=~\"collector|federator\"})", "legendFormat": "{{job}}/{{host}}", "refId": "A"}
       ]
     }
   ]
