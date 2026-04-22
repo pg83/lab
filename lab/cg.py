@@ -1289,7 +1289,7 @@ class Grafana:
         # auto-invalidate the service without needing a self.v bump.
         # Trialed on grafana+samogon where "accidentally kept
         # running old code" is cheap to diagnose.
-        self.hash = _class_src_hash(type(self))
+        self._hash = _class_src_hash(type(self))
 
     def name(self):
         return 'grafana'
@@ -1411,7 +1411,7 @@ class Samogon:
         self.port = port
         self.s3_endpoint = s3_endpoint
         # Experimental: class-source AST hash. See Grafana above.
-        self.hash = _class_src_hash(type(self))
+        self._hash = _class_src_hash(type(self))
 
     def name(self):
         return 'samogon'
@@ -1515,7 +1515,7 @@ class Loki:
         # currently reachable on nebula. Unflushed in-memory chunks
         # (<~5m old) are lost, which we accept for the observability
         # tier. Class-source changes already invalidate the pickle
-        # via self.hash = _class_src_hash(type(self)); the wipe is
+        # via self._hash = _class_src_hash(type(self)); the wipe is
         # the counterpart on the state side.
         shutil.rmtree(self.home_dir(), ignore_errors=True)
         make_dirs(self.home_dir(), owner='loki')
@@ -1612,7 +1612,7 @@ class Promtail:
         self.loki_port = loki_port
         self.me = me
         self.sources = []
-        self.hash = _class_src_hash(type(self))
+        self._hash = _class_src_hash(type(self))
 
     def name(self):
         return 'promtail'
