@@ -13,4 +13,5 @@ lab/bin/sched/psi(delay=100)
 lab/bin/sched/net/stat(delay=100)
 lab/bin/sched/sock/stat(delay=100)
 lab/bin/sched/load(delay=100)
+lab/bin/sched/iostat(delay=100)
 {% endblock %}

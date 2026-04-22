@@ -13,6 +13,7 @@
 {% block run_deps %}
 lab/bin/sched/smart(delay=1000)
 lab/bin/sched/disk/stat(delay=1000)
+lab/bin/sched/df(delay=1000)
 lab/bin/sched/ip/diag(delay=1000)
 lab/bin/sched/xfs/info(delay=1000)
 {% endblock %}
