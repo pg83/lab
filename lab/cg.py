@@ -1038,7 +1038,7 @@ def it_nebula_reals(lh, h, port):
 
 class EtcdPrivate:
     def __init__(self, peers, port_peer, port_client, hostname, etcid, addr, user_name):
-        self.v = 2
+        self.v = 3
         self.etcid = etcid
         self.peers = peers
         self.port_peer = port_peer
