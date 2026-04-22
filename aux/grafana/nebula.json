@@ -1,0 +1,120 @@
+{
+  "uid": "nebula",
+  "title": "Nebula",
+  "tags": ["nebula", "network"],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "graphTooltip": 0,
+  "time": {"from": "now-30m", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "refresh": "15s",
+  "annotations": {"list": []},
+  "templating": {"list": []},
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Packets lost /s (underlay indicator)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "pps"}},
+      "targets": [
+        {"expr": "rate(nebula_nebula_network_packets_lost{job=\"nebula_node\"}[1m])", "legendFormat": "{{host}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Handshake timeouts (cumulative)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "short"}},
+      "targets": [
+        {"expr": "nebula_nebula_handshake_manager_timed_out{job=\"nebula_node\"}", "legendFormat": "{{host}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Handshakes initiated /s (live tunnel-build attempts)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 6},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "ops"}},
+      "targets": [
+        {"expr": "rate(nebula_nebula_handshake_manager_initiated{job=\"nebula_node\"}[1m])", "legendFormat": "{{host}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Cached packets dropped (queued waiting for tunnel)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 6},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "short"}},
+      "targets": [
+        {"expr": "nebula_nebula_hostinfo_cached_packets_dropped{job=\"nebula_node\"}", "legendFormat": "{{host}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Data messages /s (actual tunnel traffic)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 12},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "ops"}},
+      "targets": [
+        {"expr": "rate(nebula_nebula_messages_tx_message{job=\"nebula_node\"}[1m])", "legendFormat": "{{host}} tx", "refId": "A"},
+        {"expr": "rate(nebula_nebula_messages_rx_message{job=\"nebula_node\"}[1m])", "legendFormat": "{{host}} rx", "refId": "B"}
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Lighthouse messages /s (control plane)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 12},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "ops"}},
+      "targets": [
+        {"expr": "rate(nebula_nebula_messages_tx_lighthouse[1m])", "legendFormat": "{{host}}/{{job}} tx", "refId": "A"},
+        {"expr": "rate(nebula_nebula_messages_rx_lighthouse[1m])", "legendFormat": "{{host}}/{{job}} rx", "refId": "B"}
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Punchy (NAT hole-punching) /s",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 18},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "ops"}},
+      "targets": [
+        {"expr": "rate(nebula_nebula_messages_tx_punchy[1m])", "legendFormat": "{{host}}/{{job}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Firewall drops + UDP drops",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 18},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "short"}},
+      "targets": [
+        {"expr": "sum by (host) (nebula_nebula_firewall_incoming_dropped_no_rule{job=\"nebula_node\"} + nebula_nebula_firewall_incoming_dropped_local_addr{job=\"nebula_node\"} + nebula_nebula_firewall_incoming_dropped_remote_addr{job=\"nebula_node\"})", "legendFormat": "{{host}} fw-in", "refId": "A"},
+        {"expr": "sum by (host) (nebula_nebula_firewall_outgoing_dropped_no_rule{job=\"nebula_node\"} + nebula_nebula_firewall_outgoing_dropped_local_addr{job=\"nebula_node\"} + nebula_nebula_firewall_outgoing_dropped_remote_addr{job=\"nebula_node\"})", "legendFormat": "{{host}} fw-out", "refId": "B"},
+        {"expr": "nebula_nebula_udp_0_drops{job=\"nebula_node\"}", "legendFormat": "{{host}} udp", "refId": "C"}
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Recent nebula errors (via Loki)",
+      "type": "logs",
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 24},
+      "datasource": {"type": "loki", "uid": "loki"},
+      "targets": [
+        {"expr": "{service=~\"nebula_.+\"} |~ \"(?i)error|timeout|fail|drop|lost\"", "refId": "A"}
+      ]
+    }
+  ]
+}

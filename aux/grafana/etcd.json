@@ -116,6 +116,16 @@
       "targets": [
         {"expr": "histogram_quantile(0.99, sum by (le, To) (rate(etcd_network_peer_round_trip_time_seconds_bucket{job=\"etcd_private\"}[5m])))", "legendFormat": "to {{To}}", "refId": "A"}
       ]
+    },
+    {
+      "id": 10,
+      "title": "Recent etcd errors/warns (via Loki)",
+      "type": "logs",
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 30},
+      "datasource": {"type": "loki", "uid": "loki"},
+      "targets": [
+        {"expr": "{service=\"etcd_private\"} |~ \"\\\"level\\\":\\\"(warn|error|fatal)\\\"\"", "refId": "A"}
+      ]
     }
   ]
 }
