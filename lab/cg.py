@@ -1717,6 +1717,40 @@ class Promtail:
             exec_into('promtail', '-config.file', fn, PATH='/bin')
 
 
+class TailLog:
+    # Loki-independent log-tail fallback. One per host, runs as root so
+    # it can read any service's log dir. Tails every tinylog current
+    # file plus each service's custom log_sources(); keeps the last 50k
+    # lines in-process; serves them over HTTP on the host's nebula IP.
+    # For use when loki is down or its ring is split.
+    #
+    # self.paths is filled after construction by do()'s second pass,
+    # mirroring Promtail's sources mechanism.
+    def __init__(self, port, me, me_nebula_ip):
+        self.port = port
+        self.me = me
+        self.me_nebula_ip = me_nebula_ip
+        self.paths = []
+        self._hash = _class_src_hash(type(self))
+
+    def name(self):
+        return 'tail_log'
+
+    def user(self):
+        return 'root'
+
+    def pkgs(self):
+        yield {'pkg': 'bin/tail/log'}
+
+    def run(self):
+        exec_into(
+            'ix_tail_log',
+            self.me_nebula_ip,
+            str(self.port),
+            *sorted(set(self.paths)),
+        )
+
+
 class Secrets:
     def __init__(self, port):
         self.v = 5
@@ -2007,6 +2041,15 @@ class ClusterMap:
 
             yield {
                 'host': hn,
+                'serv': TailLog(
+                    port=p['tail_log'],
+                    me=hn,
+                    me_nebula_ip=h['nebula']['ip'],
+                ),
+            }
+
+            yield {
+                'host': hn,
                 'serv': CO2Mon(p['co2_mon']),
             }
 
@@ -2230,6 +2273,7 @@ sys.modules['builtins'].MirrorFetch = MirrorFetch
 sys.modules['builtins'].Samogon = Samogon
 sys.modules['builtins'].Loki = Loki
 sys.modules['builtins'].Promtail = Promtail
+sys.modules['builtins'].TailLog = TailLog
 sys.modules['builtins'].Secrets = Secrets
 sys.modules['builtins'].SecretsV2 = SecretsV2
 sys.modules['builtins'].HFSync = HFSync
@@ -2560,6 +2604,7 @@ def do(code):
         'samogon': 8031,
         'loki': 8032,
         'promtail': 8033,
+        'tail_log': 8040,
         'loki_memberlist': 7946,
     }
 
@@ -2659,6 +2704,12 @@ def do(code):
         if promtail_key in by_addr:
             for src in hndl.iter_log_sources():
                 by_addr[promtail_key].srv.sources.append(src)
+
+        tail_log_key = f'{host}:tail_log'
+
+        if tail_log_key in by_addr:
+            for src in hndl.iter_log_sources():
+                by_addr[tail_log_key].srv.paths.append(src['path'])
 
         for bal in hndl.l7_balancer():
             proto = bal['proto']
