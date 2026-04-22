@@ -15,6 +15,7 @@ bin/lm/sensors
 bin/kernel/6/14
 bin/kernel/6/16
 bin/smart/mon/tools
+bin/ix/timeout
 bin/fixits(delay=10)
 bin/sched/100
 bin/sched/1000
