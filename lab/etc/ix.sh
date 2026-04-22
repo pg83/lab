@@ -7,6 +7,8 @@
 lab/etc/env
 lab/etc/keys
 lab/etc/hosts
+lab/etc/arp
+lab/etc/multihome
 
 {% for d in hm.disabled %}
 lab/etc/stopper(srv_dir={{d}})
