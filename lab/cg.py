@@ -1546,6 +1546,16 @@ class Loki:
                 'bind_port': self.memberlist_port,
                 'abort_if_cluster_join_fails': False,
                 'join_members': [f'{p}.nebula:{self.memberlist_port}' for p in self.peers],
+                # Without an explicit bind/advertise the hashicorp
+                # memberlist picks the default-route source IP, which
+                # on these hosts lands on eth3 (10.0.0.{67,71,75}) —
+                # LAN, not nebula. When the LAN flapped at 23:05 UTC
+                # the ring fragmented and never recovered because
+                # heartbeats never reached peers via nebula. Pin
+                # both bind and advertise to the nebula address so
+                # gossip stays on the VPN mesh.
+                'bind_addr': [f'{self.me}.nebula'],
+                'advertise_addr': f'{self.me}.nebula',
             },
             'schema_config': {
                 'configs': [
