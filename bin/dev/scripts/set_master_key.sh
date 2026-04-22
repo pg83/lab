@@ -1,10 +1,10 @@
 #!/bin/sh
 
-# Push the secrets_v2 master passphrase into pers_db on every lab
-# host. The passphrase is used by the secrets_v2 service to decrypt
-# the git-committed store blob on startup. persdb_put reads its value
-# from a file whose path equals the key name — so we stage argv[1]
-# into /master.key, put it, then wipe.
+# Push the secrets_v2 master passphrase into each host's EFI-var store
+# via the `persdb` CLI. The passphrase is used by the secrets_v2
+# service to decrypt the git-committed store blob on startup.
+# `persdb put` reads its value from a file whose path equals the key
+# name — so we stage argv[1] into /master.key, put it, then wipe.
 #
 # Usage:
 #   ./set_master_key.sh <passphrase>            # default hosts lab{1,2,3}
@@ -34,7 +34,7 @@ for h in $HOSTS; do
         set -eu
         umask 077
         printf '%s' '$PP' > /master.key
-        persdb_put /master.key
+        persdb put /master.key
         shred -u /master.key 2>/dev/null || rm -f /master.key
         echo 'ok'
     "

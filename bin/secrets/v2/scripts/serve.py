@@ -1,26 +1,28 @@
 #!/usr/bin/env python3
 """
 secrets_v2 — serve secrets from a git-committed encrypted JSONlines
-blob, decrypted once on startup with a passphrase pulled from pers_db.
+blob, decrypted once on startup with a passphrase passed in via the
+SECRETS_V2_MASTER_KEY env var.
 
 Argv:
     1. listen port
-    2. persdb port
-    3. path to the encrypted store file
+    2. path to the encrypted store file
+
+The parent (SecretsV2.run() in cg.py) runs as root, fetches
+/master.key from EFI via `persdb get`, and injects it here through
+the environment so the server itself runs unprivileged.
 
 Format matches secrets/store (the original `mod` bicycle):
     outer: {"salt": "<hex>", "data": "<base64(lzma(aes-128-cbc(...)))>"}
     plaintext inside: jsonlines of {"k": "/some/path", "v": "value"}
 
-The passphrase (stored as a raw utf-8 string under pers_db key
-"/master.key") is combined with the per-file salt via openssl's
+The passphrase is combined with the per-file salt via openssl's
 PBKDF2 KDF to derive the actual AES key+iv — byte-for-byte matching
 secrets/mod so a file written by either tool opens with the other.
 
-The decrypted store sits in process memory until the service restarts.
 No TTL-recycle — keep the process running indefinitely. To rotate
-secrets: edit store locally with mod-style CLI, push to lab repo,
-next ix mut replaces the file and pid1 respawns the service.
+secrets: edit store locally with mod, push to lab repo, next ix mut
+replaces the file and pid1 respawns via _hash rotation.
 """
 
 import os
@@ -29,7 +31,6 @@ import json
 import base64
 import lzma
 import subprocess
-import urllib.request as ur
 
 import http.server as hs
 
@@ -73,12 +74,6 @@ def decode(key, iv, data):
     )
 
 
-def persdb_get(persdb_port, key):
-    req = {'type': 'get', 'key': key}
-    q = base64.b64encode(json.dumps(req).encode()).decode()
-    return ur.urlopen(f'http://localhost:{persdb_port}/{q}').read()
-
-
 def load_store(store_path, passphrase):
     raw = open(store_path).read()
     d = json.loads(raw)
@@ -102,10 +97,9 @@ def load_store(store_path, passphrase):
 
 def main():
     port = int(sys.argv[1])
-    persdb_port = int(sys.argv[2])
-    store_path = sys.argv[3]
+    store_path = sys.argv[2]
 
-    pp = persdb_get(persdb_port, '/master.key').decode('utf-8').strip()
+    pp = os.environ['SECRETS_V2_MASTER_KEY'].strip()
 
     store = load_store(store_path, pp)
 
@@ -127,7 +121,6 @@ def main():
             self.wfile.write(body)
 
         def log_message(self, fmt, *args):
-            # mirror old secrets service's noisy default logging
             sys.stderr.write(f'{self.client_address[0]} - - [{self.log_date_time_string()}] {fmt % args}\n')
 
     hs.ThreadingHTTPServer(('localhost', port), Handler).serve_forever()

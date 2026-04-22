@@ -17,7 +17,7 @@ fetched from lab1.
 Usage:
     extract_nebula_secrets > plain.jsonl
 
-Assumes key-based ssh root@<host>.nebula works and `persdb_get` is
+Assumes key-based ssh root@<host>.nebula works and `persdb` is
 in PATH on the host (it's shipped by lab/common).
 
 Pipeline:
@@ -44,7 +44,7 @@ HOSTS = [
 def fetch(host, key):
     out = subprocess.check_output([
         'ssh', f'root@{host}.nebula',
-        f'persdb_get {key}',
+        f'persdb get {key}',
     ])
 
     return out.decode('utf-8')
