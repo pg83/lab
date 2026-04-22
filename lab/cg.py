@@ -309,13 +309,13 @@ class Nebula:
                 f.write(json.dumps(cfg, indent=4, sort_keys=True))
 
             with open(ca, 'wb') as f:
-                f.write(get_key('/nebula/ca.crt'))
+                f.write(get_key_v2('/nebula/ca.crt'))
 
             with open(cert, 'wb') as f:
-                f.write(get_key(f'/nebula/{self.host}.crt'))
+                f.write(get_key_v2(f'/nebula/{self.host}.crt'))
 
             with open(key, 'wb') as f:
-                f.write(get_key(f'/nebula/{self.host}.key'))
+                f.write(get_key_v2(f'/nebula/{self.host}.key'))
 
             exec_into('nebula', '--config', conf)
 
