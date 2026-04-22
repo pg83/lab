@@ -1722,7 +1722,29 @@ class TailLog:
     # For use when loki is down or its ring is split.
     #
     # self.paths is filled after construction by do()'s second pass,
-    # mirroring Promtail's sources mechanism.
+    # mirroring Promtail's sources mechanism. TailLog's own
+    # log_sources() contributes the base-IX runit services that
+    # aren't registered in cg.py (syslogd, chrony, autoupdate_ix, …);
+    # including them here means both promtail and tail_log pick them
+    # up automatically via the same iter_log_sources() plumbing.
+    # (runsvdir is the runit root and has no std/current; skipped.)
+    IX_TINYLOGS = (
+        'autologin_1',
+        'autoupdate_ix',
+        'chrony',
+        'dbus',
+        'dnsproxy',
+        'irqbalance',
+        'mdnsd',
+        'mdnsd_dns',
+        'mdnsd_exporter',
+        'resolvconf',
+        'sched10',
+        'sched100',
+        'sched1000',
+        'syslogd',
+    )
+
     def __init__(self, port, me, me_nebula_ip):
         self.port = port
         self.me = me
@@ -1738,6 +1760,14 @@ class TailLog:
 
     def pkgs(self):
         yield {'pkg': 'bin/tail/log'}
+
+    def log_sources(self):
+        for svc in self.IX_TINYLOGS:
+            yield {
+                'job_name': f'{svc}/tinylog',
+                'path': f'/var/run/{svc}/std/current',
+                'labels': {'service': svc, 'stream': 'tinylog'},
+            }
 
     def run(self):
         exec_into(
