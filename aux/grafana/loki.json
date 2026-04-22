@@ -1,0 +1,116 @@
+{
+  "uid": "loki",
+  "title": "Loki",
+  "tags": ["loki", "logs"],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "graphTooltip": 0,
+  "time": {"from": "now-30m", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "refresh": "15s",
+  "annotations": {"list": []},
+  "templating": {"list": []},
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Log ingest rate (bytes/s by host)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "Bps"}},
+      "targets": [
+        {"expr": "sum by (host) (rate(loki_distributor_bytes_received_total{job=\"loki\"}[1m]))", "legendFormat": "{{host}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Log ingest rate (lines/s by host)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "ops"}},
+      "targets": [
+        {"expr": "sum by (host) (rate(loki_distributor_lines_received_total{job=\"loki\"}[1m]))", "legendFormat": "{{host}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Query latency by route (p95)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 6},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "s"}},
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum by (le, route) (rate(loki_request_duration_seconds_bucket{job=\"loki\",route=~\"loki_api_v1_.+\"}[5m])))", "legendFormat": "{{route}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Query rate (qps) by route",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 6},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "ops"}},
+      "targets": [
+        {"expr": "sum by (route) (rate(loki_request_duration_seconds_count{job=\"loki\",route=~\"loki_api_v1_.+\"}[1m]))", "legendFormat": "{{route}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Active streams per ingester",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 12},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "short"}},
+      "targets": [
+        {"expr": "sum by (host) (loki_ingester_memory_streams{job=\"loki\"})", "legendFormat": "{{host}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Chunks flushed to store /s",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 12},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "ops"}},
+      "targets": [
+        {"expr": "sum by (host) (rate(loki_ingester_chunks_stored_total{job=\"loki\"}[1m]))", "legendFormat": "{{host}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 7,
+      "title": "WAL bytes in use",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 18},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "bytes"}},
+      "targets": [
+        {"expr": "sum by (host) (loki_ingester_wal_bytes_in_use{job=\"loki\"})", "legendFormat": "{{host}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Memberlist cluster members seen",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 18},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "short"}},
+      "targets": [
+        {"expr": "loki_memberlist_client_cluster_members_count{job=\"loki\"}", "legendFormat": "{{host}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Recent error logs (via Loki datasource)",
+      "type": "logs",
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 24},
+      "datasource": {"type": "loki", "uid": "loki"},
+      "targets": [
+        {"expr": "{service=\"loki\"} |~ \"(?i)error|fatal|panic\"", "refId": "A"}
+      ]
+    }
+  ]
+}

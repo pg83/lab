@@ -1,0 +1,121 @@
+{
+  "uid": "etcd",
+  "title": "etcd",
+  "tags": ["etcd"],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "graphTooltip": 0,
+  "time": {"from": "now-30m", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "refresh": "15s",
+  "annotations": {"list": []},
+  "templating": {"list": []},
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Leader state per member (1 = has leader)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0, "max": 1}},
+      "targets": [
+        {"expr": "etcd_server_has_leader{job=\"etcd_private\"}", "legendFormat": "{{host}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Leader changes seen (total)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "short"}},
+      "targets": [
+        {"expr": "etcd_server_leader_changes_seen_total{job=\"etcd_private\"}", "legendFormat": "{{host}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Proposals /s (committed / applied / failed)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 6},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "ops"}},
+      "targets": [
+        {"expr": "sum by (host) (rate(etcd_server_proposals_committed_total{job=\"etcd_private\"}[1m]))", "legendFormat": "{{host}} committed", "refId": "A"},
+        {"expr": "sum by (host) (rate(etcd_server_proposals_applied_total{job=\"etcd_private\"}[1m]))", "legendFormat": "{{host}} applied", "refId": "B"},
+        {"expr": "sum by (host) (rate(etcd_server_proposals_failed_total{job=\"etcd_private\"}[1m]))", "legendFormat": "{{host}} failed", "refId": "C"}
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Proposals pending (gauge)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 6},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "short"}},
+      "targets": [
+        {"expr": "etcd_server_proposals_pending{job=\"etcd_private\"}", "legendFormat": "{{host}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 5,
+      "title": "WAL fsync duration p99 (per member)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 12},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "s"}},
+      "targets": [
+        {"expr": "histogram_quantile(0.99, sum by (le, host) (rate(etcd_disk_wal_fsync_duration_seconds_bucket{job=\"etcd_private\"}[5m])))", "legendFormat": "{{host}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Backend commit duration p99 (the 'apply took too long' signal)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 12},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "s"}},
+      "targets": [
+        {"expr": "histogram_quantile(0.99, sum by (le, host) (rate(etcd_disk_backend_commit_duration_seconds_bucket{job=\"etcd_private\"}[5m])))", "legendFormat": "{{host}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 7,
+      "title": "MVCC DB total size",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 18},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "bytes"}},
+      "targets": [
+        {"expr": "etcd_mvcc_db_total_size_in_bytes{job=\"etcd_private\"}", "legendFormat": "{{host}} total", "refId": "A"},
+        {"expr": "etcd_mvcc_db_total_size_in_use_in_bytes{job=\"etcd_private\"}", "legendFormat": "{{host}} in-use", "refId": "B"}
+      ]
+    },
+    {
+      "id": 8,
+      "title": "gRPC incoming traffic (recv/send bytes/s)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 18},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "Bps"}},
+      "targets": [
+        {"expr": "sum by (host) (rate(etcd_network_client_grpc_received_bytes_total{job=\"etcd_private\"}[1m]))", "legendFormat": "{{host}} rx", "refId": "A"},
+        {"expr": "sum by (host) (rate(etcd_network_client_grpc_sent_bytes_total{job=\"etcd_private\"}[1m]))", "legendFormat": "{{host}} tx", "refId": "B"}
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Raft peer round-trip p99",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 24},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "s"}},
+      "targets": [
+        {"expr": "histogram_quantile(0.99, sum by (le, To) (rate(etcd_network_peer_round_trip_time_seconds_bucket{job=\"etcd_private\"}[5m])))", "legendFormat": "to {{To}}", "refId": "A"}
+      ]
+    }
+  ]
+}

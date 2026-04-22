@@ -46,4 +46,20 @@ EOF
 base64 -d << EOF > ${out}/share/grafana-provisioning/dashboards-json/minio.json
 {% include 'minio.json/base64' %}
 EOF
+
+base64 -d << EOF > ${out}/share/grafana-provisioning/dashboards-json/loki.json
+{% include 'loki.json/base64' %}
+EOF
+
+base64 -d << EOF > ${out}/share/grafana-provisioning/dashboards-json/grafana.json
+{% include 'grafana.json/base64' %}
+EOF
+
+base64 -d << EOF > ${out}/share/grafana-provisioning/dashboards-json/prometheus.json
+{% include 'prometheus.json/base64' %}
+EOF
+
+base64 -d << EOF > ${out}/share/grafana-provisioning/dashboards-json/etcd.json
+{% include 'etcd.json/base64' %}
+EOF
 {% endblock %}

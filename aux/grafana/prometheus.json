@@ -1,0 +1,109 @@
+{
+  "uid": "prometheus",
+  "title": "Prometheus (Collector + Federator)",
+  "tags": ["prometheus", "observability"],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "graphTooltip": 0,
+  "time": {"from": "now-30m", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "refresh": "15s",
+  "annotations": {"list": []},
+  "templating": {"list": []},
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Samples ingested/s by job",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "ops"}},
+      "targets": [
+        {"expr": "sum by (job) (rate(prometheus_tsdb_head_samples_appended_total{job=~\"collector|federator\"}[1m]))", "legendFormat": "{{job}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Active series",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "short"}},
+      "targets": [
+        {"expr": "sum by (job, host) (prometheus_tsdb_head_series{job=~\"collector|federator\"})", "legendFormat": "{{job}}/{{host}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Scrape duration p95 by target",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 6},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "s"}},
+      "targets": [
+        {"expr": "topk(10, max by (job) (scrape_duration_seconds))", "legendFormat": "{{job}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Scrape failures /min by job",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 6},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "ops"}},
+      "targets": [
+        {"expr": "sum by (job) (rate(prometheus_target_scrape_pool_sync_total{outcome=\"failed\"}[1m]))", "legendFormat": "{{job}} sync-fail", "refId": "A"},
+        {"expr": "sum by (job) ((1 - up))", "legendFormat": "{{job}} down", "refId": "B"}
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Out-of-order samples dropped (Federator)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 12},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "ops"}},
+      "targets": [
+        {"expr": "sum by (host) (rate(prometheus_target_scrapes_sample_out_of_order_total{job=\"federator\"}[1m]))", "legendFormat": "{{host}} ooo", "refId": "A"},
+        {"expr": "sum by (host) (rate(prometheus_target_scrapes_sample_duplicate_timestamp_total{job=\"federator\"}[1m]))", "legendFormat": "{{host}} dup-ts", "refId": "B"}
+      ]
+    },
+    {
+      "id": 6,
+      "title": "WAL corruptions + truncations",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 12},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "short"}},
+      "targets": [
+        {"expr": "sum by (job) (prometheus_tsdb_wal_corruptions_total{job=~\"collector|federator\"})", "legendFormat": "{{job}} corrupt", "refId": "A"},
+        {"expr": "sum by (job) (rate(prometheus_tsdb_wal_truncations_total{job=~\"collector|federator\"}[5m]))", "legendFormat": "{{job}} trunc/s", "refId": "B"}
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Query latency p95 (engine)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 18},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "s"}},
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum by (le, job) (rate(prometheus_engine_query_duration_seconds_bucket{job=~\"collector|federator\"}[5m])))", "legendFormat": "{{job}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Rule evaluation duration p95",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 18},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "s"}},
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum by (le, rule_group) (rate(prometheus_rule_evaluation_duration_seconds_bucket{job=~\"collector|federator\"}[5m])))", "legendFormat": "{{rule_group}}", "refId": "A"}
+      ]
+    }
+  ]
+}

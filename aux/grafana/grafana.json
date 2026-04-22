@@ -1,0 +1,108 @@
+{
+  "uid": "grafana",
+  "title": "Grafana",
+  "tags": ["grafana", "observability"],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "graphTooltip": 0,
+  "time": {"from": "now-30m", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "refresh": "15s",
+  "annotations": {"list": []},
+  "templating": {"list": []},
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "title": "HTTP request rate by status",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "ops"}},
+      "targets": [
+        {"expr": "sum by (status_code) (rate(grafana_http_request_duration_seconds_count{job=\"grafana\"}[1m]))", "legendFormat": "{{status_code}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 2,
+      "title": "HTTP latency (p50/p95/p99)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "s"}},
+      "targets": [
+        {"expr": "histogram_quantile(0.50, sum by (le) (rate(grafana_http_request_duration_seconds_bucket{job=\"grafana\"}[5m])))", "legendFormat": "p50", "refId": "A"},
+        {"expr": "histogram_quantile(0.95, sum by (le) (rate(grafana_http_request_duration_seconds_bucket{job=\"grafana\"}[5m])))", "legendFormat": "p95", "refId": "B"},
+        {"expr": "histogram_quantile(0.99, sum by (le) (rate(grafana_http_request_duration_seconds_bucket{job=\"grafana\"}[5m])))", "legendFormat": "p99", "refId": "C"}
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Slowest routes (p95)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 6},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "s"}},
+      "targets": [
+        {"expr": "topk(5, histogram_quantile(0.95, sum by (le, handler) (rate(grafana_http_request_duration_seconds_bucket{job=\"grafana\"}[5m]))))", "legendFormat": "{{handler}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Failed login attempts / 401s",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 6},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "ops"}},
+      "targets": [
+        {"expr": "sum by (host) (rate(grafana_http_request_duration_seconds_count{job=\"grafana\",status_code=\"401\"}[1m]))", "legendFormat": "{{host}} 401", "refId": "A"},
+        {"expr": "sum by (host) (rate(grafana_api_login_post_total{job=\"grafana\",status=\"failure\"}[1m]))", "legendFormat": "{{host}} login-fail", "refId": "B"}
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Goroutines by host",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 12},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "short"}},
+      "targets": [
+        {"expr": "go_goroutines{job=\"grafana\"}", "legendFormat": "{{host}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 6,
+      "title": "RSS memory by host",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 12},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "bytes"}},
+      "targets": [
+        {"expr": "process_resident_memory_bytes{job=\"grafana\"}", "legendFormat": "{{host}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Alert rules evaluating",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 18},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "short"}},
+      "targets": [
+        {"expr": "sum by (host) (grafana_alerting_rule_group_rules{job=\"grafana\"})", "legendFormat": "{{host}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Recent grafana errors (via Loki)",
+      "type": "logs",
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 24},
+      "datasource": {"type": "loki", "uid": "loki"},
+      "targets": [
+        {"expr": "{service=\"grafana\"} |~ \"level=(error|fatal)\"", "refId": "A"}
+      ]
+    }
+  ]
+}
