@@ -1479,14 +1479,14 @@ class Loki:
     # over nebula. Chunks + index land in MinIO (bucket "loki" has
     # to be pre-created). Grafana picks Loki up as a datasource; the
     # on-host Promtail ships /var/run/*/std/current lines here.
-    def __init__(self, port, memberlist_port, s3_endpoint, peers, me, me_nebula_ip):
+    def __init__(self, port, s3_endpoint, peers, me, me_nebula_ip, etcd_endpoints):
         self.v = 2
         self.port = port
-        self.memberlist_port = memberlist_port
         self.s3_endpoint = s3_endpoint
         self.peers = list(peers)
         self.me = me
         self.me_nebula_ip = me_nebula_ip
+        self.etcd_endpoints = list(etcd_endpoints)
         self._hash = _class_src_hash(type(self))
 
     def name(self):
@@ -1549,26 +1549,23 @@ class Loki:
                 'replication_factor': min(3, max(1, len(self.peers))),
                 'ring': {
                     'instance_addr': f'{self.me}.nebula',
-                    'kvstore': {'store': 'memberlist'},
+                    # Dropped memberlist after one-too-many splits.
+                    # etcd is already HA on the cluster, strong
+                    # consistency means no "UNHEALTHY from 23:05Z"
+                    # stragglers, and reforming the ring after a
+                    # restart is instant rather than a gossip-
+                    # convergence dance. Cost: modest write load on
+                    # etcd (ring heartbeats), shared with whatever
+                    # disk congestion we already had there.
+                    'kvstore': {
+                        'store': 'etcd',
+                        'etcd': {
+                            'endpoints': self.etcd_endpoints,
+                            'dial_timeout': '10s',
+                            'max_retries': 10,
+                        },
+                    },
                 },
-            },
-            'memberlist': {
-                'bind_port': self.memberlist_port,
-                'abort_if_cluster_join_fails': False,
-                'join_members': [f'{p}.nebula:{self.memberlist_port}' for p in self.peers],
-                # Without an explicit bind/advertise the hashicorp
-                # memberlist picks the default-route source IP, which
-                # on these hosts lands on eth3 (10.0.0.{67,71,75}) —
-                # LAN, not nebula. When the LAN flapped at 23:05 UTC
-                # the ring fragmented and never recovered because
-                # heartbeats never reached peers via nebula. Pin
-                # both bind and advertise to the nebula address so
-                # gossip stays on the VPN mesh.
-                # memberlist needs literal IPs (it passes through
-                # net.ParseIP, not a resolver), so use the nebula IP
-                # directly rather than the .nebula hostname.
-                'bind_addr': [self.me_nebula_ip],
-                'advertise_addr': self.me_nebula_ip,
             },
             'schema_config': {
                 'configs': [
@@ -1953,11 +1950,14 @@ class ClusterMap:
                 'host': hn,
                 'serv': Loki(
                     port=p['loki'],
-                    memberlist_port=p['loki_memberlist'],
                     s3_endpoint=f"http://{hn}.eth1:{p['minio']}",
                     peers=[x['hostname'] for x in self.conf['hosts']],
                     me=hn,
                     me_nebula_ip=h['nebula']['ip'],
+                    etcd_endpoints=[
+                        f"{x['hostname']}.nebula:{p['etcd_client_private']}"
+                        for x in self.conf['hosts']
+                    ],
                 ),
             }
 
@@ -2525,7 +2525,6 @@ def do(code):
         'samogon': 8031,
         'loki': 8032,
         'promtail': 8033,
-        'loki_memberlist': 7946,
     }
 
     users = {
