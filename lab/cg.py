@@ -1479,13 +1479,14 @@ class Loki:
     # over nebula. Chunks + index land in MinIO (bucket "loki" has
     # to be pre-created). Grafana picks Loki up as a datasource; the
     # on-host Promtail ships /var/run/*/std/current lines here.
-    def __init__(self, port, memberlist_port, s3_endpoint, peers, me):
+    def __init__(self, port, memberlist_port, s3_endpoint, peers, me, me_nebula_ip):
         self.v = 2
         self.port = port
         self.memberlist_port = memberlist_port
         self.s3_endpoint = s3_endpoint
         self.peers = list(peers)
         self.me = me
+        self.me_nebula_ip = me_nebula_ip
         self._hash = _class_src_hash(type(self))
 
     def name(self):
@@ -1563,8 +1564,11 @@ class Loki:
                 # heartbeats never reached peers via nebula. Pin
                 # both bind and advertise to the nebula address so
                 # gossip stays on the VPN mesh.
-                'bind_addr': [f'{self.me}.nebula'],
-                'advertise_addr': f'{self.me}.nebula',
+                # memberlist needs literal IPs (it passes through
+                # net.ParseIP, not a resolver), so use the nebula IP
+                # directly rather than the .nebula hostname.
+                'bind_addr': [self.me_nebula_ip],
+                'advertise_addr': self.me_nebula_ip,
             },
             'schema_config': {
                 'configs': [
@@ -1939,6 +1943,7 @@ class ClusterMap:
                     s3_endpoint=f"http://{hn}.eth1:{p['minio']}",
                     peers=[x['hostname'] for x in self.conf['hosts']],
                     me=hn,
+                    me_nebula_ip=h['nebula']['ip'],
                 ),
             }
 
