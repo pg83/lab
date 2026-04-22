@@ -3,82 +3,255 @@
   "title": "Cluster Overview",
   "tags": ["cluster"],
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "time": {"from": "now-1h", "to": "now"},
   "refresh": "30s",
-  "templating": {
-    "list": [
-      {
-        "name": "host",
-        "label": "host",
-        "type": "query",
-        "datasource": {"type": "prometheus", "uid": "prom"},
-        "query": {"query": "label_values(node_load1, host)", "refId": "StandardVariableQuery"},
-        "refresh": 1,
-        "sort": 1,
-        "multi": true,
-        "includeAll": true,
-        "allValue": ".*"
-      }
-    ]
-  },
+  "templating": {"list": []},
   "panels": [
-    {
-      "id": 1,
-      "title": "Load — $host",
-      "type": "timeseries",
-      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 0},
-      "repeat": "host",
-      "repeatDirection": "h",
-      "maxPerRow": 3,
-      "datasource": {"type": "prometheus", "uid": "prom"},
-      "targets": [
-        {"expr": "node_load1{host=\"$host\"}",  "legendFormat": "1m",  "refId": "A"},
-        {"expr": "node_load5{host=\"$host\"}",  "legendFormat": "5m",  "refId": "B"},
-        {"expr": "node_load15{host=\"$host\"}", "legendFormat": "15m", "refId": "C"}
-      ]
-    },
-    {
-      "id": 2,
-      "title": "CPU % — $host",
-      "type": "timeseries",
-      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 6},
-      "repeat": "host",
-      "repeatDirection": "h",
-      "maxPerRow": 3,
-      "datasource": {"type": "prometheus", "uid": "prom"},
-      "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}},
-      "targets": [
-        {"expr": "100 - (avg without (cpu) (rate(node_cpu_seconds_total{host=\"$host\",mode=\"idle\"}[1m])) * 100)", "legendFormat": "used", "refId": "A"}
-      ]
-    },
-    {
-      "id": 3,
-      "title": "Memory % — $host",
-      "type": "timeseries",
-      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 12},
-      "repeat": "host",
-      "repeatDirection": "h",
-      "maxPerRow": 3,
-      "datasource": {"type": "prometheus", "uid": "prom"},
-      "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}},
-      "targets": [
-        {"expr": "(1 - node_memory_MemAvailable_bytes{host=\"$host\"} / node_memory_MemTotal_bytes{host=\"$host\"}) * 100", "legendFormat": "used", "refId": "A"}
-      ]
-    },
-    {
-      "id": 4,
-      "title": "Procs — $host",
-      "type": "timeseries",
-      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 18},
-      "repeat": "host",
-      "repeatDirection": "h",
-      "maxPerRow": 3,
-      "datasource": {"type": "prometheus", "uid": "prom"},
-      "targets": [
-        {"expr": "node_procs_running{host=\"$host\"}", "legendFormat": "running", "refId": "A"},
-        {"expr": "node_procs_blocked{host=\"$host\"}", "legendFormat": "blocked", "refId": "B"}
-      ]
-    }
+
+    {"id": 1, "title": "Load — cluster sum", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "targets": [
+       {"expr": "sum(node_load1)",  "legendFormat": "1m",  "refId": "A"},
+       {"expr": "sum(node_load5)",  "legendFormat": "5m",  "refId": "B"},
+       {"expr": "sum(node_load15)", "legendFormat": "15m", "refId": "C"}
+     ]},
+    {"id": 2, "title": "Load — lab1", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 6, "y": 0},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "targets": [
+       {"expr": "node_load1{host=\"lab1\"}",  "legendFormat": "1m",  "refId": "A"},
+       {"expr": "node_load5{host=\"lab1\"}",  "legendFormat": "5m",  "refId": "B"},
+       {"expr": "node_load15{host=\"lab1\"}", "legendFormat": "15m", "refId": "C"}
+     ]},
+    {"id": 3, "title": "Load — lab2", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 12, "y": 0},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "targets": [
+       {"expr": "node_load1{host=\"lab2\"}",  "legendFormat": "1m",  "refId": "A"},
+       {"expr": "node_load5{host=\"lab2\"}",  "legendFormat": "5m",  "refId": "B"},
+       {"expr": "node_load15{host=\"lab2\"}", "legendFormat": "15m", "refId": "C"}
+     ]},
+    {"id": 4, "title": "Load — lab3", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 18, "y": 0},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "targets": [
+       {"expr": "node_load1{host=\"lab3\"}",  "legendFormat": "1m",  "refId": "A"},
+       {"expr": "node_load5{host=\"lab3\"}",  "legendFormat": "5m",  "refId": "B"},
+       {"expr": "node_load15{host=\"lab3\"}", "legendFormat": "15m", "refId": "C"}
+     ]},
+
+    {"id": 5, "title": "CPU % — cluster avg (core-weighted)", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 0, "y": 6},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}},
+     "targets": [
+       {"expr": "100 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[1m])) * 100", "legendFormat": "used", "refId": "A"}
+     ]},
+    {"id": 6, "title": "CPU % — lab1", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 6, "y": 6},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}},
+     "targets": [
+       {"expr": "100 - avg without (cpu) (rate(node_cpu_seconds_total{host=\"lab1\",mode=\"idle\"}[1m])) * 100", "legendFormat": "used", "refId": "A"}
+     ]},
+    {"id": 7, "title": "CPU % — lab2", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 12, "y": 6},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}},
+     "targets": [
+       {"expr": "100 - avg without (cpu) (rate(node_cpu_seconds_total{host=\"lab2\",mode=\"idle\"}[1m])) * 100", "legendFormat": "used", "refId": "A"}
+     ]},
+    {"id": 8, "title": "CPU % — lab3", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 18, "y": 6},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}},
+     "targets": [
+       {"expr": "100 - avg without (cpu) (rate(node_cpu_seconds_total{host=\"lab3\",mode=\"idle\"}[1m])) * 100", "legendFormat": "used", "refId": "A"}
+     ]},
+
+    {"id": 9, "title": "Memory % — cluster avg (byte-weighted)", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 0, "y": 12},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}},
+     "targets": [
+       {"expr": "(1 - sum(node_memory_MemAvailable_bytes) / sum(node_memory_MemTotal_bytes)) * 100", "legendFormat": "used", "refId": "A"}
+     ]},
+    {"id": 10, "title": "Memory % — lab1", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 6, "y": 12},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}},
+     "targets": [
+       {"expr": "(1 - node_memory_MemAvailable_bytes{host=\"lab1\"} / node_memory_MemTotal_bytes{host=\"lab1\"}) * 100", "legendFormat": "used", "refId": "A"}
+     ]},
+    {"id": 11, "title": "Memory % — lab2", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 12, "y": 12},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}},
+     "targets": [
+       {"expr": "(1 - node_memory_MemAvailable_bytes{host=\"lab2\"} / node_memory_MemTotal_bytes{host=\"lab2\"}) * 100", "legendFormat": "used", "refId": "A"}
+     ]},
+    {"id": 12, "title": "Memory % — lab3", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 18, "y": 12},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}},
+     "targets": [
+       {"expr": "(1 - node_memory_MemAvailable_bytes{host=\"lab3\"} / node_memory_MemTotal_bytes{host=\"lab3\"}) * 100", "legendFormat": "used", "refId": "A"}
+     ]},
+
+    {"id": 13, "title": "Procs — cluster sum", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 0, "y": 18},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "targets": [
+       {"expr": "sum(node_procs_running)", "legendFormat": "running", "refId": "A"},
+       {"expr": "sum(node_procs_blocked)", "legendFormat": "blocked", "refId": "B"}
+     ]},
+    {"id": 14, "title": "Procs — lab1", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 6, "y": 18},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "targets": [
+       {"expr": "node_procs_running{host=\"lab1\"}", "legendFormat": "running", "refId": "A"},
+       {"expr": "node_procs_blocked{host=\"lab1\"}", "legendFormat": "blocked", "refId": "B"}
+     ]},
+    {"id": 15, "title": "Procs — lab2", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 12, "y": 18},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "targets": [
+       {"expr": "node_procs_running{host=\"lab2\"}", "legendFormat": "running", "refId": "A"},
+       {"expr": "node_procs_blocked{host=\"lab2\"}", "legendFormat": "blocked", "refId": "B"}
+     ]},
+    {"id": 16, "title": "Procs — lab3", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 18, "y": 18},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "targets": [
+       {"expr": "node_procs_running{host=\"lab3\"}", "legendFormat": "running", "refId": "A"},
+       {"expr": "node_procs_blocked{host=\"lab3\"}", "legendFormat": "blocked", "refId": "B"}
+     ]},
+
+    {"id": 17, "title": "IOPS — cluster sum", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 0, "y": 24},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "iops"}},
+     "targets": [
+       {"expr": "sum(rate(node_disk_reads_completed_total{device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m]))",  "legendFormat": "r", "refId": "A"},
+       {"expr": "sum(rate(node_disk_writes_completed_total{device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m]))", "legendFormat": "w", "refId": "B"}
+     ]},
+    {"id": 18, "title": "IOPS — lab1", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 6, "y": 24},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "iops"}},
+     "targets": [
+       {"expr": "sum(rate(node_disk_reads_completed_total{host=\"lab1\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m]))",  "legendFormat": "r", "refId": "A"},
+       {"expr": "sum(rate(node_disk_writes_completed_total{host=\"lab1\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m]))", "legendFormat": "w", "refId": "B"}
+     ]},
+    {"id": 19, "title": "IOPS — lab2", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 12, "y": 24},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "iops"}},
+     "targets": [
+       {"expr": "sum(rate(node_disk_reads_completed_total{host=\"lab2\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m]))",  "legendFormat": "r", "refId": "A"},
+       {"expr": "sum(rate(node_disk_writes_completed_total{host=\"lab2\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m]))", "legendFormat": "w", "refId": "B"}
+     ]},
+    {"id": 20, "title": "IOPS — lab3", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 18, "y": 24},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "iops"}},
+     "targets": [
+       {"expr": "sum(rate(node_disk_reads_completed_total{host=\"lab3\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m]))",  "legendFormat": "r", "refId": "A"},
+       {"expr": "sum(rate(node_disk_writes_completed_total{host=\"lab3\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m]))", "legendFormat": "w", "refId": "B"}
+     ]},
+
+    {"id": 21, "title": "Disk throughput — cluster sum", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 0, "y": 30},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "Bps"}},
+     "targets": [
+       {"expr": "sum(rate(node_disk_read_bytes_total{device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m]))",    "legendFormat": "r", "refId": "A"},
+       {"expr": "sum(rate(node_disk_written_bytes_total{device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m]))", "legendFormat": "w", "refId": "B"}
+     ]},
+    {"id": 22, "title": "Disk throughput — lab1", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 6, "y": 30},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "Bps"}},
+     "targets": [
+       {"expr": "sum(rate(node_disk_read_bytes_total{host=\"lab1\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m]))",    "legendFormat": "r", "refId": "A"},
+       {"expr": "sum(rate(node_disk_written_bytes_total{host=\"lab1\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m]))", "legendFormat": "w", "refId": "B"}
+     ]},
+    {"id": 23, "title": "Disk throughput — lab2", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 12, "y": 30},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "Bps"}},
+     "targets": [
+       {"expr": "sum(rate(node_disk_read_bytes_total{host=\"lab2\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m]))",    "legendFormat": "r", "refId": "A"},
+       {"expr": "sum(rate(node_disk_written_bytes_total{host=\"lab2\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m]))", "legendFormat": "w", "refId": "B"}
+     ]},
+    {"id": 24, "title": "Disk throughput — lab3", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 18, "y": 30},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "Bps"}},
+     "targets": [
+       {"expr": "sum(rate(node_disk_read_bytes_total{host=\"lab3\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m]))",    "legendFormat": "r", "refId": "A"},
+       {"expr": "sum(rate(node_disk_written_bytes_total{host=\"lab3\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m]))", "legendFormat": "w", "refId": "B"}
+     ]},
+
+    {"id": 25, "title": "Disk %util — cluster max (worst device)", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 0, "y": 36},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}},
+     "targets": [
+       {"expr": "max(rate(node_disk_io_time_seconds_total{device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m])) * 100", "legendFormat": "max", "refId": "A"}
+     ]},
+    {"id": 26, "title": "Disk %util — lab1 (max device)", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 6, "y": 36},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}},
+     "targets": [
+       {"expr": "max(rate(node_disk_io_time_seconds_total{host=\"lab1\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m])) * 100", "legendFormat": "max", "refId": "A"}
+     ]},
+    {"id": 27, "title": "Disk %util — lab2 (max device)", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 12, "y": 36},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}},
+     "targets": [
+       {"expr": "max(rate(node_disk_io_time_seconds_total{host=\"lab2\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m])) * 100", "legendFormat": "max", "refId": "A"}
+     ]},
+    {"id": 28, "title": "Disk %util — lab3 (max device)", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 18, "y": 36},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}},
+     "targets": [
+       {"expr": "max(rate(node_disk_io_time_seconds_total{host=\"lab3\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m])) * 100", "legendFormat": "max", "refId": "A"}
+     ]},
+
+    {"id": 29, "title": "Disk await — cluster avg (ms/op)", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 0, "y": 42},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "ms"}},
+     "targets": [
+       {"expr": "1000 * (sum(rate(node_disk_read_time_seconds_total{device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m])) + sum(rate(node_disk_write_time_seconds_total{device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m]))) / clamp_min(sum(rate(node_disk_reads_completed_total{device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m])) + sum(rate(node_disk_writes_completed_total{device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m])), 1)", "legendFormat": "avg", "refId": "A"}
+     ]},
+    {"id": 30, "title": "Disk await — lab1 (ms/op)", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 6, "y": 42},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "ms"}},
+     "targets": [
+       {"expr": "1000 * (sum(rate(node_disk_read_time_seconds_total{host=\"lab1\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m])) + sum(rate(node_disk_write_time_seconds_total{host=\"lab1\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m]))) / clamp_min(sum(rate(node_disk_reads_completed_total{host=\"lab1\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m])) + sum(rate(node_disk_writes_completed_total{host=\"lab1\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m])), 1)", "legendFormat": "avg", "refId": "A"}
+     ]},
+    {"id": 31, "title": "Disk await — lab2 (ms/op)", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 12, "y": 42},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "ms"}},
+     "targets": [
+       {"expr": "1000 * (sum(rate(node_disk_read_time_seconds_total{host=\"lab2\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m])) + sum(rate(node_disk_write_time_seconds_total{host=\"lab2\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m]))) / clamp_min(sum(rate(node_disk_reads_completed_total{host=\"lab2\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m])) + sum(rate(node_disk_writes_completed_total{host=\"lab2\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m])), 1)", "legendFormat": "avg", "refId": "A"}
+     ]},
+    {"id": 32, "title": "Disk await — lab3 (ms/op)", "type": "timeseries",
+     "gridPos": {"h": 6, "w": 6, "x": 18, "y": 42},
+     "datasource": {"type": "prometheus", "uid": "prom"},
+     "fieldConfig": {"defaults": {"unit": "ms"}},
+     "targets": [
+       {"expr": "1000 * (sum(rate(node_disk_read_time_seconds_total{host=\"lab3\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m])) + sum(rate(node_disk_write_time_seconds_total{host=\"lab3\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m]))) / clamp_min(sum(rate(node_disk_reads_completed_total{host=\"lab3\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m])) + sum(rate(node_disk_writes_completed_total{host=\"lab3\",device=~\"sd[a-z]+|nvme[0-9]+n[0-9]+\"}[1m])), 1)", "legendFormat": "avg", "refId": "A"}
+     ]}
+
   ]
 }
