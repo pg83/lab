@@ -1262,6 +1262,13 @@ class Federator:
             exec_into(*args)
 
 
+# Not a secret — grafana state is wiped on every boot, all dashboards
+# and datasources are provisioning-managed, and the port is exposed
+# only on the nebula mesh. Any non-default value keeps grafana from
+# showing the "change password on first login" form.
+GRAFANA_ADMIN_PASSWORD = 'grafana'
+
+
 class Grafana:
     def __init__(self, port, collector_port, loki_port):
         self.v = 1
@@ -1299,6 +1306,7 @@ class Grafana:
             'pkg': 'bin/sched/grafana/reload',
             'delay': '10',
             'port': str(self.port),
+            'password': GRAFANA_ADMIN_PASSWORD,
         }
 
     def ini(self):
@@ -1318,6 +1326,10 @@ class Grafana:
             'check_for_updates = false\n'
             '[security]\n'
             'disable_gravatar = true\n'
+            # Any non-default password skips the "change password on
+            # first login" form. Keep in sync with the reload sched
+            # script's curl URL (both pull GRAFANA_ADMIN_PASSWORD).
+            f'admin_password = {GRAFANA_ADMIN_PASSWORD}\n'
             # Grafana 13's new unified-storage datasource path has a
             # provisioning bug: the datasources module starts before
             # the datasource API server is ready, so every
@@ -1334,6 +1346,17 @@ class Grafana:
         )
 
     def run(self):
+        # Wipe state on every boot — the whole grafana config is
+        # provisioning-managed (datasources yaml + dashboards json),
+        # so there's nothing in sqlite worth keeping. Throwing the
+        # DB away on restart immunises us against half-populated
+        # provisioning state from earlier buggy ini attempts.
+        # admin_password is set non-default so grafana skips the
+        # "change password on first login" prompt.
+        s = self.state_dir()
+        shutil.rmtree(f'{s}/data', ignore_errors=True)
+        os.makedirs(f'{s}/data', exist_ok=True)
+
         # Grafana's plugin loader does a symlink-escape containment check
         # (filepath.Rel against realpath) and rejects anything whose
         # canonical path escapes the homepath. In the realm, only files
