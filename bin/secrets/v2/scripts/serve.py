@@ -80,16 +80,7 @@ def persdb_get(persdb_port, key):
 
 
 def load_store(store_path, passphrase):
-    try:
-        raw = open(store_path).read()
-    except FileNotFoundError:
-        print(f'secrets_v2: store {store_path} not found; serving empty', file=sys.stderr)
-        return {}
-
-    if not raw.strip():
-        print(f'secrets_v2: store {store_path} empty; serving empty', file=sys.stderr)
-        return {}
-
+    raw = open(store_path).read()
     d = json.loads(raw)
     k = genkey(passphrase, d['salt'])
     ct = base64.b64decode(d['data'])
