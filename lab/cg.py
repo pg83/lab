@@ -1509,6 +1509,15 @@ class Loki:
         }
 
     def prepare(self):
+        # Wipe state on every boot — same idea as Grafana. memberlist
+        # KV (collectors/ring etc) and compactor WAL get reset so a
+        # fresh gossip exchange rebuilds the ring from the peers
+        # currently reachable on nebula. Unflushed in-memory chunks
+        # (<~5m old) are lost, which we accept for the observability
+        # tier. Class-source changes already invalidate the pickle
+        # via self.hash = _class_src_hash(type(self)); the wipe is
+        # the counterpart on the state side.
+        shutil.rmtree(self.home_dir(), ignore_errors=True)
         make_dirs(self.home_dir(), owner='loki')
 
     def prom_port(self):
