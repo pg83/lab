@@ -1107,6 +1107,13 @@ class EtcdPrivate:
             # small, this is only so a burst won't trip the alarm
             # before the next compaction tick.
             '--quota-backend-bytes', str(8 * 1024 * 1024 * 1024),
+            # Default is 5s — loki's etcd kvstore client multiplexes
+            # several rings (ingester/distributor/scheduler/compactor/
+            # ruler/query_scheduler) over a single gRPC channel and
+            # their combined keepalive pings trip etcd's rate limit,
+            # which returns ENHANCE_YOUR_CALM GOAWAY and tears down
+            # the conn. 1s is enough headroom for the fanout.
+            '--grpc-keepalive-min-time', '1s',
         ]
 
         exec_into(*args)
