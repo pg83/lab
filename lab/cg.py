@@ -1535,6 +1535,50 @@ class SamogonBot:
         exec_into('etcdctl', 'lock', '/lock/samogon_bot', 'samogon', 'bot', **env)
 
 
+class JobScheduler:
+    # Cluster cron. Runs on every host, singleton via
+    # `etcdctl lock /lock/job/scheduler`. The lock holder reads
+    # /etc/cron/<delay>-<name>.json every 10s and fires each job
+    # (wrapped in `timeout 10s`) once per delay window. Clients
+    # package their job configs anywhere in the tree — the merged
+    # realm view collects them into /etc/cron/.
+    #
+    # Env carries every secret a scheduled cmd might want expanded
+    # via $VAR in its argv: S3 creds, gorn API, ETCDCTL_ENDPOINTS
+    # (inherited from the service env). Cron files pick what they
+    # use; scheduler itself doesn't know what any of them mean.
+    def __init__(self, gorn_api, s3_endpoint):
+        self.v = 1
+        self.gorn_api = gorn_api
+        self.s3_endpoint = s3_endpoint
+        self._hash = _class_src_hash(type(self))
+
+    def name(self):
+        return 'job_scheduler'
+
+    def user(self):
+        return 'job_scheduler'
+
+    def pkgs(self):
+        yield {'pkg': 'bin/job/scheduler'}
+
+    def run(self):
+        env = {
+            'PATH': '/bin',
+            'HOME': os.getcwd(),
+            'TMPDIR': os.getcwd(),
+            'GORN_API': self.gorn_api,
+            'S3_ENDPOINT': self.s3_endpoint,
+            'AWS_ACCESS_KEY_ID': get_key('/s3/user').decode().strip(),
+            'AWS_SECRET_ACCESS_KEY': get_key('/s3/password').decode().strip(),
+        }
+
+        # Same stagger dance as SamogonBot / HFSync.
+        time.sleep(random.random() * 10)
+
+        exec_into('etcdctl', 'lock', '/lock/job/scheduler', 'job_scheduler', **env)
+
+
 class Loki:
     # HA log aggregator, one per host. Ring kvstore lives in the
     # secondary etcd_2 cluster (separate from gorn's etcd_private to
@@ -2161,6 +2205,14 @@ class ClusterMap:
 
             yield {
                 'host': hn,
+                'serv': JobScheduler(
+                    gorn_api=f"http://127.0.0.1:{p['gorn_ctl']}",
+                    s3_endpoint=f"http://{hn}.eth1:{p['minio']}",
+                ),
+            }
+
+            yield {
+                'host': hn,
                 'serv': SecretsV2(p['secrets_v2']),
             }
 
@@ -2356,6 +2408,7 @@ sys.modules['builtins'].CO2Mon = CO2Mon
 sys.modules['builtins'].MirrorFetch = MirrorFetch
 sys.modules['builtins'].Samogon = Samogon
 sys.modules['builtins'].SamogonBot = SamogonBot
+sys.modules['builtins'].JobScheduler = JobScheduler
 sys.modules['builtins'].Loki = Loki
 sys.modules['builtins'].Promtail = Promtail
 sys.modules['builtins'].TailLog = TailLog
@@ -2717,6 +2770,7 @@ def do(code):
         'etcd_private': 1026,
         'etcd_2': 2003,
         'samogon_bot': 2004,
+        'job_scheduler': 2005,
         'secrets': 1027,
         'hf_sync': 1028,
         'ghcr_sync': 1029,
