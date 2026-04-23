@@ -22,6 +22,7 @@ cwd is a fresh tmpfs inside the gorn wrap ns.
 """
 
 import os
+import random
 import subprocess
 import sys
 import time
@@ -67,7 +68,29 @@ def main():
     blob = f'slot-{slot:02d}.db.zst'
     snap = 'snap.db'
 
-    subprocess.run(['etcdctl', 'snapshot', 'save', snap], check=True)
+    # etcdctl snapshot save refuses multi-endpoint lists
+    # (Error: snapshot must be requested to one selected node) — the
+    # RPC streams the whole bbolt DB from a single peer and has no
+    # "fan out" semantics. Pick one at random so retries hit different
+    # peers, and drop ETCDCTL_ENDPOINTS from the child env so the CLI
+    # doesn't see both --endpoints and the env var (ambiguous across
+    # etcdctl versions). --command-timeout=10m covers the multi-GiB
+    # snapshot transfer; default 5s kills it.
+    endpoints = [e.strip() for e in os.environ['ETCDCTL_ENDPOINTS'].split(',') if e.strip()]
+
+    if not endpoints:
+        raise SystemExit('ETCDCTL_ENDPOINTS empty')
+
+    ep = random.choice(endpoints)
+    env = os.environ.copy()
+    env.pop('ETCDCTL_ENDPOINTS', None)
+
+    log(f'snapshot save from {ep}')
+    subprocess.run(
+        ['etcdctl', '--endpoints', ep, '--command-timeout=10m', 'snapshot', 'save', snap],
+        env=env,
+        check=True,
+    )
     subprocess.run(['zstd', '-10', '-q', '--rm', snap, '-o', blob], check=True)
 
     key = f'etcd/etcd/backup/{blob}'
