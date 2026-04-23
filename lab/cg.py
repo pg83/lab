@@ -699,7 +699,7 @@ class DropBear2(DropBear):
 
 class GornSsh:
     def __init__(self, uniq, host, port, nebula_host):
-        self.v = 4
+        self.v = 5
         self.uniq = uniq
         self.host = host
         self.port = port
@@ -733,7 +733,10 @@ class GornSsh:
         }
 
     def home_dir(self):
-        return f'{self.std_dir()}/home'
+        return f'/var/run/{self.name()}/home'
+
+    def work_dir(self):
+        return f'/var/run/{self.name()}/work'
 
     def prepare(self):
         u = self.name()
@@ -741,7 +744,7 @@ class GornSsh:
         ssh_dir = f'{self.home_dir()}/.ssh'
         make_dirs(ssh_dir, owner=u)
         os.chmod(ssh_dir, 0o700)
-        make_dirs(f'{self.std_dir()}/log', owner=u)
+        make_dirs(self.work_dir(), owner=u)
 
     def run(self):
         u = self.name()
@@ -2272,14 +2275,12 @@ class ClusterMap:
                     'host': nb['ip'],
                     'port': port,
                     'user': user,
-                    'path': f'/var/run/{user}/std/home',
-                    # Wrap runs as the endpoint user (gorn_<N>), not root.
-                    # `std/home` is the only subdir prepare() reliably
-                    # chowns to that uid — `std/log` we tried earlier has
-                    # been flaking back to root-owned (EACCES spam in the
-                    # gorn service log every dispatch). Put the agent log
-                    # under home to dodge it entirely.
-                    'log_path': f'/var/run/{user}/std/home/gorn-wrap.log',
+                    # `work/` is the per-task scratch root. gorn wrap
+                    # chdirs here, then unshares + mounts a fresh tmpfs
+                    # on top so each task runs in its own ephemeral
+                    # filesystem — orphans die with the mount ns.
+                    'path': f'/var/run/{user}/work',
+                    'log_path': f'/var/run/{user}/home/gorn-wrap.log',
                     'nebula_host': nb['hostname'],
                 })
 
