@@ -162,22 +162,16 @@ def has_target_fail(blob):
 
 
 def check(tier, sha):
-    workdir = f'/tmp/ci-work-{os.getpid()}'
+    # Workdir = PWD (the endpoint path gorn chdir'd us into). Clone
+    # into `./ix` under it and run from there. rmtree first so a
+    # leftover from a prior task on this endpoint doesn't interfere.
+    workdir = 'ix'
 
     if os.path.exists(workdir):
         shutil.rmtree(workdir)
 
-    os.makedirs(workdir)
-
     subprocess.run(('git', 'clone', GIT_URL, workdir), check=True)
     subprocess.run(('git', '-C', workdir, 'checkout', sha), check=True)
-
-    # Sweep stale mc-molot-<N> workdirs before the build — molot
-    # leaves them behind when owning processes die without cleanup
-    # (same sweep the old ci_cycle.sh did).
-    for name in os.listdir(workdir):
-        if name.startswith('mc-molot-'):
-            shutil.rmtree(os.path.join(workdir, name))
 
     env = os.environ.copy()
     env['IX_EXEC_KIND'] = 'molot'
