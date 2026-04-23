@@ -42,7 +42,7 @@ CI_TIERS = [
 # Comma-separated Telegram user IDs allowed to send .torrents to the
 # SamogonBot service. Empty → bot crash-loops on start (intentional;
 # we don't want to accidentally ship a world-writable bot).
-TG_ALLOW_USERS = ''
+TG_ALLOW_USERS = '51154499'
 
 CPUS_PER_SLOT = 4
 
