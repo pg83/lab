@@ -60,9 +60,9 @@ TIERS = ['set/ci/tier/0', 'set/ci/tier/1', 'set/ci/tier/2']
 # endpoints on other hosts — effectively cold every run. We push the
 # union into a single S3 object and pull it back on every ci check.
 CACHE_LOCK_KEY = '/lock/ci/cache'
-CACHE_S3_BUCKET = 'ci'
+CACHE_S3_BUCKET = 'cix'
 CACHE_S3_KEY = 'complete'
-MC_ALIAS = 'ci'
+MC_ALIAS = 'cix'
 
 # Marker strings that mean "./ix build got far enough to dispatch a
 # target, the target blew up". Seeing any of these in captured stdout
