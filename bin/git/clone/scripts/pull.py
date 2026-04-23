@@ -65,11 +65,29 @@ def main():
         clone(url, dst)
         sys.exit(0)
 
-    before = git_rev_parse_head(dst)
+    # Cheap probe: ls-remote is a single TCP round-trip returning
+    # ~1 KB of ref info — designed for frequent polling. Full
+    # `git pull` does a complete upload-pack negotiation every time
+    # regardless of whether anything changed, which on a 10s cycle
+    # across 12+ services puts us into GitHub abuse-rate-limit
+    # territory (~1 req/sec per IP). ls-remote keeps us well below.
+    log('git', 'ls-remote', '--quiet', url, 'HEAD')
+    remote_head = subprocess.run(
+        ('git', 'ls-remote', '--quiet', url, 'HEAD'),
+        check=True,
+        stdout=subprocess.PIPE,
+        text=True,
+    ).stdout.split()[0]
 
-    # pull can fail on history rewrite, detached HEAD, submodule
-    # config drift, etc. Wipe + re-clone as coarse recovery; a
-    # successful re-clone also counts as "gained new commits".
+    local_head = git_rev_parse_head(dst)
+
+    if remote_head == local_head:
+        sys.exit(7)
+
+    # Actual new commit(s) — do full pull. On failure (history
+    # rewrite, detached HEAD, submodule config drift, …) wipe and
+    # re-clone as coarse recovery; a successful re-clone also counts
+    # as "gained new commits".
     try:
         git('pull', cwd=dst)
     except subprocess.CalledProcessError:
@@ -78,11 +96,6 @@ def main():
         sys.exit(0)
 
     git('submodule', 'update', '--init', '--recursive', cwd=dst)
-
-    after = git_rev_parse_head(dst)
-
-    if before == after:
-        sys.exit(7)
 
     sys.exit(0)
 
