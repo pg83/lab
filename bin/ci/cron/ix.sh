@@ -16,7 +16,7 @@ mkdir -p ${out}/etc/cron
 cat << 'EOF' > ${out}/etc/cron/10-ci-{{slug}}.json
 {
     "cmd": [
-        "etcdctl", "lock", "/lock/ci/{{slug}}",
+        "etcdctl", "lock", "/lock/ci/{{slug}}", "--",
         "dedup", "/ci/{{slug}}", "--",
         "gorn", "ignite",
         "--root", "ci",
