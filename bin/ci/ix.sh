@@ -7,5 +7,7 @@ bin/python
 bin/etcd/ctl
 bin/git/clone
 bin/minio/patched/client
+bin/dedup
 bin/ci/scripts
+bin/ci/cron
 {% endblock %}

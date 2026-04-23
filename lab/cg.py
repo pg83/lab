@@ -1099,56 +1099,6 @@ class EtcdPrivate:
         exec_into(*args)
 
 
-class CI:
-    # Cluster CI orchestrator. Runs on every host, singleton via
-    # `etcdctl lock /lock/ci` — only the leader polls GitHub and
-    # dispatches per-tier builds through gorn. Peers block inside
-    # etcdctl until the holder dies.
-    #
-    # Tier fan-out lives inside `ci serve` (in lab/bin/ci/scripts/ci.py),
-    # not here. The leader enqueues one `gorn ignite -- ci check <tier>
-    # <sha>` per tier with a fixed GUID `ci-<tier>-<sha>`, waits for
-    # all three, advances /ci/last_sha in etcd only on all-green.
-    # `ci check` exits non-zero only on infra errors (clone failed,
-    # ./ix missing, molot itself died); target build failures are
-    # success-for-ci-check — they're detected by marker strings in
-    # captured build output.
-    def __init__(self, gorn_api, s3_endpoint):
-        self.v = 2
-        self.gorn_api = gorn_api
-        self.s3_endpoint = s3_endpoint
-
-    def name(self):
-        return 'ci'
-
-    def user(self):
-        return 'ci'
-
-    def pkgs(self):
-        yield {'pkg': 'bin/ci'}
-
-    def run(self):
-        env = {
-            'PATH': '/bin',
-            'HOME': os.getcwd(),
-            'TMPDIR': os.getcwd(),
-            'GORN_API': self.gorn_api,
-            'S3_ENDPOINT': self.s3_endpoint,
-            'S3_BUCKET': 'gorn',
-            'MOLOT_FULL_SLOTS': '10',
-            # Quiet molot — suppresses per-node build stdout/stderr from
-            # the dispatcher log. Everything still lands in
-            # s3://gorn/molot/<uid>/{stdout,stderr} and can be pulled
-            # on demand via dev/molot_trace.sh. CI's own log stays
-            # readable.
-            'MOLOT_QUIET': '1',
-            'AWS_ACCESS_KEY_ID': get_key('/s3/user').decode().strip(),
-            'AWS_SECRET_ACCESS_KEY': get_key('/s3/password').decode().strip(),
-        }
-
-        exec_into('etcdctl', 'lock', '/lock/ci', 'ci', 'serve', **env)
-
-
 class Perses:
     def __init__(self, port):
         self.v = 1
@@ -2303,15 +2253,6 @@ class ClusterMap:
                     'serv': NebulaLh(lh['name'], lh_port, neb_map, p['nebula_lh_prom'], pm),
                 }
 
-        for hn in self.conf['by_host']:
-            yield {
-                'host': hn,
-                'serv': CI(
-                    gorn_api=f"http://127.0.0.1:{p['gorn_ctl']}",
-                    s3_endpoint=f"http://{hn}.eth1:{p['minio']}",
-                ),
-            }
-
         gorn_endpoints = []
 
         for hn, n in GORN_N.items():
@@ -2401,7 +2342,6 @@ sys.modules['builtins'].GornProm = GornProm
 sys.modules['builtins'].Perses = Perses
 sys.modules['builtins'].Grafana = Grafana
 sys.modules['builtins'].Federator = Federator
-sys.modules['builtins'].CI = CI
 sys.modules['builtins'].SshTunnel = SshTunnel
 sys.modules['builtins'].SocksProxy = SocksProxy
 sys.modules['builtins'].CO2Mon = CO2Mon
@@ -2784,7 +2724,6 @@ def do(code):
     for i in range(0, 64):
         users['heat_' + str(i + 1)] = 1030 + i
 
-    users['ci'] = 1200
     users['gorn'] = 1099
     users['gorn_ctl'] = 1098
     users['gorn_web'] = 1097
