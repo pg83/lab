@@ -20,7 +20,7 @@ export IX_EXEC_KIND=molot
 export S3_BUCKET=gorn
 export MOLOT_CACHE=./cache
 
-sleep 10
+sleep 30
 
 # gpull exits 7 when there are no new commits — set -e short-circuits
 # the rest of this cycle, runit restarts us, next sleep+gpull. Only
