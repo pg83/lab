@@ -30,12 +30,6 @@ DISABLE = {
     'lab3': DISABLE_ALL + [],
 }
 
-CI_TIERS = [
-    'set/ci/tier/0',
-    'set/ci/tier/1',
-    'set/ci/tier/2',
-]
-
 # Comma-separated Telegram user IDs allowed to send .torrents to the
 # SamogonBot service. Empty → bot crash-loops on start (intentional;
 # we don't want to accidentally ship a world-writable bot).
@@ -1106,37 +1100,53 @@ class EtcdPrivate:
 
 
 class CI:
-    def __init__(self, idx, targets, gorn_api, s3_endpoint):
-        self.v = 2
-        self.idx = idx
-        self.targets = targets
+    # Cluster CI orchestrator. Runs on every host, singleton via
+    # `etcdctl lock /lock/ci` — only the leader polls GitHub and
+    # dispatches per-tier builds through gorn. Peers block inside
+    # etcdctl until the holder dies.
+    #
+    # Tier fan-out lives inside `ci serve` (in lab/bin/ci/scripts/ci.py),
+    # not here. The leader enqueues one `gorn ignite -- ci check <tier>
+    # <sha>` per tier with a fixed GUID `ci-<tier>-<sha>`, waits for
+    # all three, advances /ci/last_sha in etcd only on all-green.
+    # `ci check` exits non-zero only on infra errors (clone failed,
+    # ./ix missing, molot itself died); target build failures are
+    # success-for-ci-check — they're detected by marker strings in
+    # captured build output.
+    def __init__(self, gorn_api, s3_endpoint):
+        self.v = 1
         self.gorn_api = gorn_api
         self.s3_endpoint = s3_endpoint
 
     def name(self):
-        return f'ci_{self.idx}'
+        return 'ci'
+
+    def user(self):
+        return 'ci'
 
     def pkgs(self):
-        yield {
-            'pkg': 'lab/services/ci',
-            'ci_targets': self.targets,
-        }
+        yield {'pkg': 'bin/ci'}
 
     def run(self):
-        exec_into(
-            '/bin/ci_cycle',
-            GORN_API=self.gorn_api,
-            S3_ENDPOINT=self.s3_endpoint,
-            MOLOT_FULL_SLOTS='10',
+        env = {
+            'PATH': '/bin',
+            'HOME': os.getcwd(),
+            'TMPDIR': os.getcwd(),
+            'GORN_API': self.gorn_api,
+            'S3_ENDPOINT': self.s3_endpoint,
+            'S3_BUCKET': 'gorn',
+            'MOLOT_FULL_SLOTS': '10',
             # Quiet molot — suppresses per-node build stdout/stderr from
             # the dispatcher log. Everything still lands in
             # s3://gorn/molot/<uid>/{stdout,stderr} and can be pulled
             # on demand via dev/molot_trace.sh. CI's own log stays
             # readable.
-            MOLOT_QUIET='1',
-            AWS_ACCESS_KEY_ID=get_key('/s3/user').decode().strip(),
-            AWS_SECRET_ACCESS_KEY=get_key('/s3/password').decode().strip(),
-        )
+            'MOLOT_QUIET': '1',
+            'AWS_ACCESS_KEY_ID': get_key('/s3/user').decode().strip(),
+            'AWS_SECRET_ACCESS_KEY': get_key('/s3/password').decode().strip(),
+        }
+
+        exec_into('etcdctl', 'lock', '/lock/ci', 'ci', 'serve', **env)
 
 
 class Perses:
@@ -2242,16 +2252,13 @@ class ClusterMap:
                 }
 
         for hn in self.conf['by_host']:
-            for i, path in enumerate(CI_TIERS):
-                yield {
-                    'host': hn,
-                    'serv': CI(
-                        i,
-                        path,
-                        gorn_api=f"http://127.0.0.1:{p['gorn_ctl']}",
-                        s3_endpoint=f"http://{hn}.eth1:{p['minio']}",
-                    ),
-                }
+            yield {
+                'host': hn,
+                'serv': CI(
+                    gorn_api=f"http://127.0.0.1:{p['gorn_ctl']}",
+                    s3_endpoint=f"http://{hn}.eth1:{p['minio']}",
+                ),
+            }
 
         gorn_endpoints = []
 
@@ -2723,9 +2730,7 @@ def do(code):
     for i in range(0, 64):
         users['heat_' + str(i + 1)] = 1030 + i
 
-    for i in range(len(CI_TIERS)):
-        users[f'ci_{i}'] = 1200 + i
-
+    users['ci'] = 1200
     users['gorn'] = 1099
     users['gorn_ctl'] = 1098
     users['gorn_web'] = 1097
