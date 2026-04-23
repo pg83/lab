@@ -130,13 +130,13 @@ def ignite(tier, sha):
         if v is not None:
             args += ['--env', f'{k}={v}']
 
-    # The worker user (gorn_N) has its own realm on /bin and doesn't
-    # see `ci`. /ix/realm/ci/bin is where our pkg landed; prepend it
-    # via `/bin/env PATH=…` so argv lookup finds ci before anything
-    # else. Same trick molot uses for minio-client, tar, etc.
+    # Worker's default PATH at ssh-login time doesn't pick up /bin;
+    # force it via /bin/env so argv lookup finds `ci` (and any tool
+    # ci itself shells out to — git, molot, gorn, python3 — all live
+    # under the same /bin).
     args += [
         '--', '/bin/env',
-        'PATH=/ix/realm/ci/bin:/bin',
+        'PATH=/bin',
         'ci', 'check', tier, sha,
     ]
 
