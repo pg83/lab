@@ -3,11 +3,11 @@
 {% block run_deps %}
 bin/gorn
 bin/molot
+bin/dedup
 bin/python
+bin/ci/cron
 bin/etcd/ctl
 bin/git/clone
-bin/minio/patched/client
-bin/dedup
 bin/ci/scripts
-bin/ci/cron
+bin/minio/patched/client
 {% endblock %}
