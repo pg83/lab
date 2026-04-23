@@ -27,10 +27,7 @@ DISABLE_ALL = [
 DISABLE = {
     'lab1': DISABLE_ALL + [],
     'lab2': DISABLE_ALL + [],
-    # minio_3 backs onto /dev/sdb which has 16 pending sectors;
-    # MinIO kept taking the drive offline every ~4m. Park until the
-    # physical swap happens.
-    'lab3': DISABLE_ALL + ['minio_3'],
+    'lab3': DISABLE_ALL + [],
 }
 
 CI_TIERS = [
