@@ -68,6 +68,7 @@ The canon captures the full generated cluster config per host (`extra` as a line
 - Don't add files under `ext/ix/` — it is an upstream submodule.
 - Don't put secrets in `cg.py`, in `.sh` templates, or in commits. Route everything through the `Secrets` service.
 - Don't edit generated runit scripts by hand; regenerate by editing the class and rebuilding.
+- Don't silence stderr. No `2>/dev/null`, no blanket `|| true`, no log truncation. Prefer noisy logs over lost diagnostics — if a command may legitimately fail, branch on that explicitly (e.g. `if [ -e path ]`), not with a blind-swallow redirect. `|| true` is only acceptable when re-applying known-idempotent state and even then only for a grep-filtered "File exists"-style error; bail loudly on anything else.
 
 ## Quick pointers
 
