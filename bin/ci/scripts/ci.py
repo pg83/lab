@@ -186,6 +186,9 @@ def check(tier):
     with open(cache_path, 'wb') as f:
         f.write(mc_cat(s3_cache_uri(), mc_env))
 
+    log(f'seeded cache_path={cache_path} size={os.path.getsize(cache_path)}'
+        f' IX_EXEC_KIND={env.get("IX_EXEC_KIND")} MOLOT_CACHE={env.get("MOLOT_CACHE")}')
+
     # start_new_session=True: ./ix build's execute.py does
     # `os.kill(0, SIGKILL)` on target-subprocess failure, which kills
     # its entire process group. Without a new session, that group
@@ -206,6 +209,9 @@ def check(tier):
         # serialized across concurrent checks via etcdctl lock around
         # `ci update`, which consumes our cache on stdin.
         try:
+            size = os.path.getsize(cache_path) if os.path.exists(cache_path) else '-'
+            log(f'merging cache_path={cache_path} size={size}')
+
             with open(cache_path, 'rb') as f:
                 subprocess.run(
                     ('etcdctl', 'lock', CACHE_LOCK_KEY, 'ci', 'update'),
