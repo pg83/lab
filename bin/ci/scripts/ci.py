@@ -23,14 +23,16 @@ Subcommands:
 
 Retry model:
 
-  GUIDs are deterministic — ci-<tier-slug>-<sha>. Gorn wrap's S3
-  idempotency check means a re-ignite of the same (tier, sha) replays
-  the cached result; we don't actually re-run a successful or failed
-  build. "Advance pointer only when all tiers succeeded" drives the
-  loop — an infra failure pins us on the same sha until upstream
-  pushes a new one (acceptable: such failures are rare and mostly
-  self-clear on cluster restart via a bumped gorn/molot hash, which
-  bumps the guid).
+  ci serve is fire-and-forget: enqueue three ignites per new sha,
+  advance /ci/last_sha immediately, never wait. Gorn owns delivery
+  and retry from there. GUIDs are deterministic ci-<tier-slug>-<sha>
+  so a re-enqueue of the same (tier, sha) — e.g. after a ci serve
+  crash + re-election — is a no-op against gorn's S3 idempotency.
+
+  ci check's exit code drives gorn's task classification: exit 0
+  → success, non-zero → non-retriable completed failure (infra).
+  Transport-level crashes (ssh dead, wrap OOM'd) are retriable by
+  gorn automatically — we don't model that here.
 """
 
 import os
@@ -115,11 +117,10 @@ FORWARD_ENV = [
 ]
 
 
-def ignite_argv(tier, sha):
+def ignite(tier, sha):
     args = [
         'gorn', 'ignite',
         '--guid', guid_for(tier, sha),
-        '--wait',
         '--descr', f'ci check {tier} {sha}',
     ]
 
@@ -131,7 +132,11 @@ def ignite_argv(tier, sha):
 
     args += ['--', 'ci', 'check', tier, sha]
 
-    return args
+    # stdin=DEVNULL — ignite's `-- argv` mode reads stdin to embed as
+    # the inner cmd's stdin. Inheriting runit's stdin would block.
+    # No --wait: ignite returns as soon as the task is accepted by
+    # gorn control. ci serve never blocks on a running build.
+    subprocess.run(args, stdin=subprocess.DEVNULL, check=True)
 
 
 def serve():
@@ -143,31 +148,13 @@ def serve():
             time.sleep(POLL_INTERVAL_S)
             continue
 
-        log(f'new sha: {last or "<empty>"} -> {remote}; dispatching {len(TIERS)} tiers')
+        log(f'new sha: {last or "<empty>"} -> {remote}; enqueuing {len(TIERS)} tiers')
 
-        # Parallel dispatch — three ignites run side-by-side, each
-        # blocks on its own gorn wait. Per-tier exit codes come back
-        # when all three return. stdin=DEVNULL because ignite's
-        # `-- argv` mode reads stdin to embed as the inner cmd's stdin,
-        # and inheriting runit's stdin would block or pipe garbage.
-        procs = [
-            (tier, subprocess.Popen(
-                ignite_argv(tier, remote),
-                stdin=subprocess.DEVNULL,
-            ))
-            for tier in TIERS
-        ]
+        for tier in TIERS:
+            ignite(tier, remote)
 
-        codes = {tier: p.wait() for tier, p in procs}
-
-        log(f'tier results: {codes}')
-
-        if all(c == 0 for c in codes.values()):
-            etcd_put(ETCD_KEY_LAST_SHA, remote)
-            log(f'advanced last_sha -> {remote}')
-        else:
-            log(f'holding last_sha at {last or "<empty>"}; will retry on next poll')
-            time.sleep(POLL_INTERVAL_S)
+        etcd_put(ETCD_KEY_LAST_SHA, remote)
+        log(f'advanced last_sha -> {remote}')
 
 
 def has_target_fail(blob):
