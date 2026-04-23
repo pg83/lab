@@ -18,11 +18,13 @@ Subcommands:
       an infra failure: paired with gorn's --retry-error in the
       cron dispatch so the leader puts the task back on the queue.
 
-  ci update
-      Reads a local molot-cache on stdin, unions it with the
-      shared cix/complete object in S3, writes the union back.
-      Intended to be invoked under `etcdctl lock /lock/ci/cache`
-      from ci check at the end of each build.
+  ci update <local_cache_path>
+      Reads a local molot-cache from <local_cache_path>, unions
+      it with the shared cix/complete object in S3, writes the
+      union back. Intended to be invoked under `etcdctl lock
+      /lock/ci/cache` from ci check at the end of each build.
+      Takes the path as argv instead of stdin because etcdctl
+      lock eats stdin before handing off to its child cmd.
 """
 
 import json
@@ -115,15 +117,17 @@ def mc_cat(uri, env):
     res.check_returncode()
 
 
-def update():
-    """Merge stdin (caller's local cache) with the shared
+def update(local_path):
+    """Merge <local_path> (caller's local cache file) with the shared
     <bucket>/complete in S3 and push the union back. Expected to be
     run under `etcdctl lock /lock/ci/cache` — no locking here.
     Pure read-modify-write, single S3 PUT."""
     env = mc_env_for(os.environ)
     uri = s3_cache_uri()
 
-    ours = sys.stdin.buffer.read()
+    with open(local_path, 'rb') as f:
+        ours = f.read()
+
     remote = mc_cat(uri, env)
 
     merged = set()
@@ -207,18 +211,18 @@ def check(tier):
         # Always push our additions back — even a partial build built
         # some nodes and those wins are worth sharing. RMW is
         # serialized across concurrent checks via etcdctl lock around
-        # `ci update`, which consumes our cache on stdin.
+        # `ci update`, which reads the cache path from argv (stdin is
+        # eaten by etcdctl lock before reaching its child).
         try:
             size = os.path.getsize(cache_path) if os.path.exists(cache_path) else '-'
             log(f'merging cache_path={cache_path} size={size}')
 
-            with open(cache_path, 'rb') as f:
-                subprocess.run(
-                    ('etcdctl', 'lock', CACHE_LOCK_KEY, 'ci', 'update'),
-                    stdin=f,
-                    env=mc_env,
-                    check=True,
-                )
+            subprocess.run(
+                ('etcdctl', 'lock', CACHE_LOCK_KEY, '--',
+                 'ci', 'update', cache_path),
+                env=mc_env,
+                check=True,
+            )
         except Exception as e:
             log(f'ci update (merge) failed: {e}')
 
@@ -254,7 +258,11 @@ def main():
         return
 
     if cmd == 'update':
-        update()
+        if len(sys.argv) != 3:
+            print('usage: ci update <local_cache_path>', file=sys.stderr)
+            sys.exit(2)
+
+        update(sys.argv[2])
         return
 
     print(f'unknown subcommand: {cmd}', file=sys.stderr)
