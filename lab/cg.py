@@ -1114,7 +1114,7 @@ class CI:
     # success-for-ci-check — they're detected by marker strings in
     # captured build output.
     def __init__(self, gorn_api, s3_endpoint):
-        self.v = 1
+        self.v = 2
         self.gorn_api = gorn_api
         self.s3_endpoint = s3_endpoint
 

@@ -128,7 +128,7 @@
                 "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=nebula_lh,runsh_script=sha256:4470f6616331d47b,srv_user=nebula_lh)",
                 "bin/ci(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=ci)",
-                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=ci,runsh_script=sha256:20dd999f52a1affa,srv_user=ci)",
+                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=ci,runsh_script=sha256:8c9d5b718321b58f,srv_user=ci)",
                 "bin/dropbear/2024(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "bin/su/exec(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_0,user_home=/var/run/gorn_0/std/home)",
@@ -262,7 +262,7 @@
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:a6a643b1c01816dc,srv_user=root)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:ffb42cdb6d80a307)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:1a4b896d57f67544)"
             ],
             "hostname": "lab1",
             "ip": "10.0.0.64",
@@ -431,7 +431,7 @@
                 "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=nebula_lh,runsh_script=sha256:0f91c04d6e87848c,srv_user=nebula_lh)",
                 "bin/ci(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=ci)",
-                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=ci,runsh_script=sha256:a192ae5a5b6d060a,srv_user=ci)",
+                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=ci,runsh_script=sha256:4265e0f70f54c6b2,srv_user=ci)",
                 "bin/dropbear/2024(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "bin/su/exec(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_0,user_home=/var/run/gorn_0/std/home)",
@@ -555,7 +555,7 @@
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:105cb0c99c0c74f5,srv_user=root)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:ffb42cdb6d80a307)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:1a4b896d57f67544)"
             ],
             "hostname": "lab2",
             "ip": "10.0.0.68",
@@ -724,7 +724,7 @@
                 "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=nebula_lh,runsh_script=sha256:b8cb8c6cc3e95031,srv_user=nebula_lh)",
                 "bin/ci(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=ci)",
-                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=ci,runsh_script=sha256:0e167916c811c73b,srv_user=ci)",
+                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=ci,runsh_script=sha256:b2f416c1fe4f07a9,srv_user=ci)",
                 "bin/dropbear/2024(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "bin/su/exec(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_0,user_home=/var/run/gorn_0/std/home)",
@@ -818,7 +818,7 @@
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:739bbad63c65a3e2,srv_user=root)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:ffb42cdb6d80a307)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:1a4b896d57f67544)"
             ],
             "hostname": "lab3",
             "ip": "10.0.0.72",
@@ -989,7 +989,7 @@
                 "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=nebula_lh,runsh_script=sha256:4470f6616331d47b,srv_user=nebula_lh)",
                 "bin/ci(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=ci)",
-                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=ci,runsh_script=sha256:20dd999f52a1affa,srv_user=ci)",
+                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=ci,runsh_script=sha256:8c9d5b718321b58f,srv_user=ci)",
                 "bin/dropbear/2024(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "bin/su/exec(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_0,user_home=/var/run/gorn_0/std/home)",
@@ -1123,7 +1123,7 @@
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:a6a643b1c01816dc,srv_user=root)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:ffb42cdb6d80a307)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:1a4b896d57f67544)"
             ],
             "hostname": "lab1",
             "ip": "10.0.0.64",
@@ -1292,7 +1292,7 @@
                 "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=nebula_lh,runsh_script=sha256:0f91c04d6e87848c,srv_user=nebula_lh)",
                 "bin/ci(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=ci)",
-                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=ci,runsh_script=sha256:a192ae5a5b6d060a,srv_user=ci)",
+                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=ci,runsh_script=sha256:4265e0f70f54c6b2,srv_user=ci)",
                 "bin/dropbear/2024(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "bin/su/exec(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_0,user_home=/var/run/gorn_0/std/home)",
@@ -1416,7 +1416,7 @@
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:105cb0c99c0c74f5,srv_user=root)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:ffb42cdb6d80a307)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:1a4b896d57f67544)"
             ],
             "hostname": "lab2",
             "ip": "10.0.0.68",
@@ -1585,7 +1585,7 @@
                 "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=nebula_lh,runsh_script=sha256:b8cb8c6cc3e95031,srv_user=nebula_lh)",
                 "bin/ci(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=ci)",
-                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=ci,runsh_script=sha256:0e167916c811c73b,srv_user=ci)",
+                "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=ci,runsh_script=sha256:b2f416c1fe4f07a9,srv_user=ci)",
                 "bin/dropbear/2024(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "bin/su/exec(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_0,user_home=/var/run/gorn_0/std/home)",
@@ -1679,7 +1679,7 @@
                 "lab/etc/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "lab/etc/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "lab/services/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:739bbad63c65a3e2,srv_user=root)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:ffb42cdb6d80a307)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:1a4b896d57f67544)"
             ],
             "hostname": "lab3",
             "ip": "10.0.0.72",
