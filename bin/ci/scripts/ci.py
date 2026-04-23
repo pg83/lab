@@ -125,10 +125,10 @@ def update(local_path):
     env = mc_env_for(os.environ)
     uri = s3_cache_uri()
 
-    with open(local_path, 'rb') as f:
+    with open(local_path) as f:
         ours = f.read()
 
-    remote = mc_cat(uri, env)
+    remote = mc_cat(uri, env).decode()
 
     merged = set()
 
@@ -212,19 +212,17 @@ def check(tier):
         # some nodes and those wins are worth sharing. RMW is
         # serialized across concurrent checks via etcdctl lock around
         # `ci update`, which reads the cache path from argv (stdin is
-        # eaten by etcdctl lock before reaching its child).
-        try:
-            size = os.path.getsize(cache_path) if os.path.exists(cache_path) else '-'
-            log(f'merging cache_path={cache_path} size={size}')
+        # eaten by etcdctl lock before reaching its child). Don't
+        # swallow failures — we want the traceback in the task stderr.
+        size = os.path.getsize(cache_path) if os.path.exists(cache_path) else '-'
+        log(f'merging cache_path={cache_path} size={size}')
 
-            subprocess.run(
-                ('etcdctl', 'lock', CACHE_LOCK_KEY, '--',
-                 'ci', 'update', cache_path),
-                env=mc_env,
-                check=True,
-            )
-        except Exception as e:
-            log(f'ci update (merge) failed: {e}')
+        subprocess.run(
+            ('etcdctl', 'lock', CACHE_LOCK_KEY, '--',
+             'ci', 'update', cache_path),
+            env=mc_env,
+            check=True,
+        )
 
     # Replay build output to our own stderr so gorn wrap's capture
     # picks it up and ships it to S3 alongside result.json.
