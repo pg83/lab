@@ -39,6 +39,11 @@ CI_TIERS = [
     'set/ci/tier/2',
 ]
 
+# Comma-separated Telegram user IDs allowed to send .torrents to the
+# SamogonBot service. Empty → bot crash-loops on start (intentional;
+# we don't want to accidentally ship a world-writable bot).
+TG_ALLOW_USERS = ''
+
 CPUS_PER_SLOT = 4
 
 HOST_CPUS = {
@@ -1508,6 +1513,59 @@ class Samogon:
             exec_into(*args, user='samogon', **env)
 
 
+class SamogonBot:
+    # Telegram bot front-end for `samogon fetch`. Accepts .torrent
+    # files from an allow-listed set of users and pipes each into
+    # `gorn ignite -- samogon fetch`.
+    #
+    # Cluster-wide singleton via `etcdctl lock /lock/samogon_bot`:
+    # the service runs on every host, but only the lock holder
+    # actually polls Telegram. Peers block inside etcdctl until
+    # the holder dies (host down, process crash) — etcd releases,
+    # another host picks up. No manual failover.
+    #
+    # TG_BOT_TOKEN comes from the old secrets store (get_key);
+    # TG_ALLOW_USERS is configuration data that lives in cg.py.
+    # S3 creds + endpoints land as env into the bot so `gorn ignite`
+    # below can forward them via --env to the worker-side fetch.
+    def __init__(self, s3_endpoint, gorn_api, tg_allow_users):
+        self.v = 1
+        self.s3_endpoint = s3_endpoint
+        self.gorn_api = gorn_api
+        self.tg_allow_users = tg_allow_users
+        self._hash = _class_src_hash(type(self))
+
+    def name(self):
+        return 'samogon_bot'
+
+    def user(self):
+        return 'samogon_bot'
+
+    def pkgs(self):
+        yield {'pkg': 'bin/samogon'}
+
+    def run(self):
+        env = {
+            'PATH': '/bin',
+            'HOME': os.getcwd(),
+            'TMPDIR': os.getcwd(),
+            'TG_BOT_TOKEN': get_key('/samogon/bot/token').decode().strip(),
+            'TG_ALLOW_USERS': self.tg_allow_users,
+            'GORN_API': self.gorn_api,
+            'AWS_ACCESS_KEY_ID': get_key('/s3/user').decode().strip(),
+            'AWS_SECRET_ACCESS_KEY': get_key('/s3/password').decode().strip(),
+            'S3_ENDPOINT': self.s3_endpoint,
+            'S3_BUCKET': 'samogon',
+            'SAMOGON_S3_ROOT': 'torrents',
+        }
+
+        # Stagger lock-acquisition attempts so all three hosts don't
+        # dogpile etcd on deploy (same dance as HFSync / MirrorFetch).
+        time.sleep(random.random() * 10)
+
+        exec_into('etcdctl', 'lock', '/lock/samogon_bot', 'samogon', 'bot', **env)
+
+
 class Loki:
     # HA log aggregator, one per host. Ring kvstore lives in the
     # secondary etcd_2 cluster (separate from gorn's etcd_private to
@@ -2125,6 +2183,15 @@ class ClusterMap:
 
             yield {
                 'host': hn,
+                'serv': SamogonBot(
+                    s3_endpoint=f"http://{hn}.eth1:{p['minio']}",
+                    gorn_api=f"http://127.0.0.1:{p['gorn_ctl']}",
+                    tg_allow_users=TG_ALLOW_USERS,
+                ),
+            }
+
+            yield {
+                'host': hn,
                 'serv': SecretsV2(p['secrets_v2']),
             }
 
@@ -2328,6 +2395,7 @@ sys.modules['builtins'].SocksProxy = SocksProxy
 sys.modules['builtins'].CO2Mon = CO2Mon
 sys.modules['builtins'].MirrorFetch = MirrorFetch
 sys.modules['builtins'].Samogon = Samogon
+sys.modules['builtins'].SamogonBot = SamogonBot
 sys.modules['builtins'].Loki = Loki
 sys.modules['builtins'].Promtail = Promtail
 sys.modules['builtins'].TailLog = TailLog
@@ -2690,6 +2758,7 @@ def do(code):
         'mirror_fetch': 1025,
         'etcd_private': 1026,
         'etcd_2': 2003,
+        'samogon_bot': 2004,
         'secrets': 1027,
         'hf_sync': 1028,
         'ghcr_sync': 1029,
