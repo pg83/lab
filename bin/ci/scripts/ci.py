@@ -122,6 +122,9 @@ def ignite(tier, sha):
         'gorn', 'ignite',
         '--guid', guid_for(tier, sha),
         '--descr', f'ci check {tier} {sha}',
+        # Keep our artifacts under gorn/ci/<guid>/ in S3, not the
+        # default gorn/cli/ that mixes with ad-hoc ignites.
+        '--root', 'ci',
         # ci check encodes its own build-fail vs infra-fail verdict in
         # the exit code. With --retry-error, any non-zero (= infra
         # error per ci check) goes back onto the gorn queue; a
