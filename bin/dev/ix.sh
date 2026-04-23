@@ -7,4 +7,6 @@ bin/etcd/ctl
 bin/dev/scripts
 bin/openssh/client
 bin/minio/patched/client
+bin/iperf
+bin/su/exec
 {% endblock %}
