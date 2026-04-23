@@ -31,5 +31,9 @@ base64 -d << EOF > ${out}/bin/iperf_shot
 {% include 'iperf_shot.sh/base64' %}
 EOF
 
+base64 -d << EOF > ${out}/bin/log_follow
+{% include 'log_follow.py/base64' %}
+EOF
+
 chmod +x ${out}/bin/*
 {% endblock %}
