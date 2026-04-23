@@ -7,6 +7,7 @@ lab/etc
 lab/services/autoupdate(user=ix)
 
 bin/ci
+bin/etcd/backup
 bin/mc
 bin/htop
 bin/dev
