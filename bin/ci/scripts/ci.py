@@ -122,6 +122,12 @@ def ignite(tier, sha):
         'gorn', 'ignite',
         '--guid', guid_for(tier, sha),
         '--descr', f'ci check {tier} {sha}',
+        # ci check encodes its own build-fail vs infra-fail verdict in
+        # the exit code. With --retry-error, any non-zero (= infra
+        # error per ci check) goes back onto the gorn queue; a
+        # clean exit 0 (build attempted, build-fail marker seen or
+        # build succeeded) finalizes the task as done.
+        '--retry-error',
     ]
 
     for k in FORWARD_ENV:
