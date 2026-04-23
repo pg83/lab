@@ -1557,6 +1557,11 @@ class SamogonBot:
             'S3_ENDPOINT': self.s3_endpoint,
             'S3_BUCKET': 'samogon',
             'SAMOGON_S3_ROOT': 'torrents',
+            # Lab hosts have no direct outbound to api.telegram.org;
+            # route the bot's Bot-API calls + file downloads through
+            # the per-host haproxy-wrapped SOCKS5 exit tunnel (port
+            # 8015, via the SocksProxy service a few lines below).
+            'SAMOGON_SOCKS5': '127.0.0.1:8015',
         }
 
         # Stagger lock-acquisition attempts so all three hosts don't
