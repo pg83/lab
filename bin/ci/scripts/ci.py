@@ -182,41 +182,30 @@ def check(tier, sha):
     # `os.kill(0, SIGKILL)` on target-subprocess failure, which kills
     # its entire process group. Without a new session, that group
     # includes us — we'd be dead before we could classify the failure.
-    proc = subprocess.Popen(
+    res = subprocess.run(
         ('./ix', 'build', tier, '--seed=1'),
         cwd=workdir,
         env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         start_new_session=True,
+        check=False,
     )
 
-    chunks = []
+    # Replay build output to our own stderr so gorn wrap's capture
+    # picks it up and ships it to S3 alongside result.json.
+    os.write(2, res.stdout)
 
-    while True:
-        c = proc.stdout.read(65536)
-
-        if not c:
-            break
-
-        chunks.append(c)
-        # Tee to stderr so the build log is live in gorn wrap's
-        # captured stderr (visible via `gorn control` API).
-        os.write(2, c)
-
-    rc = proc.wait()
-    blob = b''.join(chunks)
-
-    if rc == 0:
+    if res.returncode == 0:
         log('ix build succeeded')
         sys.exit(0)
 
-    if has_target_fail(blob):
-        log(f'ix build exited {rc} with target-failure marker — counted as build error (ci check success)')
+    if has_target_fail(res.stdout):
+        log(f'ix build exited {res.returncode} with target-failure marker — counted as build error (ci check success)')
         sys.exit(0)
 
-    log(f'ix build exited {rc} with no target-failure marker — infra error')
-    sys.exit(rc if rc else 2)
+    log(f'ix build exited {res.returncode} with no target-failure marker — infra error')
+    sys.exit(res.returncode if res.returncode else 2)
 
 
 def main():
