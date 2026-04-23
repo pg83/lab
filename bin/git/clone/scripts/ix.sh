@@ -4,7 +4,7 @@
 mkdir ${out}/bin
 
 base64 -d << EOF > ${out}/bin/gpull
-{% include 'pull.sh/base64' %}
+{% include 'pull.py/base64' %}
 EOF
 
 chmod +x ${out}/bin/*
