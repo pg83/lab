@@ -1482,7 +1482,7 @@ class SamogonBot:
         }
 
         # Stagger lock-acquisition attempts so all three hosts don't
-        # dogpile etcd on deploy (same dance as HFSync / MirrorFetch).
+        # dogpile etcd on deploy (same dance as MirrorFetch).
         time.sleep(random.random() * 10)
 
         exec_into('etcdctl', 'lock', '/lock/samogon_bot', 'samogon', 'bot', **env)
@@ -1501,7 +1501,7 @@ class JobScheduler:
     # (inherited from the service env). Cron files pick what they
     # use; scheduler itself doesn't know what any of them mean.
     def __init__(self, gorn_api, s3_endpoint):
-        self.v = 1
+        self.v = 2
         self.gorn_api = gorn_api
         self.s3_endpoint = s3_endpoint
         self._hash = _class_src_hash(type(self))
@@ -1511,6 +1511,18 @@ class JobScheduler:
 
     def user(self):
         return 'job_scheduler'
+
+    def py_modules(self):
+        # Cluster-wide Python deps that used to come via HFSync; other
+        # python tools under the scheduler (cron scripts, helpers) end
+        # up sharing the same interpreter set, so keep them parked
+        # here after HFSync was migrated to a cron.
+        return [
+            'pip/tqdm',
+            'pip/PyYAML',
+            'pip/requests',
+            'pip/filelock',
+        ]
 
     def pkgs(self):
         yield {'pkg': 'bin/job/scheduler'}
@@ -1524,9 +1536,15 @@ class JobScheduler:
             'S3_ENDPOINT': self.s3_endpoint,
             'AWS_ACCESS_KEY_ID': get_key('/s3/user').decode().strip(),
             'AWS_SECRET_ACCESS_KEY': get_key('/s3/password').decode().strip(),
+            # Tokens for the HF / GHCR sync crons. Scheduler holds
+            # them so cron files can $-expand into gorn ignite
+            # --env pairs without every job needing its own secrets
+            # plumbing on the worker side.
+            'HF_TOKEN': get_key('/hf/token').decode().strip(),
+            'GHCR_TOKEN': get_key('/ghcr/token').decode().strip(),
         }
 
-        # Same stagger dance as SamogonBot / HFSync.
+        # Same stagger dance as SamogonBot / other lock-leader services.
         time.sleep(random.random() * 10)
 
         exec_into('etcdctl', 'lock', '/lock/job/scheduler', 'job_scheduler', **env)
@@ -1906,64 +1924,6 @@ class MirrorFetch:
         exec_into('etcdctl', 'lock', '/lock/mirror', 'cache_ix_sources', **env)
 
 
-class HFSync:
-    def __init__(self):
-        self.v = 1
-
-    def name(self):
-        return 'hf_sync'
-
-    def pkgs(self):
-        yield {
-            'pkg': 'bin/hf/sync',
-        }
-
-    def py_modules(self):
-        return [
-            'pip/tqdm',
-            'pip/PyYAML',
-            'pip/requests',
-            'pip/filelock',
-        ]
-
-    def run(self):
-        env = {
-            'PATH': '/bin',
-            'HF_TOKEN': get_key('/hf/token').decode().strip(),
-            'HOME': os.getcwd(),
-            'TMPDIR': os.getcwd(),
-        }
-
-        time.sleep(random.random() * 10)
-
-        exec_into('etcdctl', 'lock', '/lock/hf', 'hf_sync', **env)
-
-
-class GHCRSync:
-    def __init__(self):
-        self.v = 2
-
-    def name(self):
-        return 'ghcr_sync'
-
-    def pkgs(self):
-        yield {
-            'pkg': 'bin/ghcr',
-        }
-
-    def run(self):
-        env = {
-            'PATH': '/bin',
-            'GHCR_TOKEN': get_key('/ghcr/token').decode().strip(),
-            'HOME': os.getcwd(),
-            'TMPDIR': os.getcwd(),
-        }
-
-        time.sleep(random.random() * 10)
-
-        exec_into('etcdctl', 'lock', '/lock/ghcr', 'ghcr_sync', **env)
-
-
 class ClusterMap:
     def __init__(self, conf):
         self.conf = conf
@@ -2056,16 +2016,6 @@ class ClusterMap:
                         'host': hn,
                         'serv': Heat(i + 1),
                     }
-
-            yield {
-                'host': hn,
-                'serv': HFSync(),
-            }
-
-            yield {
-                'host': hn,
-                'serv': GHCRSync(),
-            }
 
             yield {
                 'host': hn,
@@ -2355,8 +2305,6 @@ sys.modules['builtins'].Promtail = Promtail
 sys.modules['builtins'].TailLog = TailLog
 sys.modules['builtins'].Secrets = Secrets
 sys.modules['builtins'].SecretsV2 = SecretsV2
-sys.modules['builtins'].HFSync = HFSync
-sys.modules['builtins'].GHCRSync = GHCRSync
 sys.modules['builtins'].Heat = Heat
 
 
@@ -2713,8 +2661,6 @@ def do(code):
         'samogon_bot': 2004,
         'job_scheduler': 2005,
         'secrets': 1027,
-        'hf_sync': 1028,
-        'ghcr_sync': 1029,
         'perses': 1017,
         'grafana': 1094,
         'federator': 2000,

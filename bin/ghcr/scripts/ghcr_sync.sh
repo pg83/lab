@@ -4,8 +4,6 @@ set -xue
 
 echo ${PATH}
 
-sleep 200
-
 rm -rf _
 
 minio-client ls minio/cas | grep STA | sed -e 's|.* ||' | sort | grep -v '^$' > 1

@@ -8,6 +8,8 @@ lab/services/autoupdate(user=ix)
 
 bin/ci
 bin/etcd/backup
+bin/hf/sync
+bin/ghcr
 bin/mc
 bin/htop
 bin/dev
