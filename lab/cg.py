@@ -1862,8 +1862,11 @@ class SecretsV2:
     def name(self):
         return 'secrets_v2'
 
-    def user(self):
-        return 'root'
+    def users(self):
+        # Start as root so persdb can read /master.key out of EFI vars
+        # (needs CAP_SYS_ADMIN); drop to secrets_v2 for the actual
+        # HTTP-server phase, which is pure Python and non-privileged.
+        return ['root', 'secrets_v2']
 
     def pkgs(self):
         yield {'pkg': 'bin/secrets/v2'}
@@ -1872,13 +1875,14 @@ class SecretsV2:
         # efi_get / efi_put need CAP_SYS_ADMIN so we fetch the
         # passphrase here (service runs as root) and pass it through
         # to the Python server via env; the server itself then does
-        # nothing privileged.
+        # nothing privileged and runs as secrets_v2.
         pp = subprocess.check_output(['persdb', 'get', '/master.key']).decode('utf-8').strip()
 
         exec_into(
             'ix_serve_secrets_v2',
             str(self.port),
             '/ix/realm/system/share/secrets-v2/store',
+            user='secrets_v2',
             SECRETS_V2_MASTER_KEY=pp,
         )
 
@@ -2661,6 +2665,7 @@ def do(code):
         'samogon_bot': 2004,
         'job_scheduler': 2005,
         'secrets': 1027,
+        'secrets_v2': 1028,
         'perses': 1017,
         'grafana': 1094,
         'federator': 2000,
