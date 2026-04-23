@@ -12,6 +12,9 @@ cat << EOF > ${out}/bin/autoupdate_cycle
 #!/usr/bin/env sh
 set -xue
 sleep 10
+# gpull exits 7 when there are no new commits — set -e short-circuits
+# the rest of this cycle, runit restarts us, next sleep+gpull. Only
+# spend time on mut when there's actually something new upstream.
 gpull https://github.com/pg83/lab ix
 ix mut system
 ix mut \$(ix list)
@@ -21,7 +24,6 @@ ix mut \$(ix list)
 # cluster — tooling can answer "is this host running the latest
 # commit?" without SSH'ing in.
 echo "autoupdate_ix: deployed runpy-sha256=\$(sha256sum /bin/runpy | awk '{print \$1}')"
-timeout 60s etcdctl watch --prefix /git/logs/git_lab | gnugrep --line-buffered 'PUT' | head -n 1
 EOF
 
 chmod +x ${out}/bin/*

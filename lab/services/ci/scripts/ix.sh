@@ -22,6 +22,10 @@ export MOLOT_CACHE=./cache
 
 sleep 10
 
+# gpull exits 7 when there are no new commits — set -e short-circuits
+# the rest of this cycle, runit restarts us, next sleep+gpull. Only
+# spend time on ./ix build when there's actually something new
+# upstream.
 gpull https://github.com/pg83/ix ix
 
 cd ix
@@ -32,8 +36,6 @@ cd ix
 rm -rf mc-molot-*
 
 ./ix build {{ci_targets}} --seed=1
-
-timeout 60s etcdctl watch --prefix /git/logs/git_ci | gnugrep --line-buffered 'PUT' | head -n 1
 EOF
 
 chmod +x ${out}/bin/*
