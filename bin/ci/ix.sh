@@ -1,10 +1,10 @@
 {% extends '//die/hub.sh' %}
 
 {% block run_deps %}
-bin/python
 bin/gorn
 bin/molot
-bin/git/clone
+bin/python
 bin/etcd/ctl
+bin/git/clone
 bin/ci/scripts
 {% endblock %}
