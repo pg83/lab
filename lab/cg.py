@@ -114,49 +114,6 @@ class Heat:
         ]
 
 
-class WebHooks:
-    def __init__(self, port, where):
-        self.port = port
-        self.path = where
-
-    def l7_balancer(self):
-        yield {
-            'proto': 'http',
-            'server': 'webhook.homelab.cam',
-            'source': '^/(.*)',
-            'dest': f':{self.port}/$1',
-        }
-
-        yield {
-            'proto': 'http',
-            'server': 'ix.homelab.cam',
-            'source': '^/(.*)',
-            'dest': f':{self.port}/cas.sh?$1',
-        }
-
-    def run(self):
-        exec_into('cgi_server', f'0.0.0.0:{self.port}', self.path)
-
-    def pkgs(self):
-        yield {
-            'pkg': 'bin/cgi/server'
-        }
-
-        yield {
-            'pkg': 'bin/git/hook',
-            'evlog_topic': 'git_ci',
-        }
-
-        yield {
-            'pkg': 'bin/git/hook',
-            'evlog_topic': 'git_lab',
-        }
-
-        yield {
-            'pkg': 'bin/mirror/serve',
-        }
-
-
 class NodeExporter:
     def __init__(self, port):
         self.port = port
@@ -2255,11 +2212,6 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': WebHooks(p['web_hooks'], '/etc/hooks/'),
-            }
-
-            yield {
-                'host': hn,
                 'serv': NodeExporter(p['node_exporter']),
             }
 
@@ -2368,7 +2320,6 @@ class ClusterMap:
 
 
 sys.modules['builtins'].IPerf = IPerf
-sys.modules['builtins'].WebHooks = WebHooks
 sys.modules['builtins'].NodeExporter = NodeExporter
 sys.modules['builtins'].Collector = Collector
 sys.modules['builtins'].NebulaNode = NebulaNode
@@ -2704,7 +2655,6 @@ def do(code):
         'sftp_d': 8002,
         'mirror_http': 8003,
         'mirror_rsyncd': 8004,
-        'web_hooks': 8005,
         'i_perf': 8006,
         'node_exporter': 8007,
         'collector': 8008,
@@ -2745,7 +2695,6 @@ def do(code):
         'git_lab': 1007,
         'git_ci': 1008,
         'h_z': 1009,
-        'web_hooks': 1010,
         'i_perf': 1011,
         'nebula_lh': 1012,
         'minio_1': 1013,
