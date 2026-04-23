@@ -8,6 +8,7 @@ lab/services/autoupdate(user=ix)
 
 bin/ci
 bin/etcd/backup
+bin/etcd/defrag
 bin/hf/sync
 bin/ghcr
 bin/mc
