@@ -205,7 +205,7 @@ def check(tier, sha):
         sys.exit(0)
 
     log(f'ix build exited {res.returncode} with no target-failure marker — infra error')
-    sys.exit(res.returncode if res.returncode else 2)
+    sys.exit(res.returncode)
 
 
 def main():
