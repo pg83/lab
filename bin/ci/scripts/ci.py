@@ -35,6 +35,7 @@ Retry model:
   gorn automatically — we don't model that here.
 """
 
+import contextlib
 import os
 import random
 import re
@@ -48,6 +49,15 @@ GIT_URL = 'https://github.com/pg83/ix'
 ETCD_KEY_LAST_SHA = '/ci/last_sha'
 POLL_INTERVAL_S = 10
 TIERS = ['set/ci/tier/0', 'set/ci/tier/1', 'set/ci/tier/2']
+
+# Shared molot-complete cache. Each gorn endpoint has its own PWD
+# so a local-only MOLOT_CACHE file would never see hits from other
+# endpoints on other hosts — effectively cold every run. We push the
+# union into a single S3 object and pull it back on every ci check.
+CACHE_LOCK_KEY = '/lock/ci/cache'
+CACHE_S3_BUCKET = 'gorn'
+CACHE_S3_KEY = 'ci/complete'
+MC_ALIAS = 'ci'
 
 # Marker strings that mean "./ix build got far enough to dispatch a
 # target, the target blew up". Seeing any of these in captured stdout
@@ -114,6 +124,9 @@ FORWARD_ENV = [
     'AWS_SECRET_ACCESS_KEY',
     'MOLOT_FULL_SLOTS',
     'MOLOT_QUIET',
+    # etcdctl on the worker needs the cluster endpoints to take the
+    # shared-cache lock; inherited from the lab service env.
+    'ETCDCTL_ENDPOINTS',
 ]
 
 
@@ -178,6 +191,109 @@ def has_target_fail(blob):
     return any(p.search(blob) for p in TARGET_FAIL_PATTERNS)
 
 
+def mc_env_for(base_env):
+    """Build an env dict with MC_HOST_<alias> baked from S3_ENDPOINT +
+    AWS_* so minio-client can reach the cluster without ~/.mc/config."""
+    scheme, host = base_env['S3_ENDPOINT'].split('://', 1)
+    key = base_env['AWS_ACCESS_KEY_ID']
+    secret = base_env['AWS_SECRET_ACCESS_KEY']
+    out = dict(base_env)
+    out[f'MC_HOST_{MC_ALIAS}'] = f'{scheme}://{key}:{secret}@{host}'
+    return out
+
+
+def s3_cache_uri():
+    return f'{MC_ALIAS}/{CACHE_S3_BUCKET}/{CACHE_S3_KEY}'
+
+
+@contextlib.contextmanager
+def etcd_lock(key):
+    """Hold an etcd lock for the duration of the with-block. `etcdctl
+    lock` prints the lease key once the lock is acquired; we block on
+    that line so the caller only enters the critical section after
+    acquisition. Releasing means killing the etcdctl child so its
+    lease expires."""
+    proc = subprocess.Popen(
+        ('etcdctl', 'lock', key, 'sleep', 'infinity'),
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+    )
+
+    try:
+        line = proc.stdout.readline()
+
+        if not line:
+            proc.wait()
+            raise RuntimeError(f'etcdctl lock {key} exited before granting')
+
+        yield
+    finally:
+        proc.terminate()
+        proc.wait()
+
+
+def mc_cat(uri, env):
+    """Return (bytes, exists). `exists=False` on 'object not found' —
+    first run before anyone has pushed a cache."""
+    res = subprocess.run(
+        ('minio-client', 'cat', uri),
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+
+    if res.returncode == 0:
+        return res.stdout, True
+
+    if b'Object does not exist' in res.stderr or b'NoSuchKey' in res.stderr:
+        return b'', False
+
+    sys.stderr.buffer.write(res.stderr)
+    res.check_returncode()
+
+
+def seed_cache(local_path, env):
+    """Under etcd lock, pull the shared molot-complete cache from S3
+    into local_path. On first run (no object yet) local_path stays
+    empty — molot will just start cold and fill it."""
+    with etcd_lock(CACHE_LOCK_KEY):
+        data, _ = mc_cat(s3_cache_uri(), env)
+
+    with open(local_path, 'wb') as f:
+        f.write(data)
+
+
+def merge_cache_back(local_path, env):
+    """Under etcd lock: re-pull the shared cache, union with our local
+    copy, push the merged result back. The re-pull matters — another
+    ci check may have merged between seed and now; union keeps both
+    their hits and ours."""
+    with etcd_lock(CACHE_LOCK_KEY):
+        remote, _ = mc_cat(s3_cache_uri(), env)
+
+        merged = set()
+
+        for blob in (remote, open(local_path, 'rb').read() if os.path.exists(local_path) else b''):
+            for line in blob.splitlines():
+                line = line.strip()
+
+                if line:
+                    merged.add(line)
+
+        tmp = local_path + '.merged'
+
+        with open(tmp, 'w') as f:
+            for line in sorted(merged):
+                f.write(line + '\n')
+
+        subprocess.run(
+            ('minio-client', 'cp', tmp, s3_cache_uri()),
+            env=env,
+            check=True,
+        )
+
+
 def check(tier, sha):
     # Workdir = PWD (the endpoint path gorn chdir'd us into). Clone
     # into `./ix` under it and run from there. rmtree first so a
@@ -193,21 +309,38 @@ def check(tier, sha):
     env = os.environ.copy()
     env['IX_EXEC_KIND'] = 'molot'
     env.setdefault('S3_BUCKET', 'gorn')
-    env['MOLOT_CACHE'] = './cache'
+
+    # Molot-complete cache: pull the shared union from S3, hand it to
+    # molot as its local cache, push the (possibly extended) union
+    # back at the end. Absolute path because molot's cwd is workdir.
+    cache_path = os.path.abspath(os.path.join(workdir, 'cache'))
+    env['MOLOT_CACHE'] = cache_path
+    mc_env = mc_env_for(env)
+
+    seed_cache(cache_path, mc_env)
 
     # start_new_session=True: ./ix build's execute.py does
     # `os.kill(0, SIGKILL)` on target-subprocess failure, which kills
     # its entire process group. Without a new session, that group
     # includes us — we'd be dead before we could classify the failure.
-    res = subprocess.run(
-        ('./ix', 'build', tier, '--seed=1'),
-        cwd=workdir,
-        env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        start_new_session=True,
-        check=False,
-    )
+    try:
+        res = subprocess.run(
+            ('./ix', 'build', tier, '--seed=1'),
+            cwd=workdir,
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+            check=False,
+        )
+    finally:
+        # Always push our additions back — even a partial build built
+        # some nodes and those wins are worth sharing. Failures here
+        # shouldn't mask the build outcome, just log.
+        try:
+            merge_cache_back(cache_path, mc_env)
+        except Exception as e:
+            log(f'merge_cache_back failed: {e}')
 
     # Replay build output to our own stderr so gorn wrap's capture
     # picks it up and ships it to S3 alongside result.json.
