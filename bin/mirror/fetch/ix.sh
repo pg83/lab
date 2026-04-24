@@ -4,5 +4,7 @@
 bin/cas
 bin/make
 bin/python
+bin/mirror/fetch/cron
 bin/mirror/fetch/scripts
+bin/minio/patched/client
 {% endblock %}

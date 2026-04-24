@@ -1484,7 +1484,7 @@ class SamogonBot:
         }
 
         # Stagger lock-acquisition attempts so all three hosts don't
-        # dogpile etcd on deploy (same dance as MirrorFetch).
+        # dogpile etcd on deploy (same dance as JobScheduler).
         time.sleep(random.random() * 10)
 
         exec_into('etcdctl', 'lock', '/lock/samogon_bot', 'samogon', 'bot', **env)
@@ -1899,24 +1899,6 @@ class CO2Mon:
         exec_into('co2mond')
 
 
-class MirrorFetch:
-    def pkgs(self):
-        yield {
-            'pkg': 'bin/mirror/fetch',
-        }
-
-    def run(self):
-        env = {
-            'HOME': os.getcwd(),
-            'TMPDIR': os.getcwd(),
-            'PATH': '/bin',
-        }
-
-        time.sleep(random.random() * 10)
-
-        exec_into('etcdctl', 'lock', '/lock/mirror', 'cache_ix_sources', **env)
-
-
 class ClusterMap:
     def __init__(self, conf):
         self.conf = conf
@@ -2114,11 +2096,6 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': MirrorFetch(),
-            }
-
-            yield {
-                'host': hn,
                 'serv': BalancerHttp(p['proxy_http'], p['proxy_http_mgmt'], bal_map),
             }
 
@@ -2289,7 +2266,6 @@ sys.modules['builtins'].Federator = Federator
 sys.modules['builtins'].SshTunnel = SshTunnel
 sys.modules['builtins'].SocksProxy = SocksProxy
 sys.modules['builtins'].CO2Mon = CO2Mon
-sys.modules['builtins'].MirrorFetch = MirrorFetch
 sys.modules['builtins'].Samogon = Samogon
 sys.modules['builtins'].SamogonBot = SamogonBot
 sys.modules['builtins'].JobScheduler = JobScheduler
@@ -2664,7 +2640,6 @@ def do(code):
         'socks_proxy': 1021,
         'ssh_cz_tunnel': 1023,
         'ssh_jopa_tunnel': 1024,
-        'mirror_fetch': 1025,
         'etcd_private': 1026,
         'etcd_2': 2003,
         'samogon_bot': 2004,
