@@ -2,7 +2,7 @@
 
 {% block run_deps %}
 bin/python
-etc/user
+etc/lab/user
 bin/git/unwrap
 bin/auto/update/scripts
 {% endblock %}
