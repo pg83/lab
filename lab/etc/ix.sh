@@ -5,9 +5,9 @@
 
 {% block run_deps %}
 lab/etc/env
+lab/etc/arp
 lab/etc/keys
 lab/etc/hosts
-lab/etc/arp
 lab/etc/sysctl
 lab/etc/multihome
 
