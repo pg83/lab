@@ -87,4 +87,4 @@ Secrets are served locally by the `Secrets` service on `localhost:8022`. Code ne
 
 ## Updating
 
-`lab/services/autoupdate` runs a loop as user `ix` that pulls the repo and rebuilds via IX. `lab/services/ci` watches `etcd` (`git_ci` topic) and triggers `./ix build bld/all` + `./ix mut ci <targets> --jail=1 --seed=1 --tmpfs=1`.
+`bin/auto/update` runs a loop as user `ix` that pulls the repo and rebuilds via IX. `lab/services/ci` watches `etcd` (`git_ci` topic) and triggers `./ix build bld/all` + `./ix mut ci <targets> --jail=1 --seed=1 --tmpfs=1`.

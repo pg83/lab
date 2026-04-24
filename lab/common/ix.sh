@@ -4,7 +4,7 @@
 {{(cluster_map | des).by_host[hostname].extra}}
 
 lab/etc
-lab/services/autoupdate(user=ix)
+bin/auto/update(user=ix)
 
 bin/ci
 bin/etcd/backup

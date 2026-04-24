@@ -4,5 +4,5 @@
 bin/python
 lab/etc/user
 bin/git/unwrap
-lab/services/autoupdate/scripts
+bin/auto/update/scripts
 {% endblock %}

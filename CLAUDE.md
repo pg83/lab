@@ -77,7 +77,7 @@ The canon captures the full generated cluster config per host (`extra` as a line
 - Host/NIC/Nebula layout: `lab/cg.py` → `gen_host(n)`.
 - Per-host service wiring: `lab/cg.py` → `ClusterMap.it_cluster()`.
 - Runit service template: `lab/services/sh/runit/ix.sh`.
-- Auto-update loop: `lab/services/autoupdate/`.
+- Auto-update loop: `bin/auto/update/`.
 - CI loop: `lab/services/ci/`.
 
 ## Runtime layout
