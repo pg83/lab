@@ -3,7 +3,7 @@
 {% block run_deps %}
 {{(cluster_map | des).by_host[hostname].extra}}
 
-lab/etc
+etc
 
 bin/ci
 bin/mc

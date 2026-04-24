@@ -736,7 +736,7 @@ class GornSsh:
         }
 
         yield {
-            'pkg': 'lab/etc/user/home',
+            'pkg': 'etc/user/home',
             'user': self.name(),
             'user_home': self.home_dir(),
         }
@@ -812,7 +812,7 @@ class GornBase:
         }
 
         yield {
-            'pkg': 'lab/etc/user/home',
+            'pkg': 'etc/user/home',
             'user': self.name(),
             'user_home': self.home_dir(),
         }
@@ -1129,7 +1129,7 @@ class Perses:
         }
 
         yield {
-            'pkg': 'lab/etc/user/home',
+            'pkg': 'etc/user/home',
             'user': self.name(),
             'user_home': self.home_dir(),
         }
@@ -1391,7 +1391,7 @@ class Samogon:
         }
 
         yield {
-            'pkg': 'lab/etc/user/home',
+            'pkg': 'etc/user/home',
             'user': 'samogon',
             'user_home': self.home_dir(),
         }
@@ -1585,7 +1585,7 @@ class Loki:
         }
 
         yield {
-            'pkg': 'lab/etc/user/home',
+            'pkg': 'etc/user/home',
             'user': 'loki',
             'user_home': self.home_dir(),
         }
@@ -2480,7 +2480,7 @@ class Service:
 
         for user in self.users():
             yield {
-                'pkg': 'lab/etc/user',
+                'pkg': 'etc/user',
                 'user': user,
             }
 

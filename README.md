@@ -10,7 +10,7 @@ Everything — the OS image, the services, the mesh network, the secondary IPs �
 ./ix                    # bootstrap: sets IX_PATH, execs ext/ix/ix
 ./ext/ix/               # IX package manager (git submodule, stal-ix/ix)
 ./lab/
-    ix.sh               # top-level hub; pulls in lab/map with the generated cluster_map
+    ix.sh               # top-level hub; pulls in map with the generated cluster_map
     cg.py               # Python generator: hosts, ports, users, service classes, topology
     map/ix.sh           # per-host dispatch (extends lab/common + lab/hosts/<hostname>)
     common/ix.sh        # base package set for every host
@@ -27,7 +27,7 @@ Everything — the OS image, the services, the mesh network, the secondary IPs �
 
 1. `./ix <command>` exports `IX_PATH="./:./ext/ix/pkgs"` and hands off to the IX tool.
 2. `lab/ix.sh` executes `cg.py` to produce a `cluster_map` (hosts, ports, users, per-host service list).
-3. The map is serialized and passed down to `lab/map`, which for each host loads `lab/common` + `lab/hosts/<hostname>`.
+3. The map is serialized and passed down to `map`, which for each host loads `lab/common` + `lab/hosts/<hostname>`.
 4. `lab/common` expands `hm.extra` — a list of `bin/run/sh(...)` package invocations, one per service.
 5. Each service is realized as a runit-supervised script that base64-decodes a pickled Python object (`runpy` entry point) and calls its `.run()`.
 
@@ -37,7 +37,7 @@ Prometheus scrape targets and HAProxy/reproxy L7 rules are wired automatically: 
 
 The whole codebase is Jinja2 templates with a `.sh` extension. A package either extends `//die/hub.sh` (pure dependency hub — only declares `run_deps`) or `//die/gen.sh` (generates files into `${out}`). Dependencies are written as `path/to/pkg(param=value,param2=value)`.
 
-Example (`lab/etc/ip/ix.sh`):
+Example (`etc/ip/ix.sh`):
 
 ```jinja2
 {% extends '//die/gen.sh' %}

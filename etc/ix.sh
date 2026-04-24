@@ -4,18 +4,18 @@
 {% set hm = cm.by_host[hostname] %}
 
 {% block run_deps %}
-lab/etc/env
-lab/etc/arp
-lab/etc/keys
-lab/etc/hosts
-lab/etc/sysctl
-lab/etc/multihome
+etc/env
+etc/arp
+etc/keys
+etc/hosts
+etc/sysctl
+etc/multihome
 
 {% for d in hm.disabled %}
-lab/etc/stopper(srv_dir={{d}})
+etc/stopper(srv_dir={{d}})
 {% endfor %}
 
 {% for net in hm.net %}
-lab/etc/ip(ip_addr={{net.ip}}/{{net.nm}},ip_gw={{net.gw}},ip_iface={{net.if}})
+etc/ip(ip_addr={{net.ip}}/{{net.nm}},ip_gw={{net.gw}},ip_iface={{net.if}})
 {% endfor %}
 {% endblock %}

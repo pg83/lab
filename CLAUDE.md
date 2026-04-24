@@ -5,8 +5,8 @@ Notes for working in this repo. Read `README.md` first for the high-level pictur
 ## Mental model
 
 - Single source of truth is `lab/cg.py`. It generates a `cluster_map` (`hosts`, `ports`, `users`, `by_host`) and yields a list of `{host, serv}` records via `ClusterMap.it_cluster()`.
-- `lab/ix.sh` calls `cg.py`, serializes the map, and passes it to `lab/map(cluster_map=..., dev_mngr=fs)`.
-- `lab/map/ix.sh` → `lab/common` + `lab/hosts/<hostname>`. `lab/common` expands `hm.extra`, which is a newline-joined list of `bin/run/sh(...)` package invocations produced by `it_srvs()` in `cg.py`.
+- `lab/ix.sh` calls `cg.py`, serializes the map, and passes it to `map(cluster_map=..., dev_mngr=fs)`.
+- `map/ix.sh` → `lab/common` + `lab/hosts/<hostname>`. `lab/common` expands `hm.extra`, which is a newline-joined list of `bin/run/sh(...)` package invocations produced by `it_srvs()` in `cg.py`.
 - Each runit service is materialized by `bin/run/sh` + `bin/run/sh/runit`. The runner script base64-decodes a pickled Python object and invokes `runpy <ctx> run` (or `prepare`).
 
 ## Package/template conventions
@@ -24,7 +24,7 @@ Notes for working in this repo. Read `README.md` first for the high-level pictur
 2. Register the class on `sys.modules['builtins']` (same pattern as the block near line 1236).
 3. Instantiate it inside `ClusterMap.it_cluster()` with `yield {'host': hn, 'serv': MyThing(...)}`.
 4. If it listens on a port, add the port to the `ports` dict in `do()`.
-5. If it needs a dedicated user, add it to the `users` dict (UID) — the wiring to `lab/etc/user` is automatic via `Service.serialize()`.
+5. If it needs a dedicated user, add it to the `users` dict (UID) — the wiring to `etc/user` is automatic via `Service.serialize()`.
 6. Metrics: implement `prom_port(self)` and it is auto-registered with the per-host `Collector`.
 7. L7 routing: yield `{'proto': 'http', 'server': <host>, 'source': <regex>, 'dest': <":port/path">}` from `l7_balancer()`; rules are fanned out across all NICs of the host automatically.
 
@@ -34,7 +34,7 @@ Notes for working in this repo. Read `README.md` first for the high-level pictur
 - Services without a `run()` method are treated as `disabled()`.
 - `exec_into(..., user='foo')` wraps with `su-exec foo`; don't double-wrap.
 - Configs are passed to binaries via `memfd()` (`/proc/self/fd/N`) — never write to `/etc` at runtime.
-- Secrets: call `get_key('/path')` (HTTP GET against `localhost:8022`). Do not hard-code material or read from files outside `/etc/keys/` (which is pre-populated by `lab/etc/keys`).
+- Secrets: call `get_key('/path')` (HTTP GET against `localhost:8022`). Do not hard-code material or read from files outside `/etc/keys/` (which is pre-populated by `etc/keys`).
 - Hosts are fixed: `lab1`, `lab2`, `lab3`. Code that assumes 3 hosts is fine.
 - `DISABLE` / `DISABLE_ALL` / `CI_MAP` near the top of `cg.py` are the per-host knobs — prefer them over conditionals inside classes.
 
