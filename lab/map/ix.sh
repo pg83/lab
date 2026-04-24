@@ -13,7 +13,6 @@ bin/ghcr
 bin/htop
 bin/persdb
 bin/hf/sync
-bin/mirror/fetch
 bin/ix/tmpfs
 etc/host/keys
 bin/sched/100
@@ -25,6 +24,7 @@ bin/etcd/backup
 bin/etcd/defrag
 bin/kernel/6/14
 bin/kernel/6/16
+bin/mirror/fetch
 bin/smart/mon/tools
 bin/fixits(delay=10)
 bin/auto/update(user=ix)
