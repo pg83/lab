@@ -8,6 +8,7 @@ lab/etc/env
 lab/etc/keys
 lab/etc/hosts
 lab/etc/arp
+lab/etc/sysctl
 lab/etc/multihome
 
 {% for d in hm.disabled %}
