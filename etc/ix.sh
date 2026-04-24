@@ -18,4 +18,9 @@ etc/stopper(srv_dir={{d}})
 {% for net in hm.net %}
 etc/ip(ip_addr={{net.ip}}/{{net.nm}},ip_gw={{net.gw}},ip_iface={{net.if}})
 {% endfor %}
+
+etc/core
+etc/concat
+etc/user/ix
+etc/user/root
 {% endblock %}
