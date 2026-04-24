@@ -11,7 +11,7 @@ cat << 'EOF' > ${out}/etc/cron/600-ghcr-sync.json
 {
     "cmd": [
         "etcdctl", "lock", "/lock/ghcr/sync", "--",
-        "dedup", "/ghcr/sync", "--",
+        "dedup", "--root", "ghcr_sync", "/ghcr/sync", "--",
         "gorn", "ignite",
         "--root", "ghcr_sync",
         "--retry-error",

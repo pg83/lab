@@ -15,7 +15,7 @@ cat << 'EOF' > ${out}/etc/cron/3600-etcd-defrag.json
 {
     "cmd": [
         "etcdctl", "lock", "/lock/etcd/defrag", "--",
-        "dedup", "/etcd/defrag", "--",
+        "dedup", "--root", "etcd_defrag", "/etcd/defrag", "--",
         "gorn", "ignite",
         "--root", "etcd_defrag",
         "--retry-error",

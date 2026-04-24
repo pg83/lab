@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-dedup <etcd_path> -- <cmd...>
+dedup --root <ROOT> <etcd_path> -- <cmd...>
 
 Single-flight helper for fire-and-forget tools that emit a task id
 on stdout (primary target: `gorn ignite` without --wait). Reads
@@ -12,11 +12,16 @@ dispatch hasn't drained yet, no point stacking another on top.
 Otherwise runs <cmd>, passes its stdout through untouched, and on
 success writes the last non-empty stdout line back into <etcd_path>.
 
+--root must match the --root that <cmd> uses when ignite'ing into
+gorn. gorn /v1/tasks/<guid> requires ?root= to know where to look
+on S3 for the "done" fallback; pass the same one here so state
+lookups work for both "queued" and "done" tasks.
+
 Usage in practice — cron-file `cmd` array, under etcdctl lock so
 two schedulers can't race the read-check-write:
 
     etcdctl lock /lock/ci/tier_0 \\
-        dedup /ci/tier_0 -- \\
+        dedup --root ci /ci/tier_0 -- \\
             gorn ignite --root ci --env AWS_ACCESS_KEY_ID=$... \\
                 -- /bin/env PATH=/bin ci check set/ci/tier/0
 
@@ -32,6 +37,7 @@ import json
 import os
 import subprocess
 import sys
+import urllib.parse
 import urllib.request
 
 
@@ -53,9 +59,9 @@ def etcd_put(path, value):
     subprocess.run(('etcdctl', 'put', path, value), check=True)
 
 
-def gorn_state(guid):
+def gorn_state(guid, root):
     api = os.environ['GORN_API'].rstrip('/')
-    url = f'{api}/v1/tasks/{guid}'
+    url = f'{api}/v1/tasks/{guid}?root=' + urllib.parse.quote(root, safe='')
 
     with urllib.request.urlopen(url, timeout=10) as resp:
         body = resp.read()
@@ -63,18 +69,30 @@ def gorn_state(guid):
     return json.loads(body).get('state', '')
 
 
-def main():
-    if len(sys.argv) < 4 or sys.argv[2] != '--':
-        print('usage: dedup <etcd_path> -- <cmd...>', file=sys.stderr)
-        sys.exit(2)
+def usage():
+    print('usage: dedup --root <ROOT> <etcd_path> -- <cmd...>', file=sys.stderr)
+    sys.exit(2)
 
-    path = sys.argv[1]
-    cmd = sys.argv[3:]
+
+def main():
+    args = sys.argv[1:]
+
+    if len(args) < 2 or args[0] != '--root':
+        usage()
+
+    root = args[1]
+    rest = args[2:]
+
+    if len(rest) < 3 or rest[1] != '--':
+        usage()
+
+    path = rest[0]
+    cmd = rest[2:]
 
     prev = etcd_get(path)
 
     if prev:
-        state = gorn_state(prev)
+        state = gorn_state(prev, root)
 
         if state == 'queued':
             log(f'{path}: {prev} still queued, skipping')
