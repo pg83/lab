@@ -248,9 +248,19 @@ class Nebula:
 
             cfg['static_host_map'] = self.smap
 
+            # read_buffer/write_buffer raise SO_RCVBUF/SO_SNDBUF on the
+            # nebula UDP socket from the kernel default (~208 KB) to 8 MB;
+            # needs net.core.rmem_max/wmem_max ≥ 8 MB on the host or
+            # setsockopt silently clamps. routines=2 uses a second reader
+            # goroutine so recvmmsg bursts drain in parallel; batch=128
+            # doubles the default recvmmsg batch size.
             cfg['listen'] = {
                 'host': '0.0.0.0',
                 'port': self.port,
+                'read_buffer': 8 * 1024 * 1024,
+                'write_buffer': 8 * 1024 * 1024,
+                'routines': 2,
+                'batch': 128,
             }
 
             cfg['pki'] = {
