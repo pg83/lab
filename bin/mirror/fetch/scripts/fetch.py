@@ -1,28 +1,36 @@
 #!/usr/bin/env python3
 
 """
-cache_ix_sources — incremental fetch of all upstream ix sources
-into the cluster CAS. Each cron tick:
+cache_ix_sources — incremental fetch of upstream ix sources into
+the cluster CAS, 100 random URLs per tick. Each cron tick:
 
   1. Pull manifest of already-fetched URL-shas from MinIO
      (mirror/mirror/fetched.txt, one sha per line, empty if first run).
-  2. Walk upstream urls.txt; build a Makefile with targets only for
-     URLs whose sha is NOT in the manifest.
-  3. make -j10. Each success → fetcher downloads, cas uploads,
-     touch {sha}.touch.
-  4. Union the existing manifest with locally-completed shas, push
-     the merged file back to MinIO.
+  2. Walk upstream urls.txt; filter to URLs whose sha is NOT in the
+     manifest. Pick BATCH random ones from what's left.
+  3. make -j10 on just that batch. Each success → fetcher downloads,
+     cas uploads, touch {sha}.touch.
+  4. Union existing manifest with locally-completed shas, push back.
 
-No local state needed between ticks — the manifest in MinIO is the
-cross-host cache. Done-shas accumulate monotonically; manual
-`mc rm mirror/mirror/fetched.txt` forces a full re-fetch.
+Small batches at 100s cadence keep upstream bandwidth smooth and
+no single tick needs an hour. Random sampling means the three
+hosts' consecutive ticks (via the cluster lock) don't redundantly
+work the same URL order — coverage of the full delta is stochastic
+but even in expectation.
+
+No local state needed between ticks; manual `mc rm` of the manifest
+forces a full re-fetch.
 """
 
 import hashlib
 import os
+import random
 import subprocess
 import sys
 import urllib.request
+
+
+BATCH = 100
 
 
 URLS_TXT = 'https://raw.githubusercontent.com/pg83/ix/main/pkgs/die/scripts/urls.txt'
@@ -101,12 +109,16 @@ def main():
 
     todo = [(u, hashlib.sha256(u.encode()).hexdigest()) for u in fetch_urls()]
     todo = [(u, s) for u, s in todo if s not in done]
-    log(f'to fetch: {len(todo)} new URLs')
+    log(f'delta: {len(todo)} new URLs')
 
     if not todo:
         return
 
-    mk = '.ONESHELL:\n' + ''.join(PART.replace('{sha}', s).replace('{url}', u) for u, s in todo)
+    random.shuffle(todo)
+    batch = todo[:BATCH]
+    log(f'this tick: {len(batch)} URLs (random sample)')
+
+    mk = '.ONESHELL:\n' + ''.join(PART.replace('{sha}', s).replace('{url}', u) for u, s in batch)
 
     # make -k: keep going past per-target failures, capture whatever
     # did complete. The manifest merge below only records successes,

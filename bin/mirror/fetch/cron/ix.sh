@@ -1,14 +1,15 @@
 {% extends '//die/gen.sh' %}
 
-{# Every 10m: take the cluster lock, dedup on /mirror/fetch, fire
-   cache_ix_sources on a gorn worker. Script pulls the manifest of
-   already-fetched URL-shas from MinIO, diffs against upstream
-   urls.txt, fetches only new ones, and merges back. #}
+{# Every 100s: take the cluster lock, dedup on /mirror/fetch, fire
+   cache_ix_sources on a gorn worker. Script pulls the manifest,
+   samples 100 random new URLs, fetches them, merges back. Small
+   batches × fast cadence keeps upstream bandwidth smooth and any
+   single tick well under the 1h make timeout. #}
 
 {% block install %}
 mkdir -p ${out}/etc/cron
 
-cat << 'EOF' > ${out}/etc/cron/600-mirror-fetch.json
+cat << 'EOF' > ${out}/etc/cron/100-mirror-fetch.json
 {
     "cmd": [
         "etcdctl", "lock", "/lock/mirror/fetch", "--",
