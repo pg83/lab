@@ -2527,14 +2527,14 @@ class Service:
                 }
 
         # extra_deps carries the service's runtime pkgs forward into
-        # lab/services/sh/runit's install step, where intro(d).uid is
+        # bin/run/sh/runit's install step, where intro(d).uid is
         # baked into run_sh as a comment. A bump of e.g. bin/gorn
         # changes that uid → run_sh diff → store-path diff → pid1
         # restarts. intro() doesn't add the pkg as our own dep, so no
         # realm collision when a pkg is requested with different flags
         # by other services.
         yield {
-            'pkg': 'lab/services/sh',
+            'pkg': 'bin/run/sh',
             'srv_dir': self.name(),
             'runsh_script': gen_runner(self.srv),
             'srv_user': self.user(),

@@ -28,7 +28,7 @@ Everything — the OS image, the services, the mesh network, the secondary IPs �
 1. `./ix <command>` exports `IX_PATH="./:./ext/ix/pkgs"` and hands off to the IX tool.
 2. `lab/ix.sh` executes `cg.py` to produce a `cluster_map` (hosts, ports, users, per-host service list).
 3. The map is serialized and passed down to `lab/map`, which for each host loads `lab/common` + `lab/hosts/<hostname>`.
-4. `lab/common` expands `hm.extra` — a list of `lab/services/sh(...)` package invocations, one per service.
+4. `lab/common` expands `hm.extra` — a list of `bin/run/sh(...)` package invocations, one per service.
 5. Each service is realized as a runit-supervised script that base64-decodes a pickled Python object (`runpy` entry point) and calls its `.run()`.
 
 Prometheus scrape targets and HAProxy/reproxy L7 rules are wired automatically: any service that implements `prom_port()` is added to the local `Collector` job list; any service yielding from `l7_balancer()` is added to `BalancerHttp` rules per host interface.
@@ -87,4 +87,4 @@ Secrets are served locally by the `Secrets` service on `localhost:8022`. Code ne
 
 ## Updating
 
-`bin/auto/update` runs a loop as user `ix` that pulls the repo and rebuilds via IX. `lab/services/ci` watches `etcd` (`git_ci` topic) and triggers `./ix build bld/all` + `./ix mut ci <targets> --jail=1 --seed=1 --tmpfs=1`.
+`bin/auto/update` runs a loop as user `ix` that pulls the repo and rebuilds via IX. `bin/ci` is fired on a cron tick by `job_scheduler`; each invocation runs `ci check <tier>` on a gorn worker (git clone + `./ix build`).

@@ -6,8 +6,8 @@ Notes for working in this repo. Read `README.md` first for the high-level pictur
 
 - Single source of truth is `lab/cg.py`. It generates a `cluster_map` (`hosts`, `ports`, `users`, `by_host`) and yields a list of `{host, serv}` records via `ClusterMap.it_cluster()`.
 - `lab/ix.sh` calls `cg.py`, serializes the map, and passes it to `lab/map(cluster_map=..., dev_mngr=fs)`.
-- `lab/map/ix.sh` → `lab/common` + `lab/hosts/<hostname>`. `lab/common` expands `hm.extra`, which is a newline-joined list of `lab/services/sh(...)` package invocations produced by `it_srvs()` in `cg.py`.
-- Each runit service is materialized by `lab/services/sh` + `lab/services/sh/runit`. The runner script base64-decodes a pickled Python object and invokes `runpy <ctx> run` (or `prepare`).
+- `lab/map/ix.sh` → `lab/common` + `lab/hosts/<hostname>`. `lab/common` expands `hm.extra`, which is a newline-joined list of `bin/run/sh(...)` package invocations produced by `it_srvs()` in `cg.py`.
+- Each runit service is materialized by `bin/run/sh` + `bin/run/sh/runit`. The runner script base64-decodes a pickled Python object and invokes `runpy <ctx> run` (or `prepare`).
 
 ## Package/template conventions
 
@@ -42,7 +42,7 @@ Notes for working in this repo. Read `README.md` first for the high-level pictur
 
 - `./ix <cmd>` is the only entry point. Never call `python3 ext/ix/ix` directly; the wrapper sets `IX_PATH`.
 - The IX package manager lives in the `ext/ix` submodule (`https://github.com/stal-ix/ix.git`). If you need something from it (base templates, package definitions), read from there; don't vendor.
-- Builds and CI run on the cluster itself via `lab/services/ci`. Don't expect a local `make test` target.
+- Builds and CI run on the cluster itself via `bin/ci` (cron-fired through `job_scheduler`). Don't expect a local `make test` target.
 
 ## Canon test
 
@@ -76,9 +76,9 @@ The canon captures the full generated cluster config per host (`extra` as a line
 - User/UID registry: `lab/cg.py` → `do()` → `users` dict.
 - Host/NIC/Nebula layout: `lab/cg.py` → `gen_host(n)`.
 - Per-host service wiring: `lab/cg.py` → `ClusterMap.it_cluster()`.
-- Runit service template: `lab/services/sh/runit/ix.sh`.
+- Runit service template: `bin/run/sh/runit/ix.sh`.
 - Auto-update loop: `bin/auto/update/`.
-- CI loop: `lab/services/ci/`.
+- CI loop: `bin/ci/` (cron-fired; see `bin/ci/cron/`).
 
 ## Runtime layout
 
