@@ -171,3 +171,116 @@ Skip unless (A) runs into a kernel version block.
   10.0.0.64 table $UID`? Latter lets MinIO reach the world via eth0
   if it ever needs to (CI pulls, etc.) without losing src-pinning for
   intra-cluster traffic. Probably cleaner.
+
+---
+
+# gorn endpoint IP concentration (CI/dispatch ingress)
+
+Observed 2026-04-24 after investigating a nebula packet-drop burst
+(lab1 udp_0_drops peaked at 194/s, 217k drops over 1h). Not a nebula
+bug — the underlay NICs show the same story: one NIC saturated,
+siblings idle.
+
+## Symptom
+
+Snapshot of physical-NIC bandwidth, steady-state CI load:
+
+| host | RX hot NIC         | RX siblings (Mbit/s)   |
+|------|--------------------|------------------------|
+| lab1 | **eth0 146 Mbit/s** | eth1 4, eth2 2, eth3 16 |
+| lab2 | **eth0 100 Mbit/s** | eth1 3, eth2 2, eth3 2 |
+| lab3 | **eth1 163 Mbit/s** | eth0 4, eth2 0.2, eth3 0.4 |
+|      | **eth1 TX 235 Mbit/s** (reply path) |          |
+
+TX spreads across eth1/2/3 because egress source selection is
+per-flow — the kernel picks whichever NIC the route table says
+reaches the destination. RX does not spread: a packet destined for
+`192.168.100.16` physically arrives on whichever NIC owns that IP,
+and that's a single NIC per host.
+
+## Cause
+
+Every gorn endpoint is registered with **one** destination IP:
+
+```
+$ curl -s http://lab1.nebula:8027/v1/endpoints | jq '[.endpoints[].host] | group_by(.) | map({ip:.[0], n:length})'
+[ {ip:"192.168.100.16", n:22},
+  {ip:"192.168.100.17", n:20},
+  {ip:"192.168.100.18", n:14} ]
+```
+
+22 lab1 workers, all behind `100.16`. That IP lives on exactly one
+physical NIC per host (eth0 on lab1/lab2, eth1 on lab3 — the
+layout is asymmetric). All CI/molot SSH dispatch, stdin upload,
+stdout download traffic lands on that single NIC. The other three
+NICs per host do nothing on RX.
+
+Headline: we're running at **1/4 of the theoretical ingress
+capacity** for worker traffic, and a burst fills one NIC's rmem /
+nebula SO_RCVBUF while the rest are idle.
+
+## Options
+
+### A. Spread endpoints across NICs (recommended)
+
+In `cg.py` `GornSsh.gorn_endpoints()`, rotate the endpoint `host`
+over the host's NIC IPs instead of pinning to one. For lab1's 22
+endpoints on 4 NICs: 6/6/5/5 per NIC (round-robin by index).
+
+Ignite/molot pick an endpoint at random from the full list, so the
+spread is automatic — no client changes. `ip route` already knows
+how to reach each IP on its own NIC; nothing else moves.
+
+**Pros.**
+- Pure cg.py change, one loop. No kernel, no routing, no patches.
+- Symmetrical with the MinIO (A) remedy above: MinIO pins *egress*
+  per uid, this pins *ingress* per endpoint.
+- Works for both nebula-tunnel traffic (if the registered IP is a
+  `.nebula` host, we'd pick per-NIC nebula IPs) and physical IPs.
+
+**Cons.**
+- Endpoint count stays the same, so per-NIC worker density drops
+  from 22 to ~5. If a single NIC's kernel-side rmem / nebula queue
+  is the bottleneck, that's a 4× headroom win; if the bottleneck
+  is a single shared nebula reader goroutine, it doesn't help.
+  (Current data suggests the former — drops correlate with NIC RX
+  peaks, not CPU.)
+- Asymmetric NIC layout (lab3 hot NIC is eth1, not eth0) means
+  the rotation table has to be per-host, not a universal list.
+
+### B. Single virtual IP + ECMP
+
+Register endpoints at one logical IP that lives on all four NICs
+via ECMP. Theoretically clean, practically: needs working L3 ECMP
+on the switch, same-subnet quirks, and `ip rule`/`ip route`
+plumbing on every host. Too much machinery for a 3-host homelab.
+
+### C. DNS round-robin
+
+Register endpoints as `labN.local` with 4 A records. SSH picks
+one per connection; NIC usage averages out. But SSH connection
+reuse (ControlMaster in gorn's SSH) pins to first-resolved IP for
+the session, so reuse clashes with rotation. Also leaves
+measurement gaps — we'd no longer see per-endpoint which NIC it
+hits.
+
+## Recommendation
+
+**Go with (A).** One `cg.py` loop producing per-NIC endpoint
+rotations. Measure before/after on `node_network_receive_bytes_total`
+by NIC to confirm the 146 Mbit/s lab1 eth0 peak spreads to ~36
+Mbit/s × 4 NICs.
+
+## Open questions
+
+- Do we register by `192.168.100.X` (physical eth0/eth1 /24) or
+  by `labN.ethK` name? Names are stabler across reconfig but add
+  a DNS step to every dial; IPs skip DNS but pin to numbers that
+  may move.
+- Nebula endpoints are also concentrated (`labN.nebula` is a
+  single IP per host inside the overlay). Same rotation story
+  applies; worth doing in the same pass since that's where the
+  194/s drop burst originally showed up.
+- Does molot need the same rotation for its own dispatch
+  (IX build-graph → gorn task fan-out)? If molot goes through
+  gorn/ignite, it rides the same endpoint list; no extra work.
