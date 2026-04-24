@@ -7,7 +7,7 @@ bin/dedup
 bin/python
 bin/ci/cron
 bin/etcd/ctl
-bin/git/clone
+bin/git/unwrap
 bin/ci/scripts
 bin/minio/patched/client
 {% endblock %}

@@ -3,6 +3,6 @@
 {% block run_deps %}
 bin/python
 lab/etc/user
-bin/git/clone
+bin/git/unwrap
 lab/services/autoupdate/scripts
 {% endblock %}
