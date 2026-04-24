@@ -579,6 +579,7 @@ class MinIO:
         self.port = port
         self.uniq = uniq
         self.cmap = cmap
+        self.script = MINIO_SCRIPT
 
     @property
     def addr(self):
@@ -603,7 +604,7 @@ class MinIO:
         }
 
     def run(self):
-        s = MINIO_SCRIPT
+        s = self.script
 
         s = s.replace('{n}', str(self.uniq))
         s = s.replace('{addr}', self.addr)
@@ -673,6 +674,7 @@ class DropBear:
     def __init__(self, host, port):
         self.host = host
         self.port = port
+        self.script = DB_PREPARE
 
     def user(self):
         return 'root'
@@ -683,7 +685,7 @@ class DropBear:
         }
 
     def run(self):
-        subprocess.run(['/bin/sh'], input=DB_PREPARE.encode())
+        subprocess.run(['/bin/sh'], input=self.script.encode())
 
         with memfd('pid') as pid:
             args = [
