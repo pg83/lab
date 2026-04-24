@@ -1028,7 +1028,7 @@ def it_nebula_reals(lh, h, port):
 
 class EtcdPrivate:
     def __init__(self, peers, port_peer, port_client, hostname, etcid, addr, user_name, cluster_state):
-        self.v = 4
+        self.v = 5
         self.etcid = etcid
         self.peers = peers
         self.port_peer = port_peer
@@ -1107,6 +1107,14 @@ class EtcdPrivate:
             # which returns ENHANCE_YOUR_CALM GOAWAY and tears down
             # the conn. 1s is enough headroom for the fanout.
             '--grpc-keepalive-min-time', '1s',
+            # Raise raft timeouts 10× above defaults (100ms / 1000ms).
+            # wal_fsync on the USB-SATA rootfs spikes to ~2s under
+            # ext4 journal contention during autoupdate deploys; at
+            # default timeouts that tripped leader elections multiple
+            # times per hour. 10× ratio between election and heartbeat
+            # preserved. See lab/NET.md for the full investigation.
+            '--heartbeat-interval', '1000',
+            '--election-timeout', '10000',
         ]
 
         exec_into(*args)

@@ -284,3 +284,112 @@ Mbit/s × 4 NICs.
 - Does molot need the same rotation for its own dispatch
   (IX build-graph → gorn task fan-out)? If molot goes through
   gorn/ignite, it rides the same endpoint list; no extra work.
+
+---
+
+# etcd leader churn during autoupdate deploys (2026-04-24)
+
+Follow-up to the nebula-drops investigation. After confirming that
+nebula drops weren't the dominant driver of leader elections, the
+real signal turned out to be **etcd wal_fsync p99 crossing the
+1s raft election-timeout during autoupdate deploy bursts**.
+
+## Evidence
+
+xcorr over 6h, etcd_private leader changes vs candidates:
+
+| signal                                  | max r | lag    |
+|-----------------------------------------|------:|:-------|
+| `fsync ← sdd write_latency (same host)` | +0.826 | 0s    |
+| `fsync ← sdd write_bytes/s (same host)` | +0.822 | 0s    |
+| `fsync ← sdd util% (same host)`         | +0.680 | 0s    |
+| nebula udp drops                        | +0.13 | noise  |
+
+Event-study against autoupdate deploy timestamps (20 events/host, 6h):
+
+| metric            | deploy peak / baseline |
+|-------------------|:----------------------:|
+| wal_fsync p99     | **2.49×** (0.86s → 2.13s) |
+| sdd write_bytes/s | 2.01× |
+| sdd io_time %     | 1.41× |
+| **leader changes** | **2.22×** |
+| proposals/s       | 0.57× (↓ — services mid-restart) |
+
+## Why it isn't a disk-hardware problem
+
+sdd is a 256 GB SATA SSD over a Silicon Motion USB-SATA bridge
+(`0x090c:0x1000`). `disk_await` (`bin/dev/scripts/disk_await.py`)
+shows steady-state `w_await` of 1–2 ms at 10–50 IOPS, `util` 2–8 %.
+Hardware is fine. The 2.1 s fsync p99 tail is almost certainly
+**ext4 journal contention** — `ix mut` writes many files during
+deploy, journal commits queue, `fsync(wal_fd)` waits for the
+whole queue to flush.
+
+SMART isn't proxied through this bridge (`-d sat`, `-d sntasmedia`,
+`-d sntjmicron` all return "unsupported"). We don't have lifetime
+TBW visibility, but the live latency numbers are the ones that
+actually matter for etcd correctness.
+
+## Chosen fix: raise raft timeouts
+
+Instead of fighting the disk, tell raft that 2 s fsync spikes are
+acceptable. Bump both members' timings 10× above defaults:
+
+- `--heartbeat-interval=1000ms` (was 100 ms default)
+- `--election-timeout=10000ms`   (was 1000 ms default)
+
+The 10× ratio between election-timeout and heartbeat-interval is
+etcd's own recommendation and is preserved.
+
+### Trade-offs
+
+- Legitimate leader crashes take up to 10 s to detect instead of 1 s.
+  For the homelab, callers (gorn, loki, molot) retry happily on the
+  `leader changed` path, so this is invisible.
+- Once an election does fire, it takes ≥ one election-timeout, so
+  real downtime windows grow from ~1 s to ~10 s. Rare event.
+- No durability impact. Same fsyncs, same WAL, same data path.
+
+### Procedure
+
+Rolling restart, one member at a time:
+
+1. Bump `--heartbeat-interval` + `--election-timeout` flags in
+   `EtcdPrivate.run()` and `EtcdSecondary.run()` in `cg.py`.
+2. Commit → autoupdate rolls out.
+3. Because autoupdate restarts services sequentially across hosts,
+   the natural cadence is already rolling. Just watch
+   `etcd_server_leader_changes_seen_total` during the rollout to
+   confirm the cluster stays up.
+4. Don't force all three to reload inside the same 10 s window
+   — if autoupdate lands on all hosts within that, pause one host's
+   service manually and unblock after the others settle.
+
+## Other options considered, not taken
+
+- **WAL on tmpfs** — eliminates fsync on sdd, but on the user's
+  reality of "several full power-offs per year", losing WAL on all
+  3 nodes simultaneously means etcd won't start and needs manual
+  `--force-new-cluster` recovery. Rejected: too much operator burden
+  for rare-but-real events.
+- **`data=writeback` on rootfs ext4** — would remove journal
+  ordering of data writes and cut the fsync tail. Viable, but
+  quieter durability behavior on crash. Parked.
+- **ionice / cgroup `io.weight` for etcd** — pushes etcd above ix
+  mut in the IO queue. Smaller effect than raising timeouts, but
+  composable. Worth doing later if timeout bump isn't enough.
+- **Replace the USB-SATA bridge with native SATA** — would help
+  if bridge were the problem; `disk_await` showed it isn't.
+- **`ix mut` no-op symlink skip** — would reduce deploy-time writes
+  overall. Deep ix change, deferred.
+
+## Status
+
+Deferred to 2026-04-25 — TO DO:
+
+1. Edit `EtcdPrivate.run()` / `EtcdSecondary.run()` in `lab/cg.py`
+   to inject `--heartbeat-interval=1000 --election-timeout=10000`.
+2. Re-canonize `tst/canon.json`.
+3. Commit, let autoupdate roll. Watch
+   `changes(etcd_server_leader_changes_seen_total[5m])` drop to
+   ~zero outside real failure.
