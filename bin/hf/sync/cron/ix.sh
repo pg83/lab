@@ -11,7 +11,7 @@ cat << 'EOF' > ${out}/etc/cron/600-hf-sync.json
 {
     "cmd": [
         "etcdctl", "lock", "/lock/hf/sync", "--",
-        "dedup", "--root", "hf_sync", "/hf/sync", "--",
+        "dedup", "/hf/sync", "--",
         "gorn", "ignite",
         "--root", "hf_sync",
         "--retry-error",

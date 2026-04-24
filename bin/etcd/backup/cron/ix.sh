@@ -12,7 +12,7 @@ cat << 'EOF' > ${out}/etc/cron/3600-etcd-backup.json
 {
     "cmd": [
         "etcdctl", "lock", "/lock/backup/etcd", "--",
-        "dedup", "--root", "backup", "/backup/etcd", "--",
+        "dedup", "/backup/etcd", "--",
         "gorn", "ignite",
         "--root", "backup",
         "--retry-error",

@@ -17,7 +17,7 @@ cat << 'EOF' > ${out}/etc/cron/10-ci-{{slug}}.json
 {
     "cmd": [
         "etcdctl", "lock", "/lock/ci/{{slug}}", "--",
-        "dedup", "--root", "ci", "/ci/{{slug}}", "--",
+        "dedup", "/ci/{{slug}}", "--",
         "gorn", "ignite",
         "--root", "ci",
         "--retry-error",
