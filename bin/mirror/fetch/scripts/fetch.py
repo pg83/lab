@@ -18,8 +18,13 @@ hosts' consecutive ticks (via the cluster lock) don't redundantly
 work the same URL order — coverage of the full delta is stochastic
 but even in expectation.
 
-No local state needed between ticks; manual `mc rm` of the manifest
-forces a full re-fetch.
+The manifest file MUST exist in MinIO before the first tick:
+
+    echo -n | minio-client pipe minio/mirror/mirror/fetched.txt
+
+An empty body is a valid first-run state. Missing file makes mc
+cat fail loud — that's a deployment bug, not "first run". Manual
+`mc rm` forces a full re-fetch once the empty file is back.
 """
 
 import hashlib
@@ -49,27 +54,22 @@ def mc_env():
     return env
 
 
-def mc(*args, env, capture=False, check=True):
+def mc(*args, env, capture=False):
     log('minio-client', *args)
 
     return subprocess.run(
         ('minio-client',) + args,
         env=env,
-        check=check,
+        check=True,
         stdout=subprocess.PIPE if capture else None,
         text=True if capture else None,
     )
 
 
 def load_manifest(env):
-    res = mc('cat', MANIFEST, env=env, capture=True, check=False)
+    body = mc('cat', MANIFEST, env=env, capture=True).stdout
 
-    if res.returncode != 0:
-        log('manifest not found on MinIO — assuming empty (first run)')
-
-        return set()
-
-    return {ln.strip() for ln in res.stdout.splitlines() if ln.strip()}
+    return {ln.strip() for ln in body.splitlines() if ln.strip()}
 
 
 def save_manifest(shas, env):
