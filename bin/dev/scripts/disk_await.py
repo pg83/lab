@@ -40,12 +40,13 @@ def read_stats(device):
 
 def main():
     ap = argparse.ArgumentParser(description='Live iostat-x for BusyBox hosts.')
-    ap.add_argument('-d', '--device', default='sdd', help='block device name (default: sdd)')
+    ap.add_argument('-d', '--device', default='sdd', help='block device name, /dev/ prefix optional (default: sdd)')
     ap.add_argument('-n', '--count', type=int, default=30, help='number of samples (default: 30)')
     ap.add_argument('-i', '--interval', type=float, default=1.0, help='interval seconds (default: 1.0)')
     args = ap.parse_args()
 
-    prev = read_stats(args.device)
+    device = args.device.removeprefix('/dev/')
+    prev = read_stats(device)
     prev_t = time.time()
 
     hdr = f'{"time":>8} {"r/s":>6} {"w/s":>6} {"rMB/s":>7} {"wMB/s":>7} {"r_await":>8} {"w_await":>8} {"aqu-sz":>7} {"%util":>6}'
@@ -53,7 +54,7 @@ def main():
 
     for _ in range(args.count):
         time.sleep(args.interval)
-        cur = read_stats(args.device)
+        cur = read_stats(device)
         cur_t = time.time()
         dt = cur_t - prev_t
 
