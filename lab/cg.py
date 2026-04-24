@@ -2515,19 +2515,23 @@ class Service:
                 'user': user,
             }
 
-        for rec in self.iter_upnp():
-            yield {
-                'pkg': 'bin/xiaomi',
-                'upnp_ip': rec['addr'],
-                'upnp_port': rec['port'],
-                'upnp_ext_port': rec['ext_port'],
-                'upnp_proto': rec['proto'],
-                'xiaomi_gw': '10.0.0.1',
-                'xiaomi_passwd': '', # get_key('/xiaomi/passwd').decode().strip(),
-                'xiaomi_name': str(rec['ext_port']) + '_' + rec['proto'],
-                'xiaomi_proto': {'TCP': 1, 'UDP': 2}[rec['proto']],
-                'delay': 100,
-            }
+        # Disabled: xiaomi_passwd is empty (get_key call commented out),
+        # so bash collapses argv and xapi.py crashes on sys.argv[7] every
+        # sched100 tick. Re-enable after restoring the password fetch.
+        if False:
+            for rec in self.iter_upnp():
+                yield {
+                    'pkg': 'bin/xiaomi',
+                    'upnp_ip': rec['addr'],
+                    'upnp_port': rec['port'],
+                    'upnp_ext_port': rec['ext_port'],
+                    'upnp_proto': rec['proto'],
+                    'xiaomi_gw': '10.0.0.1',
+                    'xiaomi_passwd': '', # get_key('/xiaomi/passwd').decode().strip(),
+                    'xiaomi_name': str(rec['ext_port']) + '_' + rec['proto'],
+                    'xiaomi_proto': {'TCP': 1, 'UDP': 2}[rec['proto']],
+                    'delay': 100,
+                }
 
         yield {
             'pkg': 'lab/services/sh',
