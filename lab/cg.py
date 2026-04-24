@@ -294,7 +294,6 @@ class NebulaNode(Nebula):
         self.prom = prom
         self.advr = advr
         self.self_vip = self_vip
-        self._hash = _class_src_hash(type(self))
 
     def run(self):
         # Strip self-entry so nebula doesn't endlessly try to handshake
@@ -511,7 +510,6 @@ class SshTunnel:
 
 class SftpD:
     def __init__(self, port, path):
-        self.v = 1
         self.port = port
         self.path = path
 
@@ -576,7 +574,7 @@ exec su-exec {user} minio server --address {addr} {cmap}
 
 class MinIO:
     def __init__(self, uniq, ipv4, port, cmap):
-        self.v = 1
+        self.v = MINIO_SCRIPT
         self.ipv4 = ipv4
         self.port = port
         self.uniq = uniq
@@ -709,7 +707,6 @@ class DropBear2(DropBear):
 
 class GornSsh:
     def __init__(self, uniq, host, port, nebula_host):
-        self.v = 5
         self.uniq = uniq
         self.host = host
         self.port = port
@@ -869,7 +866,6 @@ class GornBase:
 
 class Gorn(GornBase):
     def __init__(self, endpoints, s3):
-        self.v = 4
         self.endpoints = endpoints
         self.s3 = s3
 
@@ -885,7 +881,6 @@ class Gorn(GornBase):
 
 class GornCtl(GornBase):
     def __init__(self, endpoints, s3, listen):
-        self.v = 2
         self.endpoints = endpoints
         self.s3 = s3
         self.listen = listen
@@ -909,7 +904,6 @@ class GornCtlNebula(GornCtl):
 
 class GornProm(GornBase):
     def __init__(self, endpoints, s3, port):
-        self.v = 1
         self.endpoints = endpoints
         self.s3 = s3
         self.port = port
@@ -931,7 +925,6 @@ class GornProm(GornBase):
 
 class GornWeb:
     def __init__(self, api, listen):
-        self.v = 1
         self.api = api
         self.listen = listen
 
@@ -969,7 +962,6 @@ class SecondIP:
     def __init__(self, addr):
         self.addr = addr
         self.script = SECOND_IP
-        self.v = 1
 
     def name(self):
         return 'ip_' + self.addr.replace('.', '_').replace('/', '_')
@@ -1028,7 +1020,6 @@ def it_nebula_reals(lh, h, port):
 
 class EtcdPrivate:
     def __init__(self, peers, port_peer, port_client, hostname, etcid, addr, user_name, cluster_state):
-        self.v = 5
         self.etcid = etcid
         self.peers = peers
         self.port_peer = port_peer
@@ -1122,7 +1113,6 @@ class EtcdPrivate:
 
 class Perses:
     def __init__(self, port):
-        self.v = 1
         self.port = port
 
     def name(self):
@@ -1176,7 +1166,6 @@ class Federator:
     # and cross-host queries (sum by host, compare latency, etc.) work
     # directly. One per host — no SPOF.
     def __init__(self, port, collector_port, hosts):
-        self.v = 1
         self.port = port
         self.collector_port = collector_port
         self.hosts = list(hosts)
@@ -1255,7 +1244,6 @@ GRAFANA_ADMIN_PASSWORD = 'grafana'
 
 class Grafana:
     def __init__(self, port, collector_port, loki_port):
-        self.v = 1
         self.port = port
         self.collector_port = collector_port
         self.loki_port = loki_port
@@ -1263,7 +1251,6 @@ class Grafana:
         # auto-invalidate the service without needing a self.v bump.
         # Trialed on grafana+samogon where "accidentally kept
         # running old code" is cheap to diagnose.
-        self._hash = _class_src_hash(type(self))
 
     def name(self):
         return 'grafana'
@@ -1381,11 +1368,8 @@ class Samogon:
     # land at /torrents/pieces/<piece-hash>. Read-only — fetches are
     # kicked from elsewhere via `gorn ignite -- samogon fetch <b64>`.
     def __init__(self, port, s3_endpoint):
-        self.v = 1
         self.port = port
         self.s3_endpoint = s3_endpoint
-        # Experimental: class-source AST hash. See Grafana above.
-        self._hash = _class_src_hash(type(self))
 
     def name(self):
         return 'samogon'
@@ -1464,11 +1448,9 @@ class SamogonBot:
     # S3 creds + endpoints land as env into the bot so `gorn ignite`
     # below can forward them via --env to the worker-side fetch.
     def __init__(self, s3_endpoint, gorn_api, tg_allow_users):
-        self.v = 1
         self.s3_endpoint = s3_endpoint
         self.gorn_api = gorn_api
         self.tg_allow_users = tg_allow_users
-        self._hash = _class_src_hash(type(self))
 
     def name(self):
         return 'samogon_bot'
@@ -1519,10 +1501,8 @@ class JobScheduler:
     # (inherited from the service env). Cron files pick what they
     # use; scheduler itself doesn't know what any of them mean.
     def __init__(self, gorn_api, s3_endpoint):
-        self.v = 2
         self.gorn_api = gorn_api
         self.s3_endpoint = s3_endpoint
-        self._hash = _class_src_hash(type(self))
 
     def name(self):
         return 'job_scheduler'
@@ -1582,13 +1562,11 @@ class Loki:
     # dance: ring forms on first contact, stale entries don't survive
     # past the lease.
     def __init__(self, port, s3_endpoint, peers, me, etcd_endpoints):
-        self.v = 3
         self.port = port
         self.s3_endpoint = s3_endpoint
         self.peers = list(peers)
         self.me = me
         self.etcd_endpoints = list(etcd_endpoints)
-        self._hash = _class_src_hash(type(self))
 
     def name(self):
         return 'loki'
@@ -1713,12 +1691,10 @@ class Promtail:
     # Service; custom sources (app-managed log files) come from the
     # service class's own log_sources() if it defines one.
     def __init__(self, port, loki_port, me):
-        self.v = 1
         self.port = port
         self.loki_port = loki_port
         self.me = me
         self.sources = []
-        self._hash = _class_src_hash(type(self))
 
     def name(self):
         return 'promtail'
@@ -1813,7 +1789,6 @@ class TailLog:
         self.me = me
         self.me_nebula_ip = me_nebula_ip
         self.paths = []
-        self._hash = _class_src_hash(type(self))
 
     def name(self):
         return 'tail_log'
@@ -1843,7 +1818,6 @@ class TailLog:
 
 class Secrets:
     def __init__(self, port):
-        self.v = 5
         self.port = port
 
     def name(self):
@@ -1875,7 +1849,6 @@ class SecretsV2:
     # store and pid1 respawns us via _hash rotation.
     def __init__(self, port):
         self.port = port
-        self._hash = _class_src_hash(type(self))
 
     def name(self):
         return 'secrets_v2'
@@ -1907,7 +1880,6 @@ class SecretsV2:
 
 class CO2Mon:
     def __init__(self, port):
-        self.v = 1
         self.port = port
 
     def name(self):
@@ -1926,9 +1898,6 @@ class CO2Mon:
 
 
 class MirrorFetch:
-    def __init__(self):
-        self.v = 2
-
     def pkgs(self):
         yield {
             'pkg': 'bin/mirror/fetch',
@@ -2345,13 +2314,13 @@ def exec_into(*args, user=None, **kwargs):
 
 
 def gen_runner(srv):
-    ctx = base64.b64encode(pickle.dumps(srv)).decode()
+    ctx = base64.b64encode(pickle.dumps({'srv': srv, 'hash': class_src_hash(type(srv))})).decode()
     scr = 'exec runpy ' + ctx + ' ${@}'
 
     return base64.b64encode(scr.encode()).decode()
 
 
-def _class_src_hash(cls):
+def class_src_hash(cls):
     # Walk the MRO and hash each class's source. ast.dump gives us
     # a canonical form that ignores whitespace/comments, so cosmetic
     # edits don't churn every service's derivation; real code
@@ -2793,5 +2762,5 @@ def do(code):
 
 
 if __name__ == '__main__':
-    ctx = pickle.loads(base64.b64decode(sys.argv[1]))
+    ctx = pickle.loads(base64.b64decode(sys.argv[1]))['srv']
     getattr(ctx, sys.argv[2], lambda: None)(*sys.argv[3:])
