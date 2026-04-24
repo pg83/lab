@@ -2493,10 +2493,14 @@ class Service:
         return list(sorted(frozenset(self.it_users())))
 
     def serialize(self):
+        srv_pkgs = []
+
         try:
-            yield from self.srv.pkgs()
+            srv_pkgs = list(self.srv.pkgs())
         except AttributeError:
             pass
+
+        yield from srv_pkgs
 
         for user in self.users():
             yield {
@@ -2522,11 +2526,19 @@ class Service:
                     'delay': 100,
                 }
 
+        # extra_deps carries the service's runtime pkgs forward into
+        # lab/services/sh/runit's install step, where intro(d).uid is
+        # baked into run_sh as a comment. A bump of e.g. bin/gorn
+        # changes that uid → run_sh diff → store-path diff → pid1
+        # restarts. intro() doesn't add the pkg as our own dep, so no
+        # realm collision when a pkg is requested with different flags
+        # by other services.
         yield {
             'pkg': 'lab/services/sh',
             'srv_dir': self.name(),
             'runsh_script': gen_runner(self.srv),
             'srv_user': self.user(),
+            'extra_deps': base64.b64encode('\n'.join(to_srv(**p) for p in srv_pkgs).encode()).decode(),
         }
 
 
