@@ -1,16 +1,17 @@
 {% extends '//die/gen.sh' %}
 
-{# Every 15 min: take the cluster lock so only one host syncs at a
-   time, then run ogorod_mirror in-process (no gorn ignite — the
-   work is small and the script is on the scheduler's PATH). #}
+{# Every 10s: take the cluster lock, dedup so a slow tick can't
+   queue behind itself. The script's hot path is six ls-remote
+   round-trips and an early-exit on no diff. #}
 
 {% block install %}
 mkdir -p ${out}/etc/cron
 
-cat << 'EOF' > ${out}/etc/cron/900-ogorod-mirror.json
+cat << 'EOF' > ${out}/etc/cron/10-ogorod-mirror.json
 {
     "cmd": [
         "etcdctl", "lock", "/lock/ogorod/mirror", "--",
+        "dedup", "/ogorod/mirror", "--",
         "ogorod_mirror"
     ]
 }
