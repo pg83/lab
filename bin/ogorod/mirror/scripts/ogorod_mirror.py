@@ -16,11 +16,29 @@ empty. clone --bare from ourselves (localhost is cheap; an empty
 mirror on first run is fine), fetch +heads/* +tags/* from github
 (delta only thanks to clone-from-self seeding the have-state),
 push --mirror back to us.
+
+clone-from-self can fail when our mirror is in a corrupt or
+half-wiped state (lost packs, stale packed-refs, etc). In that
+case fall back to `git init --bare` and let push --mirror replace
+our state from scratch. Without this fallback any corruption is
+permanent — every cron tick ls-remote sees a stale ref, decides
+to sync, and the clone re-trips the same broken state.
+
+Sleep 100s before the init fallback. After init the fetch from
+github is no-delta (we have no objects), so the next push is a
+full re-pull from upstream. If clone-from-self is failing for an
+infra reason that affects all repos (ogorod_serve down, network
+flap), every cron tick on every repo on every host would otherwise
+fall into the init path and do a full github fetch — that's a
+self-inflicted DDoS on upstream. The sleep stretches the cron
+period from ~10s to ~110s while clone-from-self is broken, cutting
+the load on github by ~10x during incidents.
 """
 
 import os
 import subprocess
 import sys
+import time
 
 
 TARGET = 'http://127.0.0.1:8035'
@@ -56,7 +74,12 @@ def main():
 
     log(f'syncing {name}')
 
-    run('git', 'clone', '--bare', dst, '.')
+    try:
+        run('git', 'clone', '--bare', dst, '.')
+    except subprocess.CalledProcessError:
+        log(f'clone-from-self failed for {name}; sleeping 100s before init+fetch to throttle upstream')
+        time.sleep(100)
+        run('git', 'init', '--bare', '.')
 
     run('git', 'fetch', '--prune', src,
         '+refs/heads/*:refs/heads/*', '+refs/tags/*:refs/tags/*')
