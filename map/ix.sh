@@ -25,6 +25,7 @@ bin/etcd/defrag
 bin/kernel/6/14
 bin/kernel/6/16
 bin/mirror/fetch
+bin/ogorod/mirror
 bin/smart/mon/tools
 bin/fixits(delay=10)
 bin/auto/update(user=ix)
