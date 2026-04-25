@@ -21,17 +21,17 @@ export GOSUMDB=off
 export GOWORK=off
 export GOCACHE=${tmp}/cgo
 export GOMODCACHE=${tmp}/gmc
-export GOPROXY="https://proxy.golang.org,direct"
+export GOPROXY="https://proxy.golang.org|direct"
 
 go_fetch() {
-    if HTTPS_PROXY=socks5://localhost:8015 HTTP_PROXY=socks5://localhost:8015 \
+    if HTTPS_PROXY=socks5://127.0.0.1:8015 HTTP_PROXY=socks5://127.0.0.1:8015 \
             go mod tidy \
-       && HTTPS_PROXY=socks5://localhost:8015 HTTP_PROXY=socks5://localhost:8015 \
+       && HTTPS_PROXY=socks5://127.0.0.1:8015 HTTP_PROXY=socks5://127.0.0.1:8015 \
             go mod vendor; then
         return 0
     fi
 
-    echo "go_fetch: socks5://localhost:8015 path failed, retrying direct" >&2
+    echo "go_fetch: socks5://127.0.0.1:8015 path failed, retrying direct" >&2
     go mod tidy && go mod vendor
 }
 
