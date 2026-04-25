@@ -18,7 +18,7 @@ cat << 'EOF' > ${out}/etc/cron/10-ogorod-mirror-{{r}}.json
 {
     "cmd": [
         "etcdctl", "lock", "/lock/ogorod/mirror/{{r}}", "--",
-        "dedup", "/ogorod/mirror/{{r}}", "--",
+        "dedup", "/ogorod/mirror/v2/{{r}}", "--",
         "gorn", "ignite",
         "--root", "ogorod_mirror",
         "--retry-error",
