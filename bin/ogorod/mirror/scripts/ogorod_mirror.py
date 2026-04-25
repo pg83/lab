@@ -10,19 +10,20 @@ ls-remote both upstream and our mirror, sort, compare. Equality
 (the common case) means an early return — the whole tick is two
 cheap HTTPS round-trips and no I/O.
 
-On divergence: clone --bare on first run, fetch +heads/* +tags/*
-thereafter, push --mirror to the local ogorod_serve. Cache lives
-in /var/run/ogorod_mirror/cache/<r>; survives ticks, wiped on
-reboot — first tick post-boot re-clones from upstream.
+On divergence: tmpdir, clone --bare from ourselves (localhost is
+cheap, an empty mirror on first run is fine), fetch +heads/* +tags/*
+from github (delta only), push --mirror back to ourselves, rm.
+No persistent cache — the temp dir lives only for one tick.
 """
 
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 
 
 TARGET = 'http://127.0.0.1:8035'
-CACHE = '/var/run/ogorod_mirror/cache'
 
 
 def log(*args):
@@ -53,20 +54,17 @@ def main():
     if ls_remote(src) == ls_remote(dst):
         return
 
-    cache_dir = f'{CACHE}/{name}'
+    log(f'syncing {name}')
 
-    os.makedirs(CACHE, exist_ok=True)
+    tmp = tempfile.mkdtemp(prefix='ogorod_mirror_')
 
-    if os.path.isdir(cache_dir):
-        log(f'fetching {name}')
-        run('git', '--git-dir', cache_dir, 'fetch', '--prune', 'origin',
+    try:
+        run('git', 'clone', '--bare', dst, tmp)
+        run('git', '--git-dir', tmp, 'fetch', '--prune', src,
             '+refs/heads/*:refs/heads/*', '+refs/tags/*:refs/tags/*')
-    else:
-        log(f'cloning {name}')
-        run('git', 'clone', '--bare', src, cache_dir)
-
-    log(f'pushing {name} -> mirror_{name}')
-    run('git', '--git-dir', cache_dir, 'push', '--mirror', dst)
+        run('git', '--git-dir', tmp, 'push', '--mirror', dst)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 if __name__ == '__main__':
