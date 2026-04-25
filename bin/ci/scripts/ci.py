@@ -9,7 +9,7 @@ against /ci/<tier>).
 Subcommands:
 
   ci check <tier>
-      Fresh clone of https://github.com/pg83/ix at its current
+      Fresh clone of the local ogorod ix mirror at its current
       HEAD sha, run `./ix build <tier> --seed=1` via molot. Exits
       0 if the build reached completion — including target-build
       failures, detected by marker strings in captured output
@@ -35,7 +35,7 @@ import subprocess
 import sys
 
 
-GIT_URL = 'https://github.com/pg83/ix'
+GIT_URL = 'http://127.0.0.1:8035/mirror_ix.git'
 
 CACHE_LOCK_KEY = '/lock/ci/cache'
 CACHE_S3_BUCKET = 'cix'
