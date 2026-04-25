@@ -4,13 +4,18 @@
 One autoupdate tick:
 
   1. Sleep briefly so a failing loop doesn't DOS the host.
-  2. Log current /bin/runpy sha256 — a heartbeat that tells Loki
-     which revision each host is running right now, answerable
-     without SSH.
-  3. Probe github for new commits via ls-remote (cheap, single
-     round-trip). If HEAD matches local, stop — no work to do.
-  4. Pull. On any pull failure, wipe and re-clone.
-  5. ix mut system, then ix mut $(ix list).
+  2. Log /bin/runpy sha256 — heartbeat into Loki, tells which
+     revision each host is running, no SSH needed.
+  3. Probe github via ls-remote (one round-trip). If HEAD matches
+     the local ix/ checkout, stop — no work to do.
+  4. Stage the upgrade in ix1/: copy current ix/ aside, pull there,
+     run `ix mut system` + `ix mut $(ix list)` against the staged
+     tree. On any failure: leave ix/ at the previous (deployed)
+     ref so the next cycle tries again. Without staging, a failed
+     mutation would leave ix/ at the new ref, the ls-remote probe
+     would now match, and the cycle would think "nothing to do" —
+     a transient network blip permanently leaving us un-built.
+  5. On success: atomic swap ix/ ← ix1/.
 
 Runit re-execs us on exit; the sleep at step 1 is the rate limit.
 """
@@ -25,6 +30,7 @@ import time
 
 URL = 'https://github.com/pg83/lab'
 DST = 'ix'
+NEW = 'ix1'
 
 
 def log(*args):
@@ -33,6 +39,7 @@ def log(*args):
 
 def run(*args, cwd=None, capture=False):
     log(*args, f'(cwd={cwd})' if cwd else '')
+
     return subprocess.run(
         args,
         cwd=cwd,
@@ -54,34 +61,28 @@ def clone(url, dst):
     run('git', 'clone', '--recurse-submodules', url, dst)
 
 
-def has_new_commits(url, dst):
-    # Fresh / corrupted checkout → treat as "definitely new".
-    if not os.path.isdir(os.path.join(dst, '.git')):
-        clone(url, dst)
+def remote_head(url):
+    return run('git', 'ls-remote', '--quiet', url, 'HEAD', capture=True).stdout.split()[0]
 
-        return True
 
-    # ls-remote is one TCP round-trip returning ~1 KB; designed for
-    # frequent polling. A full `git pull` negotiates upload-pack
-    # every time regardless of whether anything changed, which on a
-    # 10s cycle × 12+ services hits GitHub's abuse rate-limiter.
-    remote = run('git', 'ls-remote', '--quiet', url, 'HEAD', capture=True).stdout.split()[0]
-    local = run('git', 'rev-parse', 'HEAD', cwd=dst, capture=True).stdout.strip()
+def local_head(dst):
+    return run('git', 'rev-parse', 'HEAD', cwd=dst, capture=True).stdout.strip()
 
-    if remote == local:
-        return False
 
-    try:
-        run('git', 'pull', cwd=dst)
-    except subprocess.CalledProcessError:
-        log('pull failed — wiping and re-cloning')
-        clone(url, dst)
+def build(checkout):
+    # The bin/auto/update/scripts wrapper at /bin/ix hard-codes
+    # /var/run/autoupdate_ix/ix as the entrypoint, which pins
+    # to DST. We're operating on a staged tree, so call its own
+    # ./ix wrapper instead — IX_PATH then derives from the
+    # script's own dirname and we work entirely inside the
+    # staged checkout.
+    ix = os.path.abspath(os.path.join(checkout, 'ix'))
 
-        return True
+    run(ix, 'mut', 'system')
 
-    run('git', 'submodule', 'update', '--init', '--recursive', cwd=dst)
+    pkgs = run(ix, 'list', capture=True).stdout.split()
 
-    return True
+    run(ix, 'mut', *pkgs)
 
 
 def main():
@@ -89,12 +90,45 @@ def main():
 
     log(f'autoupdate_ix: runpy-sha256={runpy_sha()}')
 
-    if not has_new_commits(URL, DST):
+    # First-time bootstrap: nothing to stage against, just clone
+    # straight into DST and build.
+    if not os.path.isdir(os.path.join(DST, '.git')):
+        clone(URL, DST)
+        build(DST)
+
         return
 
-    run('ix', 'mut', 'system')
-    pkgs = run('ix', 'list', capture=True).stdout.split()
-    run('ix', 'mut', *pkgs)
+    if remote_head(URL) == local_head(DST):
+        return
+
+    # Stage upgrade so a failed build doesn't move DST forward.
+    if os.path.exists(NEW):
+        shutil.rmtree(NEW)
+
+    # cp -a preserves symlinks, perms, timestamps; submodule
+    # checkouts and .git/ all come along intact.
+    run('cp', '-a', DST, NEW)
+
+    try:
+        run('git', 'pull', cwd=NEW)
+        run('git', 'submodule', 'update', '--init', '--recursive', cwd=NEW)
+        build(NEW)
+    except subprocess.CalledProcessError:
+        log('staged build failed; leaving ix at previous ref, retry next cycle')
+        shutil.rmtree(NEW)
+
+        raise
+
+    log(f'staged build succeeded; promoting {NEW} → {DST}')
+
+    backup = DST + '.bak'
+
+    if os.path.exists(backup):
+        shutil.rmtree(backup)
+
+    os.rename(DST, backup)
+    os.rename(NEW, DST)
+    shutil.rmtree(backup)
 
 
 if __name__ == '__main__':
