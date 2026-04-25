@@ -34,9 +34,16 @@ Exit policy:
 
 import json
 import os
+import re
 import subprocess
 import sys
 import urllib.request
+
+
+# gorn task ids are uuids; treat anything else stored at the
+# dedup path as garbage (e.g. stdout from a non-gorn-ignite cmd
+# that ran before the cron was migrated to gorn) and ignore it.
+GUID_RE = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
 
 
 def log(*args):
@@ -76,6 +83,10 @@ def main():
     cmd = sys.argv[3:]
 
     prev = etcd_get(path)
+
+    if prev and not GUID_RE.match(prev):
+        log(f'{path}: stored value {prev!r} is not a guid; treating as no previous')
+        prev = ''
 
     if prev:
         if gorn_queued(prev):
