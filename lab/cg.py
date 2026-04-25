@@ -1825,7 +1825,7 @@ class OgorodServe:
     # mutex, fetches don't. See ogorod/CLAUDE.md.
     #
     # Wire-protocol delegated to native git-http-backend (CGI subprocess),
-    # so `bin/git` is a runtime dep alongside `bin/ogorod`. The
+    # so `bin/git/unwrap` is a runtime dep alongside `bin/ogorod`. The
     # pre-receive hook re-execs ogorod itself in `hook` mode to ship
     # incoming packs to S3 + run CAS on refs.
     def __init__(self, port, s3_endpoint, etcd_endpoints):
@@ -1849,7 +1849,7 @@ class OgorodServe:
 
     def pkgs(self):
         yield {'pkg': 'bin/ogorod'}
-        yield {'pkg': 'bin/git'}
+        yield {'pkg': 'bin/git/unwrap'}
 
         yield {
             'pkg': 'etc/lab/user/home',
@@ -1914,7 +1914,7 @@ class OgorodThin:
 
     def pkgs(self):
         yield {'pkg': 'bin/ogorod'}
-        yield {'pkg': 'bin/git'}
+        yield {'pkg': 'bin/git/unwrap'}
 
         yield {
             'pkg': 'etc/lab/user/home',
