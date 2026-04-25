@@ -1842,7 +1842,7 @@ class OgorodServe:
         return ['root', 'ogorod_serve']
 
     def home_dir(self):
-        return f'/var/run/{self.name()}/std/home'
+        return f'/var/run/{self.name()}/home'
 
     def cache_dir(self):
         return f'{self.home_dir()}/cache'
@@ -1904,7 +1904,7 @@ class OgorodThin:
         return ['root', 'ogorod_thin']
 
     def home_dir(self):
-        return f'/var/run/{self.name()}/std/home'
+        return f'/var/run/{self.name()}/home'
 
     def cache_dir(self):
         return f'{self.home_dir()}/cache'
