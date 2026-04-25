@@ -2,11 +2,13 @@
 
 """
 Mirror github.com/pg83/<r> → http://127.0.0.1:8035/mirror_<r>.git
-under /lock/ogorod/mirror, fired every 10s by job_scheduler.
+under /lock/ogorod/mirror/<r>, fired every 10s by job_scheduler.
+The repo name is the only argv: the cron generator emits one entry
+per repo so each sync runs on its own lock.
 
-Per repo each tick: ls-remote both upstream and our mirror, sort,
-compare. Equality (the common case) means an early return — the
-whole tick is six cheap HTTPS round-trips and no I/O.
+ls-remote both upstream and our mirror, sort, compare. Equality
+(the common case) means an early return — the whole tick is two
+cheap HTTPS round-trips and no I/O.
 
 On divergence: clone --bare on first run, fetch +heads/* +tags/*
 thereafter, push --mirror to the local ogorod_serve. Cache lives
@@ -19,7 +21,6 @@ import subprocess
 import sys
 
 
-REPOS = ['molot', 'gorn', 'ix', 'lab', 'samogon', 'ogorod']
 TARGET = 'http://127.0.0.1:8035'
 CACHE = '/var/run/ogorod_mirror/cache'
 
@@ -40,7 +41,12 @@ def run(*args):
     subprocess.run(list(args), check=True)
 
 
-def sync_one(name):
+def main():
+    if len(sys.argv) != 2:
+        raise SystemExit('usage: ogorod_mirror <repo>')
+
+    name = sys.argv[1]
+
     src = f'https://github.com/pg83/{name}.git'
     dst = f'{TARGET}/mirror_{name}.git'
 
@@ -48,6 +54,8 @@ def sync_one(name):
         return
 
     cache_dir = f'{CACHE}/{name}'
+
+    os.makedirs(CACHE, exist_ok=True)
 
     if os.path.isdir(cache_dir):
         log(f'fetching {name}')
@@ -59,13 +67,6 @@ def sync_one(name):
 
     log(f'pushing {name} -> mirror_{name}')
     run('git', '--git-dir', cache_dir, 'push', '--mirror', dst)
-
-
-def main():
-    os.makedirs(CACHE, exist_ok=True)
-
-    for r in REPOS:
-        sync_one(r)
 
 
 if __name__ == '__main__':
