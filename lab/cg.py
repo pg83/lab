@@ -1881,6 +1881,73 @@ class OgorodServe:
         )
 
 
+class OgorodThin:
+    # Sibling of OgorodServe with the cluster-sync logic moved out of
+    # the HTTP path and into per-binary wrappers. The Go HTTP handler
+    # only ensures the bare repo skeleton + holds the etcd lock on
+    # push, then exec's git-http-backend with PATH prepended by
+    # cache_dir/bin/. Those wrappers re-exec us as `ogorod wrap` to
+    # do SyncRepo + syscall.Exec the real git binary.
+    #
+    # Goal: A/B comparison against OgorodServe. Same data plane
+    # (etcd refs + S3 packs + ogorod hook) — only the wire-protocol
+    # serving stack differs.
+    def __init__(self, port, s3_endpoint, etcd_endpoints):
+        self.port = port
+        self.s3_endpoint = s3_endpoint
+        self.etcd_endpoints = list(etcd_endpoints)
+
+    def name(self):
+        return 'ogorod_thin'
+
+    def users(self):
+        return ['root', 'ogorod_thin']
+
+    def home_dir(self):
+        return f'/var/run/{self.name()}/std/home'
+
+    def cache_dir(self):
+        return f'{self.home_dir()}/cache'
+
+    def bin_dir(self):
+        return f'{self.home_dir()}/bin'
+
+    def pkgs(self):
+        yield {'pkg': 'bin/ogorod'}
+        yield {'pkg': 'bin/git'}
+
+        yield {
+            'pkg': 'etc/lab/user/home',
+            'user': 'ogorod_thin',
+            'user_home': self.home_dir(),
+        }
+
+    def prepare(self):
+        make_dirs(self.home_dir(), owner='ogorod_thin')
+        make_dirs(self.cache_dir(), owner='ogorod_thin')
+        make_dirs(self.bin_dir(), owner='ogorod_thin')
+
+    def run(self):
+        env = {
+            'PATH': '/bin',
+            'HOME': self.home_dir(),
+            'OGOROD_ETCD_ENDPOINTS': ','.join(self.etcd_endpoints),
+            'OGOROD_S3_ENDPOINT': self.s3_endpoint,
+            'OGOROD_S3_ACCESS_KEY': get_key('/s3/user').decode().strip(),
+            'OGOROD_S3_SECRET_KEY': get_key('/s3/password').decode().strip(),
+            'OGOROD_S3_BUCKET': 'ogorod',
+        }
+
+        exec_into(
+            'ogorod', 'serve-thin',
+            '--listen', f'0.0.0.0:{self.port}',
+            '--cache-dir', self.cache_dir(),
+            '--bin-dir', self.bin_dir(),
+            user='ogorod_thin',
+            **env,
+        )
+
+
 class Secrets:
     def __init__(self, port):
         self.port = port
@@ -2131,6 +2198,18 @@ class ClusterMap:
 
             yield {
                 'host': hn,
+                'serv': OgorodThin(
+                    port=p['ogorod_thin'],
+                    s3_endpoint=f"http://{hn}.eth1:{p['minio']}",
+                    etcd_endpoints=[
+                        f"{x['hostname']}.nebula:{p['etcd_2_client']}"
+                        for x in self.conf['hosts']
+                    ],
+                ),
+            }
+
+            yield {
+                'host': hn,
                 'serv': CO2Mon(p['co2_mon']),
             }
 
@@ -2348,6 +2427,7 @@ sys.modules['builtins'].Loki = Loki
 sys.modules['builtins'].Promtail = Promtail
 sys.modules['builtins'].TailLog = TailLog
 sys.modules['builtins'].OgorodServe = OgorodServe
+sys.modules['builtins'].OgorodThin = OgorodThin
 sys.modules['builtins'].Secrets = Secrets
 sys.modules['builtins'].SecretsV2 = SecretsV2
 sys.modules['builtins'].Heat = Heat
@@ -2695,6 +2775,7 @@ def do(code):
         'promtail': 8033,
         'tail_log': 8040,
         'ogorod_serve': 8035,
+        'ogorod_thin': 8038,
     }
 
     users = {
@@ -2729,6 +2810,7 @@ def do(code):
         'samogon': 2001,
         'loki': 2002,
         'ogorod_serve': 2006,
+        'ogorod_thin': 2007,
     }
 
     for i in range(0, 64):
