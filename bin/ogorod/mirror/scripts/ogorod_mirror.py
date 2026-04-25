@@ -10,17 +10,15 @@ ls-remote both upstream and our mirror, sort, compare. Equality
 (the common case) means an early return — the whole tick is two
 cheap HTTPS round-trips and no I/O.
 
-On divergence: tmpdir, clone --bare from ourselves (localhost is
-cheap, an empty mirror on first run is fine), fetch +heads/* +tags/*
-from github (delta only), push --mirror back to ourselves, rm.
-No persistent cache — the temp dir lives only for one tick.
+On divergence: keep a bare git dir at <cwd>/<r>, init it if first
+seen, fetch +heads/* +tags/* from github (delta only after first
+run), push --mirror to ourselves. No cleanup; state persists in
+the scheduler's cwd between ticks so only deltas move on the wire.
 """
 
 import os
-import shutil
 import subprocess
 import sys
-import tempfile
 
 
 TARGET = 'http://127.0.0.1:8035'
@@ -56,15 +54,15 @@ def main():
 
     log(f'syncing {name}')
 
-    tmp = tempfile.mkdtemp(prefix='ogorod_mirror_')
+    bare = os.path.abspath(name)
 
-    try:
-        run('git', 'clone', '--bare', dst, tmp)
-        run('git', '--git-dir', tmp, 'fetch', '--prune', src,
-            '+refs/heads/*:refs/heads/*', '+refs/tags/*:refs/tags/*')
-        run('git', '--git-dir', tmp, 'push', '--mirror', dst)
-    finally:
-        shutil.rmtree(tmp, ignore_errors=True)
+    if not os.path.exists(os.path.join(bare, 'HEAD')):
+        run('git', 'init', '--bare', bare)
+
+    run('git', '--git-dir', bare, 'fetch', '--prune', src,
+        '+refs/heads/*:refs/heads/*', '+refs/tags/*:refs/tags/*')
+
+    run('git', '--git-dir', bare, 'push', '--mirror', dst)
 
 
 if __name__ == '__main__':
