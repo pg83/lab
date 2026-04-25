@@ -2,18 +2,20 @@
 
 """
 Mirror github.com/pg83/<r> → http://127.0.0.1:8035/mirror_<r>.git
-under /lock/ogorod/mirror/<r>, fired every 10s by job_scheduler.
-The repo name is the only argv: the cron generator emits one entry
-per repo so each sync runs on its own lock.
+under /lock/ogorod/mirror/<r>, fired every 10s by job_scheduler
+and shipped to a gorn worker via `gorn ignite`. The repo name is
+the only argv; the cron generator emits one entry per repo so each
+sync runs on its own lock and on whichever worker is free.
 
 ls-remote both upstream and our mirror, sort, compare. Equality
 (the common case) means an early return — the whole tick is two
 cheap HTTPS round-trips and no I/O.
 
-On divergence: keep a bare git dir at <cwd>/<r>, init it if first
-seen, fetch +heads/* +tags/* from github (delta only after first
-run), push --mirror to ourselves. No cleanup; state persists in
-the scheduler's cwd between ticks so only deltas move on the wire.
+On divergence: gorn-wrap put us in a fresh tmpfs ns, so cwd is
+empty. clone --bare from ourselves (localhost is cheap; an empty
+mirror on first run is fine), fetch +heads/* +tags/* from github
+(delta only thanks to clone-from-self seeding the have-state),
+push --mirror back to us.
 """
 
 import os
@@ -54,15 +56,12 @@ def main():
 
     log(f'syncing {name}')
 
-    bare = os.path.abspath(name)
+    run('git', 'clone', '--bare', dst, '.')
 
-    if not os.path.exists(os.path.join(bare, 'HEAD')):
-        run('git', 'init', '--bare', bare)
-
-    run('git', '--git-dir', bare, 'fetch', '--prune', src,
+    run('git', 'fetch', '--prune', src,
         '+refs/heads/*:refs/heads/*', '+refs/tags/*:refs/tags/*')
 
-    run('git', '--git-dir', bare, 'push', '--mirror', dst)
+    run('git', 'push', '--mirror', dst)
 
 
 if __name__ == '__main__':
