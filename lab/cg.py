@@ -102,7 +102,12 @@ class IPerf3:
         }
 
     def run(self):
-        exec_into('iperf3', '-s', '-p', self.port)
+        # `bin/runsrv/scripts/srv` exports TMPDIR=${PWD} before
+        # dropping to srv_user; that PWD (= /var/run/i_perf_3/std)
+        # is root-owned, and iperf3's per-stream mkstemp fails with
+        # EACCES. /var/run/i_perf_3 *is* chowned to i_perf_3 by the
+        # runit `hi` script — point TMPDIR there.
+        exec_into('iperf3', '-s', '-p', self.port, TMPDIR='/var/run/i_perf_3')
 
 
 class Heat:
