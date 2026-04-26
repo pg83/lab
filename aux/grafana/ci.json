@@ -1,0 +1,137 @@
+{
+  "uid": "ci",
+  "title": "CI",
+  "tags": ["ci"],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "graphTooltip": 0,
+  "time": {"from": "now-3h", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "refresh": "30s",
+  "annotations": {"list": []},
+  "templating": {"list": []},
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "title": "CI checks per minute, by class",
+      "description": "Counts ci_done events grouped by classifier verdict — `success` (real green), `target_fail` (a tier package broke, ci-check still exits 0), `infra_error` (everything else: realm prep, freeze, network).",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 0},
+      "datasource": {"type": "loki", "uid": "loki"},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {"drawStyle": "bars", "stacking": {"mode": "normal", "group": "A"}, "fillOpacity": 50, "lineWidth": 1}
+        }
+      },
+      "options": {"legend": {"displayMode": "table", "placement": "right", "calcs": ["mean", "lastNotNull"]}},
+      "targets": [
+        {
+          "expr": "sum by (class) (count_over_time({service=\"ci_metrics\"} | json [$__interval]))",
+          "legendFormat": "{{class}}",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 2,
+      "title": "Top failing packages (last 1h)",
+      "description": "Aggregates `node failed: ... <pkg>` markers across every ci-check run in the window. Persistent culprits dominate; flapping nodes show up as smaller bars.",
+      "type": "barchart",
+      "gridPos": {"h": 10, "w": 12, "x": 0, "y": 8},
+      "datasource": {"type": "loki", "uid": "loki"},
+      "fieldConfig": {"defaults": {"unit": "short"}},
+      "options": {
+        "orientation": "horizontal",
+        "showValue": "always",
+        "stacking": "none",
+        "legend": {"showLegend": false}
+      },
+      "targets": [
+        {
+          "expr": "topk(15, sum by (failed_node) (count_over_time({service=\"ci_metrics\"} | json | failed_node!=\"\" [1h])))",
+          "legendFormat": "{{failed_node}}",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+
+    {
+      "id": 3,
+      "title": "Per-tier success ratio",
+      "description": "success / (success + target_fail + infra_error) over a 10-min window, grouped by tier. Drops below 1.0 mean either a real package broke or our infra is flaking.",
+      "type": "timeseries",
+      "gridPos": {"h": 10, "w": 12, "x": 12, "y": 8},
+      "datasource": {"type": "loki", "uid": "loki"},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "custom": {"drawStyle": "line", "lineWidth": 2, "fillOpacity": 10}
+        }
+      },
+      "options": {"legend": {"displayMode": "table", "placement": "right", "calcs": ["mean", "lastNotNull"]}},
+      "targets": [
+        {
+          "expr": "sum by (tier) (count_over_time({service=\"ci_metrics\"} | json | class=\"success\" [10m])) / sum by (tier) (count_over_time({service=\"ci_metrics\"} | json | tier!=\"\" [10m]))",
+          "legendFormat": "{{tier}}",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "id": 4,
+      "title": "Check duration p50 / p95 (s)",
+      "description": "Two clusters expected: ~17s tasks (cache hit, no real build) and longer ones when a tier actually compiles something. p95 spike means the long tail moved.",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 18},
+      "datasource": {"type": "loki", "uid": "loki"},
+      "fieldConfig": {"defaults": {"unit": "s"}},
+      "options": {"legend": {"displayMode": "table", "placement": "right", "calcs": ["mean", "max", "lastNotNull"]}},
+      "targets": [
+        {
+          "expr": "quantile_over_time(0.5, {service=\"ci_metrics\"} | json | unwrap dur [5m])",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "quantile_over_time(0.95, {service=\"ci_metrics\"} | json | unwrap dur [5m])",
+          "legendFormat": "p95",
+          "refId": "B"
+        }
+      ]
+    },
+
+    {
+      "id": 5,
+      "title": "Recent infra errors",
+      "description": "ci-check runs the classifier marked `infra_error` — neither real success nor a recognised target failure. These are the ones to triage: realm prep crashes, freeze ImportErrors, network blips. Click through to Loki Explore to read the full stderr.",
+      "type": "logs",
+      "gridPos": {"h": 12, "w": 24, "x": 0, "y": 26},
+      "datasource": {"type": "loki", "uid": "loki"},
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": true,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending"
+      },
+      "targets": [
+        {
+          "expr": "{service=\"ci_metrics\"} | json | class=\"infra_error\" | line_format \"{{.tier}}  host={{.host}}  failed_node={{.failed_node}}  dur={{.dur}}s  guid={{.guid}}\"",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}
