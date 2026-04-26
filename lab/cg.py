@@ -462,7 +462,7 @@ class Gofra:
             # below the timeout-bound flush rate at line speed, so
             # window drives flush cadence under load.
             'reorder': {
-                'window': 32,
+                'window': 64,
                 'timeout_us': 500,
             },
             # Writer side has its own batching: accumulates up to
@@ -470,7 +470,7 @@ class Gofra:
             # sorting + tun.Write'ing. Bigger bucket = bigger
             # monotonic run on TUN; smaller = lower latency.
             'writer': {
-                'bucket': 32,
+                'bucket': 64,
                 'timeout_us': 500,
             },
         }
