@@ -488,7 +488,7 @@ class NebulaNG:
             with open(key, 'wb') as f:
                 f.write(get_key(f'/nebula/ng/{self.host}.key'))
 
-            exec_into('nebula', '--config', conf)
+            exec_into('nebula_ng', '--config', conf)
 
 
 class Ssh3:

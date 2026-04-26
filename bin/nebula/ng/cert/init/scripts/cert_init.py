@@ -78,14 +78,14 @@ def main():
         log(f'workdir {d}')
 
         subprocess.run(
-            ['nebula-cert', 'ca', '-name', CA_NAME, '-duration', CA_DURATION],
+            ['nebula_ng_cert', 'ca', '-name', CA_NAME, '-duration', CA_DURATION],
             check=True,
         )
         log('generated ca.crt + ca.key')
 
         for name, ip in HOSTS:
             subprocess.run(
-                ['nebula-cert', 'sign',
+                ['nebula_ng_cert', 'sign',
                  '-ca-crt', 'ca.crt', '-ca-key', 'ca.key',
                  '-name', name, '-ip', ip, '-duration', HOST_DURATION],
                 check=True,
