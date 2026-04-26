@@ -1279,8 +1279,8 @@ class Grafana:
 
         yield {
             'pkg': 'aux/grafana',
-            'collector_port': str(self.collector_port),
-            'loki_port': str(self.loki_port),
+            'prom_url': f'http://{self.bind_addr}:{self.collector_port}',
+            'loki_url': f'http://{self.bind_addr}:{self.loki_port}',
         }
 
         yield {

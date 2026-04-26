@@ -12,7 +12,7 @@ datasources:
     uid: prom
     type: prometheus
     access: proxy
-    url: http://127.0.0.1:{{collector_port | defined('collector_port')}}
+    url: {{prom_url | defined('prom_url')}}
     orgId: 1
     isDefault: true
     editable: false
@@ -20,7 +20,7 @@ datasources:
     uid: loki
     type: loki
     access: proxy
-    url: http://127.0.0.1:{{loki_port | defined('loki_port')}}
+    url: {{loki_url | defined('loki_url')}}
     orgId: 1
     editable: false
 EOF
