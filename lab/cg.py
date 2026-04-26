@@ -92,6 +92,22 @@ class IPerf:
         exec_into('iperf', '-s', '-p', self.port)
 
 
+class IPerf3:
+    def __init__(self, port):
+        self.port = port
+
+    def name(self):
+        return 'iperf3'
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/iperf/3',
+        }
+
+    def run(self):
+        exec_into('iperf3', '-s', '-p', str(self.port))
+
+
 class Heat:
     def __init__(self, num):
         self.uniq = num
@@ -2391,6 +2407,11 @@ class ClusterMap:
 
             yield {
                 'host': hn,
+                'serv': IPerf3(p['i_perf_3']),
+            }
+
+            yield {
+                'host': hn,
                 'serv': NodeExporter(p['node_exporter']),
             }
 
@@ -2491,6 +2512,7 @@ class ClusterMap:
 
 
 sys.modules['builtins'].IPerf = IPerf
+sys.modules['builtins'].IPerf3 = IPerf3
 sys.modules['builtins'].NodeExporter = NodeExporter
 sys.modules['builtins'].Collector = Collector
 sys.modules['builtins'].NebulaNode = NebulaNode
@@ -2843,6 +2865,7 @@ def do(code):
         'mirror_http': 8003,
         'mirror_rsyncd': 8004,
         'i_perf': 8006,
+        'i_perf_3': 8049,
         'node_exporter': 8007,
         'collector': 8008,
         'nebula_node_prom': 8009,
@@ -2886,6 +2909,7 @@ def do(code):
         'git_ci': 1008,
         'h_z': 1009,
         'i_perf': 1011,
+        'iperf3': 1029,
         'nebula_lh': 1012,
         'minio_1': 1013,
         'minio_2': 1014,
