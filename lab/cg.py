@@ -463,7 +463,7 @@ class Gofra:
             # window drives flush cadence under load.
             'reorder': {
                 'window': 16,
-                'timeout_us': 1000,
+                'timeout_us': 500,
             },
             # Writer side has its own batching: accumulates up to
             # `bucket` sub-slices from the reorder goroutine before
@@ -471,7 +471,7 @@ class Gofra:
             # monotonic run on TUN; smaller = lower latency.
             'writer': {
                 'bucket': 16,
-                'timeout_us': 1000,
+                'timeout_us': 500,
             },
         }
 
