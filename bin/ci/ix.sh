@@ -6,6 +6,7 @@ bin/molot
 bin/dedup
 bin/python
 bin/ci/cron
+bin/ci/metrics
 bin/etcd/ctl
 bin/git/unwrap
 bin/ci/scripts
