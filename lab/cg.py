@@ -132,9 +132,10 @@ def make_dirs(path, owner=None):
 
 
 class Collector:
-    def __init__(self, port, host):
+    def __init__(self, port, host, bind_addr):
         self.port = port
         self.host = host
+        self.bind_addr = bind_addr
         self.jobs = []
 
     def prom_port(self):
@@ -172,7 +173,7 @@ class Collector:
                 'prometheus',
                 f'--config.file={fn}',
                 '--storage.tsdb.path=/home/collector/',
-                f'--web.listen-address=0.0.0.0:{self.port}',
+                f'--web.listen-address={self.bind_addr}:{self.port}',
             ]
 
             exec_into(*args)
@@ -1174,10 +1175,11 @@ class Federator:
     # of at its local Collector so dashboards see the whole cluster,
     # and cross-host queries (sum by host, compare latency, etc.) work
     # directly. One per host — no SPOF.
-    def __init__(self, port, collector_port, hosts):
+    def __init__(self, port, collector_port, hosts, bind_addr):
         self.port = port
         self.collector_port = collector_port
         self.hosts = list(hosts)
+        self.bind_addr = bind_addr
 
     def name(self):
         return 'federator'
@@ -1234,11 +1236,7 @@ class Federator:
                 'prometheus',
                 f'--config.file={fn}',
                 f'--storage.tsdb.path=/home/{self.name()}/',
-                # Bind on all interfaces (including nebula) so the
-                # mesh-wirez forward `-L :N:labX.nebula:N` from a dev
-                # sandbox can reach it. Local Grafana still hits
-                # 127.0.0.1 via the same 0.0.0.0 bind.
-                f'--web.listen-address=0.0.0.0:{self.port}',
+                f'--web.listen-address={self.bind_addr}:{self.port}',
             ]
 
             exec_into(*args)
@@ -1252,10 +1250,11 @@ GRAFANA_ADMIN_PASSWORD = 'grafana'
 
 
 class Grafana:
-    def __init__(self, port, collector_port, loki_port):
+    def __init__(self, port, collector_port, loki_port, bind_addr):
         self.port = port
         self.collector_port = collector_port
         self.loki_port = loki_port
+        self.bind_addr = bind_addr
         # Experimental: class-source AST hash so method-body edits
         # auto-invalidate the service without needing a self.v bump.
         # Trialed on grafana+samogon where "accidentally kept
@@ -1300,7 +1299,7 @@ class Grafana:
 
         return (
             '[server]\n'
-            'http_addr = 0.0.0.0\n'
+            f'http_addr = {self.bind_addr}\n'
             f'http_port = {self.port}\n'
             '[paths]\n'
             f'data = {s}/data\n'
@@ -1835,18 +1834,23 @@ class OgorodServe:
     # so `bin/git/unwrap` is a runtime dep alongside `bin/ogorod`. The
     # pre-receive hook re-execs ogorod itself in `hook` mode to ship
     # incoming packs to S3 + run CAS on refs.
-    def __init__(self, port, s3_endpoint, etcd_endpoints):
+    def __init__(self, port, s3_endpoint, etcd_endpoints, bind_addr, suffix=None):
         self.port = port
         self.s3_endpoint = s3_endpoint
         self.etcd_endpoints = list(etcd_endpoints)
+        self.bind_addr = bind_addr
+        self.suffix = suffix
 
     def name(self):
+        if self.suffix:
+            return f'ogorod_serve_{self.suffix}'
+
         return 'ogorod_serve'
 
     def users(self):
         # Start as root so prepare() can chown the cache dir, then
         # drop to ogorod_serve via su-exec inside run().
-        return ['root', 'ogorod_serve']
+        return ['root', self.name()]
 
     def home_dir(self):
         return f'/var/run/{self.name()}/home'
@@ -1860,13 +1864,13 @@ class OgorodServe:
 
         yield {
             'pkg': 'etc/lab/user/home',
-            'user': 'ogorod_serve',
+            'user': self.name(),
             'user_home': self.home_dir(),
         }
 
     def prepare(self):
-        make_dirs(self.home_dir(), owner='ogorod_serve')
-        make_dirs(self.cache_dir(), owner='ogorod_serve')
+        make_dirs(self.home_dir(), owner=self.name())
+        make_dirs(self.cache_dir(), owner=self.name())
 
     def run(self):
         env = {
@@ -1881,9 +1885,9 @@ class OgorodServe:
 
         exec_into(
             'ogorod', 'serve',
-            '--listen', f'0.0.0.0:{self.port}',
+            '--listen', f'{self.bind_addr}:{self.port}',
             '--cache-dir', self.cache_dir(),
-            user='ogorod_serve',
+            user=self.name(),
             **env,
         )
 
@@ -1899,16 +1903,21 @@ class OgorodThin:
     # Goal: A/B comparison against OgorodServe. Same data plane
     # (etcd refs + S3 packs + ogorod hook) — only the wire-protocol
     # serving stack differs.
-    def __init__(self, port, s3_endpoint, etcd_endpoints):
+    def __init__(self, port, s3_endpoint, etcd_endpoints, bind_addr, suffix=None):
         self.port = port
         self.s3_endpoint = s3_endpoint
         self.etcd_endpoints = list(etcd_endpoints)
+        self.bind_addr = bind_addr
+        self.suffix = suffix
 
     def name(self):
+        if self.suffix:
+            return f'ogorod_thin_{self.suffix}'
+
         return 'ogorod_thin'
 
     def users(self):
-        return ['root', 'ogorod_thin']
+        return ['root', self.name()]
 
     def home_dir(self):
         return f'/var/run/{self.name()}/home'
@@ -1925,14 +1934,14 @@ class OgorodThin:
 
         yield {
             'pkg': 'etc/lab/user/home',
-            'user': 'ogorod_thin',
+            'user': self.name(),
             'user_home': self.home_dir(),
         }
 
     def prepare(self):
-        make_dirs(self.home_dir(), owner='ogorod_thin')
-        make_dirs(self.cache_dir(), owner='ogorod_thin')
-        make_dirs(self.bin_dir(), owner='ogorod_thin')
+        make_dirs(self.home_dir(), owner=self.name())
+        make_dirs(self.cache_dir(), owner=self.name())
+        make_dirs(self.bin_dir(), owner=self.name())
 
     def run(self):
         env = {
@@ -1947,10 +1956,10 @@ class OgorodThin:
 
         exec_into(
             'ogorod', 'serve-thin',
-            '--listen', f'0.0.0.0:{self.port}',
+            '--listen', f'{self.bind_addr}:{self.port}',
             '--cache-dir', self.cache_dir(),
             '--bin-dir', self.bin_dir(),
-            user='ogorod_thin',
+            user=self.name(),
             **env,
         )
 
@@ -2141,7 +2150,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': Collector(p['collector'], hn),
+                'serv': Collector(p['collector'], hn, h['nebula']['ip']),
             }
 
             yield {
@@ -2151,12 +2160,12 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': Federator(p['federator'], p['collector'], [x['hostname'] for x in self.conf['hosts']]),
+                'serv': Federator(p['federator'], p['collector'], [x['hostname'] for x in self.conf['hosts']], h['nebula']['ip']),
             }
 
             yield {
                 'host': hn,
-                'serv': Grafana(p['grafana'], p['federator'], p['loki']),
+                'serv': Grafana(p['grafana'], p['federator'], p['loki'], h['nebula']['ip']),
             }
 
             yield {
@@ -2191,29 +2200,34 @@ class ClusterMap:
                 ),
             }
 
-            yield {
-                'host': hn,
-                'serv': OgorodServe(
-                    port=p['ogorod_serve'],
-                    s3_endpoint=f"http://{hn}.eth1:{p['minio']}",
-                    etcd_endpoints=[
-                        f"{x['hostname']}.nebula:{p['etcd_2_client']}"
-                        for x in self.conf['hosts']
-                    ],
-                ),
-            }
+            ogorod_etcd = [
+                f"{x['hostname']}.nebula:{p['etcd_2_client']}"
+                for x in self.conf['hosts']
+            ]
+            ogorod_s3 = f"http://{hn}.eth1:{p['minio']}"
 
-            yield {
-                'host': hn,
-                'serv': OgorodThin(
-                    port=p['ogorod_thin'],
-                    s3_endpoint=f"http://{hn}.eth1:{p['minio']}",
-                    etcd_endpoints=[
-                        f"{x['hostname']}.nebula:{p['etcd_2_client']}"
-                        for x in self.conf['hosts']
-                    ],
-                ),
-            }
+            for bind, suffix in [(h['nebula']['ip'], None), ('127.0.0.1', 'local')]:
+                yield {
+                    'host': hn,
+                    'serv': OgorodServe(
+                        port=p['ogorod_serve'],
+                        s3_endpoint=ogorod_s3,
+                        etcd_endpoints=ogorod_etcd,
+                        bind_addr=bind,
+                        suffix=suffix,
+                    ),
+                }
+
+                yield {
+                    'host': hn,
+                    'serv': OgorodThin(
+                        port=p['ogorod_thin'],
+                        s3_endpoint=ogorod_s3,
+                        etcd_endpoints=ogorod_etcd,
+                        bind_addr=bind,
+                        suffix=suffix,
+                    ),
+                }
 
             yield {
                 'host': hn,
@@ -2818,6 +2832,8 @@ def do(code):
         'loki': 2002,
         'ogorod_serve': 2006,
         'ogorod_thin': 2007,
+        'ogorod_serve_local': 2008,
+        'ogorod_thin_local': 2009,
     }
 
     for i in range(0, 64):
