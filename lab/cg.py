@@ -1108,6 +1108,13 @@ class EtcdPrivate:
             # preserved. See lab/NET.md for the full investigation.
             '--heartbeat-interval', '1000',
             '--election-timeout', '10000',
+            # Default 100ms warn threshold fires on every spike of
+            # the USB-SATA wal_fsync (which goes up to ~2s under
+            # ext4 journal contention). At default this drowns
+            # genuine slow-apply signal in routine noise; 2s lines
+            # up with the worst-case fsync seen on this hardware
+            # so warns now mean real degradation.
+            '--warning-apply-duration', '2s',
         ]
 
         exec_into(*args)
