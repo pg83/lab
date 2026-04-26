@@ -33,7 +33,11 @@ HOSTS = [
 ]
 ETCD_PREFIX = '/nebula/ng'
 CA_NAME = 'lab-ng'
-DURATION = '50000h'
+# Host cert must expire strictly BEFORE the CA — nebula-cert otherwise
+# refuses with "certificate expires after signing certificate". Pick
+# CA at ~11.4 years and hosts at ~5.7 years, plenty of head-room.
+CA_DURATION = '100000h'
+HOST_DURATION = '50000h'
 
 
 def log(*args):
@@ -74,7 +78,7 @@ def main():
         log(f'workdir {d}')
 
         subprocess.run(
-            ['nebula-cert', 'ca', '-name', CA_NAME, '-duration', DURATION],
+            ['nebula-cert', 'ca', '-name', CA_NAME, '-duration', CA_DURATION],
             check=True,
         )
         log('generated ca.crt + ca.key')
@@ -83,7 +87,7 @@ def main():
             subprocess.run(
                 ['nebula-cert', 'sign',
                  '-ca-crt', 'ca.crt', '-ca-key', 'ca.key',
-                 '-name', name, '-ip', ip, '-duration', DURATION],
+                 '-name', name, '-ip', ip, '-duration', HOST_DURATION],
                 check=True,
             )
             log(f'signed {name} {ip}')
