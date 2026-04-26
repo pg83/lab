@@ -96,16 +96,13 @@ class IPerf3:
     def __init__(self, port):
         self.port = port
 
-    def name(self):
-        return 'iperf3'
-
     def pkgs(self):
         yield {
             'pkg': 'bin/iperf/3',
         }
 
     def run(self):
-        exec_into('iperf3', '-s', '-p', str(self.port))
+        exec_into('iperf3', '-s', '-p', self.port)
 
 
 class Heat:
@@ -2909,7 +2906,7 @@ def do(code):
         'git_ci': 1008,
         'h_z': 1009,
         'i_perf': 1011,
-        'iperf3': 1029,
+        'i_perf_3': 1029,
         'nebula_lh': 1012,
         'minio_1': 1013,
         'minio_2': 1014,
