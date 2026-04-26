@@ -174,6 +174,7 @@ class Collector:
                 f'--config.file={fn}',
                 '--storage.tsdb.path=/home/collector/',
                 f'--web.listen-address={self.bind_addr}:{self.port}',
+                f'--web.listen-address=127.0.0.1:{self.port}',
             ]
 
             exec_into(*args)
@@ -1237,6 +1238,7 @@ class Federator:
                 f'--config.file={fn}',
                 f'--storage.tsdb.path=/home/{self.name()}/',
                 f'--web.listen-address={self.bind_addr}:{self.port}',
+                f'--web.listen-address=127.0.0.1:{self.port}',
             ]
 
             exec_into(*args)
@@ -1279,8 +1281,8 @@ class Grafana:
 
         yield {
             'pkg': 'aux/grafana',
-            'prom_url': f'http://{self.bind_addr}:{self.collector_port}',
-            'loki_url': f'http://{self.bind_addr}:{self.loki_port}',
+            'prom_url': f'http://127.0.0.1:{self.collector_port}',
+            'loki_url': f'http://127.0.0.1:{self.loki_port}',
         }
 
         yield {
