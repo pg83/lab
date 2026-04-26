@@ -452,6 +452,20 @@ class Gofra:
                 },
             },
             'peers': peers,
+            # The default 10 ms reorder timeout adds ~5 ms to the
+            # effective inner RTT, capping single TCP stream at
+            # ~1 Gbps even though the bandwidth is there. Real
+            # cross-path reorder distance on this LAN is single
+            # microseconds, so 1 ms gives ~30× headroom and lets
+            # cwnd auto-tune past the 1 Gbps step.
+            #
+            # Window=16 batches × 64 packets = ~1k packets — well
+            # below the timeout-bound flush rate at line speed, so
+            # window will drive flush cadence under load.
+            'reorder': {
+                'window': 16,
+                'timeout_ms': 1,
+            },
         }
 
     def run(self):
