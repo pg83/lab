@@ -392,103 +392,49 @@ class NebulaLh(Nebula):
         return cfg
 
 
-class NebulaNG:
-    # link_join multipath nebula (pg83/nebula fork). Stripes UDP across
-    # all 4 underlay NICs of every peer simultaneously. Independent of
-    # the existing NebulaNode service: own port, own VIP space
-    # (192.168.101.0/24), own TUN device (nebula_ng0), own PKI store
-    # (/nebula/ng/* in etcd, populated by bin/nebula/ng/cert/init).
-    def __init__(self, host, port, prom, lj_hosts, vip):
+class Gofra:
+    # Multipath UDP encapsulator (pg83/gofra). No crypto, no firewall,
+    # no peer discovery — just a TUN device + N underlay sockets that
+    # stripe inner packets across every (src, dst) pair of every
+    # peer. Own port, own VIP space (192.168.102.0/24), own TUN device
+    # (gofra0).
+    def __init__(self, host, port, hosts, vip):
         self.host = host
         self.port = port
-        self.prom = prom
-        self.lj_hosts = lj_hosts
-        self.vip = vip
+        self.hosts = hosts
+        self.vip = vip  # full prefix string e.g. '192.168.102.16/24'
 
     def name(self):
-        return 'nebula_ng'
+        return 'gofra'
 
     def user(self):
         return 'root'
 
-    def prom_port(self):
-        return self.prom
-
     def pkgs(self):
-        yield {'pkg': 'bin/nebula/ng'}
+        yield {'pkg': 'bin/gofra'}
 
     def config(self):
-        cfg = json.loads(json.dumps(NEBULA))
-
-        cfg['tun'] = {
-            'disabled': False,
-            'dev': 'nebula_ng0',
-            'drop_local_broadcast': False,
-            'drop_multicast': False,
-            'tx_queue': 500,
-            'mtu': 1300,
+        self_ip = self.vip.split('/')[0]
+        peers = {k: v for k, v in self.hosts.items() if k != self_ip}
+        return {
+            'log_level': 'info',
+            'listen_port': self.port,
+            'me': {
+                'underlay': self.hosts[self_ip],
+                'tun': {
+                    'dev': 'gofra0',
+                    'mtu': 1400,
+                    'vip': self.vip,
+                },
+            },
+            'peers': peers,
         }
-
-        # No lighthouse — every peer is in static_host_map and
-        # link_join.hosts already.
-        cfg['lighthouse'] = {
-            'am_lighthouse': False,
-            'interval': 60,
-            'hosts': [],
-        }
-
-        # static_host_map: peer VIP → [canonical underlay AddrPort].
-        # Single entry per peer; Channel4x4 expands to all 4 underlay
-        # IPs internally via link_join.hosts.
-        smap = {}
-        for peer_vip, ips in self.lj_hosts.items():
-            if peer_vip == self.vip:
-                continue
-            smap[peer_vip] = [f'{ips[0]}:{self.port}']
-        cfg['static_host_map'] = smap
-
-        return cfg
 
     def run(self):
-        with multi(memfd("conf"), memfd("ca"), memfd("cert"), memfd("key")) as (conf, ca, cert, key):
-            cfg = self.config()
-
-            # listen.host doubles as the canonical key into
-            # link_join.hosts; the actual binds happen on each entry of
-            # link_join.hosts[self.vip].
-            cfg['listen'] = {
-                'host': self.vip,
-                'port': self.port,
-                'read_buffer': 8 * 1024 * 1024,
-                'write_buffer': 8 * 1024 * 1024,
-            }
-
-            cfg['link_join'] = {
-                'enabled': True,
-                'hosts': self.lj_hosts,
-            }
-
-            cfg['pki'] = {
-                'ca': ca,
-                'cert': cert,
-                'key': key,
-            }
-
-            cfg['stats']['listen'] = '127.0.0.1:' + str(self.prom_port())
-
-            with open(conf, "w") as f:
-                f.write(json.dumps(cfg, indent=4, sort_keys=True))
-
-            with open(ca, 'wb') as f:
-                f.write(get_key('/nebula/ng/ca.crt'))
-
-            with open(cert, 'wb') as f:
-                f.write(get_key(f'/nebula/ng/{self.host}.crt'))
-
-            with open(key, 'wb') as f:
-                f.write(get_key(f'/nebula/ng/{self.host}.key'))
-
-            exec_into('nebula_ng', '--config', conf)
+        with memfd('config.json') as conf:
+            with open(conf, 'w') as f:
+                f.write(json.dumps(self.config(), indent=4, sort_keys=True))
+            exec_into('gofra', '--config', conf)
 
 
 class Ssh3:
@@ -2158,13 +2104,14 @@ class ClusterMap:
         all_etc_private = []
         all_etc_2 = []
 
-        # nebula-ng link_join table: canonical VIP → list of underlay
-        # IPs. Static — driven entirely by gen_host(n) topology.
-        ng_hosts = {}
+        # gofra peer table: peer VIP → list of underlay IPs. Static,
+        # driven entirely by gen_host(n) topology. 192.168.102.0/24 is
+        # the gofra overlay subnet.
+        gofra_hosts = {}
         for hn in ['lab1', 'lab2', 'lab3']:
             h = self.conf['by_host'][hn]
             n = int(hn[-1])
-            ng_hosts[f'192.168.101.{15 + n}'] = [net['ip'] for net in h['net']]
+            gofra_hosts[f'192.168.102.{15 + n}'] = [net['ip'] for net in h['net']]
 
         for hn in ['lab1', 'lab2', 'lab3']:
             h = self.conf['by_host'][hn]
@@ -2449,10 +2396,10 @@ class ClusterMap:
                 'serv': NebulaNode(hn, nn_port, neb_map, p['nebula_node_prom'], nn_adv, nb['ip']),
             }
 
-            ng_vip = f'192.168.101.{15 + int(hn[-1])}'
+            gofra_vip = f'192.168.102.{15 + int(hn[-1])}/24'
             yield {
                 'host': hn,
-                'serv': NebulaNG(hn, p['nebula_ng'], p['nebula_ng_prom'], ng_hosts, ng_vip),
+                'serv': Gofra(hn, p['gofra'], gofra_hosts, gofra_vip),
             }
 
             if lh := h.get('nebula', {}).get('lh', None):
@@ -2535,7 +2482,7 @@ sys.modules['builtins'].NodeExporter = NodeExporter
 sys.modules['builtins'].Collector = Collector
 sys.modules['builtins'].NebulaNode = NebulaNode
 sys.modules['builtins'].NebulaLh = NebulaLh
-sys.modules['builtins'].NebulaNG = NebulaNG
+sys.modules['builtins'].Gofra = Gofra
 sys.modules['builtins'].Ssh3 = Ssh3
 sys.modules['builtins'].SftpD = SftpD
 sys.modules['builtins'].MinIO = MinIO
@@ -2913,8 +2860,7 @@ def do(code):
         'tail_log': 8040,
         'ogorod_serve': 8035,
         'ogorod_thin': 8038,
-        'nebula_ng': 8044,
-        'nebula_ng_prom': 8045,
+        'gofra': 8048,
     }
 
     users = {
