@@ -173,8 +173,14 @@ class Collector:
                 'prometheus',
                 f'--config.file={fn}',
                 '--storage.tsdb.path=/home/collector/',
-                f'--web.listen-address={self.bind_addr}:{self.port}',
-                f'--web.listen-address=127.0.0.1:{self.port}',
+                # Bind on 0.0.0.0 for now: prometheus 3.7's
+                # documented multi-listen via repeated
+                # --web.listen-address ate the second flag in
+                # production (only the first was kept), so both
+                # the local self-scrape and the Grafana datasource
+                # on 127.0.0.1 went dark. Revisit once we confirm
+                # the right syntax.
+                f'--web.listen-address=0.0.0.0:{self.port}',
             ]
 
             exec_into(*args)
@@ -1282,8 +1288,10 @@ class Federator:
                 'prometheus',
                 f'--config.file={fn}',
                 f'--storage.tsdb.path=/home/{self.name()}/',
-                f'--web.listen-address={self.bind_addr}:{self.port}',
-                f'--web.listen-address=127.0.0.1:{self.port}',
+                # Same caveat as Collector — multi-listen via
+                # repeated --web.listen-address didn't survive
+                # the deploy. 0.0.0.0 until that's nailed down.
+                f'--web.listen-address=0.0.0.0:{self.port}',
             ]
 
             exec_into(*args)
@@ -1346,7 +1354,12 @@ class Grafana:
 
         return (
             '[server]\n'
-            f'http_addr = {self.bind_addr}\n'
+            # Same as Federator: nebula-only bind was breaking the
+            # local Prometheus scrape (Collector → Grafana metrics).
+            # 0.0.0.0 until we have a clean per-binary multi-listen
+            # story. Grafana's HTTP UI still only matters from the
+            # nebula side via the wirez forward.
+            'http_addr = 0.0.0.0\n'
             f'http_port = {self.port}\n'
             '[paths]\n'
             f'data = {s}/data\n'
