@@ -463,13 +463,13 @@ class Gofra:
 
 class Gofra2:
     # C++ rewrite of Gofra on top of std/ + io_uring (pg83/gofra
-    # gofra2 binary). Phase 1: single-queue TUN, no virtio_net_hdr.
-    # Lives alongside the Go-based Gofra during rollout — own
-    # listen_port, own VIP space (192.168.103.0/24), own TUN device
-    # (gofra20). Same underlay NICs.
+    # gofra2 binary). Multi-queue TUN paired with N UDP sockets,
+    # honest src×dst stripe per peer. Lives alongside the Go-based
+    # Gofra during rollout — own VIP space (192.168.103.0/24), own
+    # TUN device (gofra20). Same underlay NICs.
     def __init__(self, host, port, hosts, vip):
         self.host = host
-        self.port = port
+        self.port = port            # cluster-wide port baked into every peer endpoint
         self.hosts = hosts          # vip → [underlay ips]
         self.vip = vip              # full prefix string '192.168.103.16/24'
 
@@ -483,28 +483,21 @@ class Gofra2:
         yield {'pkg': 'bin/gofra/2'}
 
     def ini(self):
-        self_ip = self.vip.split('/')[0]
-        peers = {k: v for k, v in self.hosts.items() if k != self_ip}
-
-        # Phase 1: gofra2 binds a single UDP socket to self.underlay[0]
-        # and reads/writes from there; receiver listens on its own
-        # underlay[0]. Stripe across all NICs is Phase 2 (multi-queue
-        # TUN + N×N socket fan-out). Pin both sides to the first NIC
-        # for now so 100% of packets reach the listening socket.
-        my_under = self.hosts[self_ip][0]
-
+        # gofra2 INI: [me].vip identifies us, [peers] holds the full
+        # cluster including ourselves; the binary picks our row via
+        # peers->lookup(my_vip) for binding. Each value is a comma-
+        # list of ip:port endpoints — N gives us N TUN queues paired
+        # with N UDP sockets and an N×M stripe to every other peer.
         lines = []
-        lines.append(f'listen_port = {self.port}')
-        lines.append('')
         lines.append('[me]')
-        lines.append('underlay = ' + my_under)
-        lines.append('tun_dev  = gofra20')
-        lines.append('tun_mtu  = 1400')
-        lines.append('tun_vip  = ' + self.vip)
+        lines.append('vip     = ' + self.vip)
+        lines.append('tun_dev = gofra20')
+        lines.append('tun_mtu = 1400')
         lines.append('')
-        lines.append('[peer]')
-        for vip, dsts in sorted(peers.items()):
-            lines.append(f'{vip} = ' + dsts[0])
+        lines.append('[peers]')
+        for vip, underlays in sorted(self.hosts.items()):
+            eps = ', '.join(f'{u}:{self.port}' for u in underlays)
+            lines.append(f'{vip} = {eps}')
         lines.append('')
         lines.append('[udp]')
         lines.append('recv_buf = 16777216')
