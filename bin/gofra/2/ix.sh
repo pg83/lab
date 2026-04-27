@@ -12,6 +12,7 @@ ad592bb9d0b887f8868dd50f7d8e84510fa89ece0a34608de54c965306db410f
 {% block bld_libs %}
 lib/c
 lib/std
+lib/mnl
 lib/linux/headers
 {% endblock %}
 
