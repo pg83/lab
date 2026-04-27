@@ -455,12 +455,6 @@ class Gofra:
                 },
             },
             'peers': peers,
-            # Single hold knob for the pipeline (only the reorder
-            # goroutine accumulates; udpReader passes recvmmsg
-            # batches straight through, writers process sub-slices
-            # immediately). Bigger = absorbs more inter-NIC
-            # jitter, smaller = lower in-tunnel latency.
-            'timeout_us': 2000,
         }
 
     def run(self):
