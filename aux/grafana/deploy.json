@@ -1,0 +1,69 @@
+{
+  "uid": "deploy",
+  "title": "Deploy convergence",
+  "tags": ["deploy"],
+  "schemaVersion": 39,
+  "version": 1,
+  "time": {"from": "now-30m", "to": "now"},
+  "refresh": "30s",
+  "templating": {"list": []},
+  "panels": [
+
+    {"id": 1, "title": "Distinct run_sh paths per service (1 = converged across all 3 hosts)",
+     "type": "timeseries",
+     "gridPos": {"h": 14, "w": 24, "x": 0, "y": 0},
+     "datasource": {"type": "loki", "uid": "loki"},
+     "fieldConfig": {
+       "defaults": {
+         "min": 0,
+         "custom": {"drawStyle": "line", "lineInterpolation": "stepAfter", "fillOpacity": 8, "showPoints": "always", "pointSize": 4},
+         "thresholds": {"mode": "absolute", "steps": [
+           {"value": null, "color": "green"},
+           {"value": 2, "color": "red"}
+         ]}
+       }
+     },
+     "options": {
+       "legend": {"showLegend": true, "displayMode": "table", "placement": "right", "calcs": ["last"]},
+       "tooltip": {"mode": "multi", "sort": "desc"}
+     },
+     "targets": [
+       {"refId": "A",
+        "expr": "count by (service) (count by (service, path) (count_over_time({stream=\"tinylog\"} |= `deploy: run_sh=` | regexp `deploy: run_sh=(?P<path>\\S+)` [5m])))",
+        "legendFormat": "{{service}}"}
+     ]},
+
+    {"id": 2, "title": "Latest run_sh per (service, host) — visual convergence",
+     "type": "table",
+     "gridPos": {"h": 18, "w": 24, "x": 0, "y": 14},
+     "datasource": {"type": "loki", "uid": "loki"},
+     "options": {"showHeader": true, "footer": {"show": false}},
+     "transformations": [
+       {"id": "extractFields", "options": {
+         "source": "labels",
+         "format": "auto",
+         "keepLabels": true,
+         "replace": false
+       }},
+       {"id": "groupBy", "options": {
+         "fields": {
+           "service": {"aggregations": [], "operation": "groupby"},
+           "host":    {"aggregations": [], "operation": "groupby"},
+           "path":    {"aggregations": ["last"], "operation": "aggregate"}
+         }
+       }},
+       {"id": "groupingToMatrix", "options": {
+         "columnField": "host",
+         "rowField": "service",
+         "valueField": "path (last)"
+       }}
+     ],
+     "targets": [
+       {"refId": "A",
+        "expr": "{stream=\"tinylog\"} |= `deploy: run_sh=` | regexp `deploy: run_sh=(?P<path>\\S+)`",
+        "queryType": "range",
+        "maxLines": 5000}
+     ]}
+
+  ]
+}

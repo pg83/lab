@@ -70,4 +70,8 @@ EOF
 base64 -d << EOF > ${out}/share/grafana-provisioning/dashboards-json/ci.json
 {% include 'ci.json/base64' %}
 EOF
+
+base64 -d << EOF > ${out}/share/grafana-provisioning/dashboards-json/deploy.json
+{% include 'deploy.json/base64' %}
+EOF
 {% endblock %}

@@ -6,6 +6,14 @@ sh ${PWD}/run_sh prepare
 {% endblock %}
 
 {% block srv_command %}
+# Print the symlink-resolved path of run_sh on every service start.
+# Each service's symlink target is /ix/store/<HASH>-bin-run-sh-runit/
+# etc/services/<srv>/run_sh; HASH bakes in runsh_script + every
+# transitive dep, so when cg.py changes for this service, HASH
+# changes, the line below changes, and a deploy-convergence
+# dashboard query that counts distinct paths per service drops
+# back to 1 once all hosts have rolled.
+echo "deploy: run_sh=$(readlink -f ${PWD}/run_sh)"
 exec sh ${PWD}/run_sh run
 {% endblock %}
 
