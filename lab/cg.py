@@ -309,10 +309,7 @@ class Nebula:
             with open(key, 'wb') as f:
                 f.write(get_key_v2(f'/nebula/{self.host}.key'))
 
-            # SCHED_FIFO same as Gofra — nebula carries the
-            # cluster's nebula-overlay traffic and shouldn't sit
-            # in run-queue behind noisy neighbours.
-            exec_into('chrt', '-f', '10', 'nebula', '--config', conf)
+            exec_into('nebula', '--config', conf)
 
 
 class NebulaNode(Nebula):
@@ -461,10 +458,7 @@ class Gofra:
         with memfd('config.json') as conf:
             with open(conf, 'w') as f:
                 f.write(json.dumps(self.config(), indent=4, sort_keys=True))
-            # SCHED_FIFO so the data-plane goroutines preempt
-            # regular work and don't sit in run-queue waiting on
-            # noisy neighbours; same pattern as bin/sndio/runit.
-            exec_into('chrt', '-f', '10', 'gofra', '--config', conf)
+            exec_into('gofra', '--config', conf)
 
 
 class Ssh3:
