@@ -74,8 +74,12 @@ EOF
 {# Per-service deploy convergence dashboard. One timeseries panel
    per service, two-column grid, value = distinct run_sh paths in
    the cluster — drops to 1 once all 3 hosts converged on the same
-   /ix/store/<HASH> for that service's runit wrapper. #}
-{% set svc_list = (services or '').split(',') | reject('equalto', '') | list %}
+   /ix/store/<HASH> for that service's runit wrapper.
+
+   services_b64 is a base64-encoded newline-joined list (comma-
+   joined would collide with ix's k=v,k2=v2 package param
+   syntax — same trick extra_deps uses). #}
+{% set svc_list = (services_b64 | b64d).split('\n') | reject('equalto', '') | list %}
 cat > ${out}/share/grafana-provisioning/dashboards-json/deploy.json <<'JSON'
 {
   "uid": "deploy",

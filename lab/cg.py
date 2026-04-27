@@ -1415,7 +1415,10 @@ class Grafana:
             'pkg': 'aux/grafana',
             'prom_url': f'http://127.0.0.1:{self.collector_port}',
             'loki_url': f'http://127.0.0.1:{self.loki_port}',
-            'services': ','.join(self.services),
+            # Base64-encoded newline-joined list — comma-separated
+            # values would collide with ix's k=v,k2=v2 package
+            # parameter syntax (extra_deps uses the same trick).
+            'services_b64': base64.b64encode('\n'.join(self.services).encode()).decode(),
         }
 
         yield {
