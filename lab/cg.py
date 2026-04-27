@@ -457,14 +457,17 @@ class Gofra:
             # batches straight through, writers process sub-slices
             # immediately). Bigger = absorbs more inter-NIC
             # jitter, smaller = lower in-tunnel latency.
-            'timeout_us': 2000,
+            'timeout_us': 4000,
         }
 
     def run(self):
         with memfd('config.json') as conf:
             with open(conf, 'w') as f:
                 f.write(json.dumps(self.config(), indent=4, sort_keys=True))
-            exec_into('gofra', '--config', conf)
+            # SCHED_FIFO so the data-plane goroutines preempt
+            # regular work and don't sit in run-queue waiting on
+            # noisy neighbours; same pattern as bin/sndio/runit.
+            exec_into('chrt', '-f', '10', 'gofra', '--config', conf)
 
 
 class Ssh3:
