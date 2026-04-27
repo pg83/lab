@@ -452,16 +452,12 @@ class Gofra:
                 },
             },
             'peers': peers,
-            # Sole flush trigger for both reorder and writer
-            # loops. Bigger = absorbs more inter-NIC jitter,
-            # smaller = lower in-tunnel latency (and lower
-            # cwnd-bumping artificial RTT).
-            'reorder': {
-                'timeout_us': 1000,
-            },
-            'writer': {
-                'timeout_us': 1000,
-            },
+            # Single hold knob for the pipeline (only the reorder
+            # goroutine accumulates; udpReader passes recvmmsg
+            # batches straight through, writers process sub-slices
+            # immediately). Bigger = absorbs more inter-NIC
+            # jitter, smaller = lower in-tunnel latency.
+            'timeout_us': 1000,
         }
 
     def run(self):
