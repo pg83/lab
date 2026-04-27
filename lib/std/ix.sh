@@ -10,7 +10,7 @@ lib/c++/dispatch
 {% endblock %}
 
 {% block bld_libs %}
-lib/rapidhash
+lib/xxhash
 lib/linux/headers
 {% endblock %}
 
