@@ -452,26 +452,15 @@ class Gofra:
                 },
             },
             'peers': peers,
-            # Reorder timeout is in microseconds (not ms) for finer
-            # tuning. Real LAN cross-path reorder distance is single
-            # microseconds, so 1000 us = 1 ms gives ~30× headroom
-            # and keeps the artificial RTT bump well below TCP
-            # cwnd auto-tuning's reach.
-            #
-            # Window=16 batches × 64 packets = ~1k packets — well
-            # below the timeout-bound flush rate at line speed, so
-            # window drives flush cadence under load.
+            # Sole flush trigger for both reorder and writer
+            # loops. Bigger = absorbs more inter-NIC jitter,
+            # smaller = lower in-tunnel latency (and lower
+            # cwnd-bumping artificial RTT).
             'reorder': {
-                'window': 64,
-                'timeout_us': 500,
+                'timeout_us': 1000,
             },
-            # Writer side has its own batching: accumulates up to
-            # `bucket` sub-slices from the reorder goroutine before
-            # sorting + tun.Write'ing. Bigger bucket = bigger
-            # monotonic run on TUN; smaller = lower latency.
             'writer': {
-                'bucket': 64,
-                'timeout_us': 500,
+                'timeout_us': 1000,
             },
         }
 
