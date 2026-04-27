@@ -1380,11 +1380,15 @@ GRAFANA_ADMIN_PASSWORD = 'grafana'
 
 
 class Grafana:
-    def __init__(self, port, collector_port, loki_port, bind_addr):
+    def __init__(self, port, collector_port, loki_port, bind_addr, services):
         self.port = port
         self.collector_port = collector_port
         self.loki_port = loki_port
         self.bind_addr = bind_addr
+        # Sorted unique list of cluster service names — used to fan
+        # out the deploy-convergence dashboard panels (one per
+        # service).
+        self.services = services
         # Experimental: class-source AST hash so method-body edits
         # auto-invalidate the service without needing a self.v bump.
         # Trialed on grafana+samogon where "accidentally kept
@@ -1411,6 +1415,7 @@ class Grafana:
             'pkg': 'aux/grafana',
             'prom_url': f'http://127.0.0.1:{self.collector_port}',
             'loki_url': f'http://127.0.0.1:{self.loki_port}',
+            'services': ','.join(self.services),
         }
 
         yield {
@@ -2312,7 +2317,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': Grafana(p['grafana'], p['federator'], p['loki'], h['nebula']['ip']),
+                'serv': Grafana(p['grafana'], p['federator'], p['loki'], h['nebula']['ip'], self.conf['services']),
             }
 
             yield {
@@ -3031,11 +3036,19 @@ def do(code):
     for h in hosts:
         by_name[h['hostname']] = h
 
+    # Shared mutable list. Grafana's ctor stores the reference;
+    # the list is populated below once we've walked all services
+    # via it_cluster. By the time Grafana.pkgs() runs (in it_srvs
+    # after the loop), the reference points at the full sorted
+    # list — no second iteration of it_cluster needed.
+    cluster_services = []
+
     cconf = {
         'hosts': hosts,
         'ports': ports,
         'users': users,
         'by_host': by_name,
+        'services': cluster_services,
     }
 
     by_host = collections.defaultdict(list)
@@ -3055,6 +3068,10 @@ def do(code):
         by_host[host].append(hndl)
         by_addr[addr] = hndl
         hndl_by_host.append((host, hndl))
+
+    # Now that all services are known, populate the shared list
+    # Grafana's ctor stashed a reference to.
+    cluster_services.extend(sorted({h.name() for _, h in hndl_by_host}))
 
     # Second pass — routing/registration lookups need by_addr fully populated
     # (e.g. EtcdPrivate is yielded before Collector, but has prom_jobs now).
