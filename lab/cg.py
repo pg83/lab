@@ -457,7 +457,7 @@ class Gofra:
             # batches straight through, writers process sub-slices
             # immediately). Bigger = absorbs more inter-NIC
             # jitter, smaller = lower in-tunnel latency.
-            'timeout_us': 1000,
+            'timeout_us': 2000,
         }
 
     def run(self):
