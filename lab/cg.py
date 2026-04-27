@@ -416,57 +416,11 @@ class NebulaLh(Nebula):
         return cfg
 
 
-class Gofra:
-    # Multipath UDP encapsulator (pg83/gofra). No crypto, no firewall,
-    # no peer discovery — just a TUN device + N underlay sockets that
-    # stripe inner packets across every (src, dst) pair of every
-    # peer. Own port, own VIP space (192.168.102.0/24), own TUN device
-    # (gofra0).
-    def __init__(self, host, port, hosts, vip):
-        self.host = host
-        self.port = port
-        self.hosts = hosts
-        self.vip = vip  # full prefix string e.g. '192.168.102.16/24'
-
-    def name(self):
-        return 'gofra'
-
-    def user(self):
-        return 'root'
-
-    def pkgs(self):
-        yield {'pkg': 'bin/gofra'}
-
-    def config(self):
-        self_ip = self.vip.split('/')[0]
-        peers = {k: v for k, v in self.hosts.items() if k != self_ip}
-        return {
-            'log_level': 'info',
-            'listen_port': self.port,
-            'me': {
-                'underlay': self.hosts[self_ip],
-                'tun': {
-                    'dev': 'gofra0',
-                    'mtu': 1400,
-                    'vip': self.vip,
-                },
-            },
-            'peers': peers,
-        }
-
-    def run(self):
-        with memfd('config.json') as conf:
-            with open(conf, 'w') as f:
-                f.write(json.dumps(self.config(), indent=4, sort_keys=True))
-            exec_into('gofra', '--config', conf)
-
-
 class Gofra2:
-    # C++ rewrite of Gofra on top of std/ + io_uring (pg83/gofra
-    # gofra2 binary). Multi-queue TUN paired with N UDP sockets,
-    # honest src×dst stripe per peer. Lives alongside the Go-based
-    # Gofra during rollout — own VIP space (192.168.103.0/24), own
-    # TUN device (gofra20). Same underlay NICs.
+    # Multipath UDP encapsulator (pg83/gofra). C++ on top of std/.
+    # Multi-queue TUN paired with N UDP sockets, honest src×dst
+    # stripe per peer. Cluster overlay subnet 192.168.103.0/24, TUN
+    # device gofra20.
     def __init__(self, host, port, hosts, vip):
         self.host = host
         self.port = port            # cluster-wide port baked into every peer endpoint
@@ -2193,16 +2147,14 @@ class ClusterMap:
         all_etc_private = []
         all_etc_2 = []
 
-        # gofra peer table: peer VIP → list of underlay IPs. Static,
-        # driven entirely by gen_host(n) topology. 192.168.102.0/24 is
-        # the gofra overlay subnet.
-        gofra_hosts = {}
+        # gofra2 peer table: peer VIP → list of underlay IPs. Static,
+        # driven entirely by gen_host(n) topology. 192.168.103.0/24 is
+        # the gofra2 overlay subnet.
         gofra2_hosts = {}
         for hn in ['lab1', 'lab2', 'lab3']:
             h = self.conf['by_host'][hn]
             n = int(hn[-1])
             underlay = [net['ip'] for net in h['net']]
-            gofra_hosts[f'192.168.102.{15 + n}'] = underlay
             gofra2_hosts[f'192.168.103.{15 + n}'] = underlay
 
         for hn in ['lab1', 'lab2', 'lab3']:
@@ -2493,12 +2445,6 @@ class ClusterMap:
                 'serv': NebulaNode(hn, nn_port, neb_map, p['nebula_node_prom'], nn_adv, nb['ip']),
             }
 
-            gofra_vip = f'192.168.102.{15 + int(hn[-1])}/24'
-            yield {
-                'host': hn,
-                'serv': Gofra(hn, p['gofra'], gofra_hosts, gofra_vip),
-            }
-
             gofra2_vip = f'192.168.103.{15 + int(hn[-1])}/24'
             yield {
                 'host': hn,
@@ -2586,7 +2532,6 @@ sys.modules['builtins'].NodeExporter = NodeExporter
 sys.modules['builtins'].Collector = Collector
 sys.modules['builtins'].NebulaNode = NebulaNode
 sys.modules['builtins'].NebulaLh = NebulaLh
-sys.modules['builtins'].Gofra = Gofra
 sys.modules['builtins'].Gofra2 = Gofra2
 sys.modules['builtins'].Ssh3 = Ssh3
 sys.modules['builtins'].SftpD = SftpD
@@ -2966,7 +2911,6 @@ def do(code):
         'tail_log': 8040,
         'ogorod_serve': 8035,
         'ogorod_thin': 8038,
-        'gofra': 8048,
         'gofra2': 8050,
     }
 
