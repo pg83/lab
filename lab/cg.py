@@ -486,18 +486,25 @@ class Gofra2:
         self_ip = self.vip.split('/')[0]
         peers = {k: v for k, v in self.hosts.items() if k != self_ip}
 
+        # Phase 1: gofra2 binds a single UDP socket to self.underlay[0]
+        # and reads/writes from there; receiver listens on its own
+        # underlay[0]. Stripe across all NICs is Phase 2 (multi-queue
+        # TUN + N×N socket fan-out). Pin both sides to the first NIC
+        # for now so 100% of packets reach the listening socket.
+        my_under = self.hosts[self_ip][0]
+
         lines = []
         lines.append(f'listen_port = {self.port}')
         lines.append('')
         lines.append('[me]')
-        lines.append('underlay = ' + ','.join(self.hosts[self_ip]))
+        lines.append('underlay = ' + my_under)
         lines.append('tun_dev  = gofra20')
         lines.append('tun_mtu  = 1400')
         lines.append('tun_vip  = ' + self.vip)
         lines.append('')
         lines.append('[peer]')
         for vip, dsts in sorted(peers.items()):
-            lines.append(f'{vip} = ' + ','.join(dsts))
+            lines.append(f'{vip} = ' + dsts[0])
         lines.append('')
         lines.append('[udp]')
         lines.append('recv_buf = 16777216')
