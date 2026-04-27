@@ -6,12 +6,12 @@ https://github.com/pg83/std/archive/f14cc2379834cf0560d9bfab4f646163766f4915.tar
 {% endblock %}
 
 {% block lib_deps %}
-lib/c++/dispatch
-{% endblock %}
-
-{% block bld_libs %}
+lib/c
+lib/c++
+lib/uring
 lib/xxhash
-lib/linux/headers
+lib/kernel
+lib/c/ares
 {% endblock %}
 
 {% block install %}
