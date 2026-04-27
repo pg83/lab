@@ -309,7 +309,10 @@ class Nebula:
             with open(key, 'wb') as f:
                 f.write(get_key_v2(f'/nebula/{self.host}.key'))
 
-            exec_into('nebula', '--config', conf)
+            # SCHED_FIFO same as Gofra — nebula carries the
+            # cluster's nebula-overlay traffic and shouldn't sit
+            # in run-queue behind noisy neighbours.
+            exec_into('chrt', '-f', '10', 'nebula', '--config', conf)
 
 
 class NebulaNode(Nebula):
