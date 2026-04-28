@@ -76,7 +76,7 @@ HOSTS="${*:-lab1 lab2 lab3}"
 # gorn_ctl (8025) binds to 127.0.0.1; gorn_ctl_nb (8027) is the nebula
 # sibling exposed on the host's nebula IP.
 GORN_API="${GORN_API:-http://lab1.nebula:8027}"
-ETCDCTL_ENDPOINTS="${ETCDCTL_ENDPOINTS:-lab1.nebula:8020,lab2.nebula:8020,lab3.nebula:8020}"
+ETCDCTL_ENDPOINTS="${ETCDCTL_ENDPOINTS:-127.0.0.1:8020}"
 export ETCDCTL_ENDPOINTS
 
 hdr() {
