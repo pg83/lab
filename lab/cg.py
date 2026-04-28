@@ -624,7 +624,7 @@ class SftpD:
                 'sftpgo', 'portable',
                 '--config-file', conf,
                 '--s3-bucket', self.path,
-                '--s3-endpoint', 'http://10.0.0.65:8012/',
+                '--s3-endpoint', 'http://127.0.0.1:8012/',
                 '--s3-region', 'minio',
                 '--s3-access-key', get_key('/s3/user').decode().strip(),
                 '--s3-access-secret', get_key('/s3/password').decode().strip(),
@@ -2278,7 +2278,7 @@ class ClusterMap:
                 'host': hn,
                 'serv': Loki(
                     port=p['loki'],
-                    s3_endpoint=f"http://{hn}.eth1:{p['minio']}",
+                    s3_endpoint=f"http://127.0.0.1:{p['minio']}",
                     peers=[x['hostname'] for x in self.conf['hosts']],
                     me=hn,
                     etcd_endpoints=[
@@ -2310,7 +2310,7 @@ class ClusterMap:
                 f"{x['hostname']}.nebula:{p['etcd_2_client']}"
                 for x in self.conf['hosts']
             ]
-            ogorod_s3 = f"http://{hn}.eth1:{p['minio']}"
+            ogorod_s3 = f"http://127.0.0.1:{p['minio']}"
 
             for bind, suffix in [(h['nebula']['ip'], None), ('127.0.0.1', 'local')]:
                 yield {
@@ -2349,14 +2349,14 @@ class ClusterMap:
                 'host': hn,
                 'serv': Samogon(
                     p['samogon'],
-                    s3_endpoint=f"http://{hn}.eth1:{p['minio']}",
+                    s3_endpoint=f"http://127.0.0.1:{p['minio']}",
                 ),
             }
 
             yield {
                 'host': hn,
                 'serv': SamogonBot(
-                    s3_endpoint=f"http://{hn}.eth1:{p['minio']}",
+                    s3_endpoint=f"http://127.0.0.1:{p['minio']}",
                     gorn_api=f"http://127.0.0.1:{p['gorn_ctl']}",
                     tg_allow_users=TG_ALLOW_USERS,
                 ),
@@ -2366,7 +2366,7 @@ class ClusterMap:
                 'host': hn,
                 'serv': JobScheduler(
                     gorn_api=f"http://127.0.0.1:{p['gorn_ctl']}",
-                    s3_endpoint=f"http://{hn}.eth1:{p['minio']}",
+                    s3_endpoint=f"http://127.0.0.1:{p['minio']}",
                 ),
             }
 
@@ -2499,7 +2499,7 @@ class ClusterMap:
             h = self.conf['by_host'][hn]
 
             s3 = {
-                'endpoint': f"http://{h['net'][1]['ip']}:{p['minio']}",
+                'endpoint': f"http://127.0.0.1:{p['minio']}",
                 'region': 'minio',
                 'bucket': 'gorn',
                 'use_path_style': True,
