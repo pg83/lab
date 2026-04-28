@@ -416,7 +416,7 @@ class NebulaLh(Nebula):
         return cfg
 
 
-class Gofra2:
+class Gofra:
     # Multipath UDP encapsulator (pg83/gofra). C++ on top of std/.
     # Multi-queue TUN paired with N UDP sockets, honest src×dst
     # stripe per peer. Cluster overlay subnet 192.168.103.0/24, TUN
@@ -428,7 +428,7 @@ class Gofra2:
         self.vip = vip              # full prefix string '192.168.103.16/24'
 
     def name(self):
-        return 'gofra2'
+        return 'gofra'
 
     def user(self):
         return 'root'
@@ -437,7 +437,7 @@ class Gofra2:
         yield {'pkg': 'bin/gofra/2'}
 
     def ini(self):
-        # gofra2 INI: [me].vip identifies us, [peers] holds the full
+        # gofra INI: [me].vip identifies us, [peers] holds the full
         # cluster including ourselves; the binary picks our row via
         # peers->lookup(my_vip) for binding. Each value is a comma-
         # list of ip:port endpoints — N gives us N TUN queues paired
@@ -2147,15 +2147,15 @@ class ClusterMap:
         all_etc_private = []
         all_etc_2 = []
 
-        # gofra2 peer table: peer VIP → list of underlay IPs. Static,
+        # gofra peer table: peer VIP → list of underlay IPs. Static,
         # driven entirely by gen_host(n) topology. 192.168.103.0/24 is
-        # the gofra2 overlay subnet.
-        gofra2_hosts = {}
+        # the gofra overlay subnet.
+        gofra_hosts = {}
         for hn in ['lab1', 'lab2', 'lab3']:
             h = self.conf['by_host'][hn]
             n = int(hn[-1])
             underlay = [net['ip'] for net in h['net']]
-            gofra2_hosts[f'192.168.103.{15 + n}'] = underlay
+            gofra_hosts[f'192.168.103.{15 + n}'] = underlay
 
         for hn in ['lab1', 'lab2', 'lab3']:
             h = self.conf['by_host'][hn]
@@ -2445,10 +2445,10 @@ class ClusterMap:
                 'serv': NebulaNode(hn, nn_port, neb_map, p['nebula_node_prom'], nn_adv, nb['ip']),
             }
 
-            gofra2_vip = f'192.168.103.{15 + int(hn[-1])}/24'
+            gofra_vip = f'192.168.103.{15 + int(hn[-1])}/24'
             yield {
                 'host': hn,
-                'serv': Gofra2(hn, p['gofra2'], gofra2_hosts, gofra2_vip),
+                'serv': Gofra(hn, p['gofra'], gofra_hosts, gofra_vip),
             }
 
             if lh := h.get('nebula', {}).get('lh', None):
@@ -2532,7 +2532,7 @@ sys.modules['builtins'].NodeExporter = NodeExporter
 sys.modules['builtins'].Collector = Collector
 sys.modules['builtins'].NebulaNode = NebulaNode
 sys.modules['builtins'].NebulaLh = NebulaLh
-sys.modules['builtins'].Gofra2 = Gofra2
+sys.modules['builtins'].Gofra = Gofra
 sys.modules['builtins'].Ssh3 = Ssh3
 sys.modules['builtins'].SftpD = SftpD
 sys.modules['builtins'].MinIO = MinIO
@@ -2911,7 +2911,7 @@ def do(code):
         'tail_log': 8040,
         'ogorod_serve': 8035,
         'ogorod_thin': 8038,
-        'gofra2': 8050,
+        'gofra': 8050,
     }
 
     users = {
