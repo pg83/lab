@@ -643,11 +643,19 @@ class SftpD:
 
 MINIO_SCRIPT = '''
 set -xue
-for i in 1 2 3; do
-    mkdir -p /var/mnt/minio/${i}
-    mount -t xfs LABEL=MINIO_${i} /var/mnt/minio/${i}
-    mkdir -p /var/mnt/minio/${i}/data
-done
+
+mkdir -p /var/mnt/minio/1
+mount -t xfs LABEL=MINIO_1 /var/mnt/minio/1
+mkdir -p /var/mnt/minio/1/data
+
+mkdir -p /var/mnt/minio/2
+mount -t xfs LABEL=MINIO_2 /var/mnt/minio/2
+mkdir -p /var/mnt/minio/2/data
+
+mkdir -p /var/mnt/minio/3
+mount -t xfs LABEL=MINIO_3 /var/mnt/minio/3
+mkdir -p /var/mnt/minio/3/data
+
 exec minio server --address :{port} {cmap}
 '''
 

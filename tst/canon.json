@@ -14,7 +14,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=etcd_2,runsh_script=sha256:622606084ca22467,srv_user=etcd_2,extra_deps=YmluL2V0Y2Qvc2VydmVy)",
                 "bin/minio/patched(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio,runsh_script=sha256:336eefac0787bbd0,srv_user=root,extra_deps=YmluL21pbmlvL3BhdGNoZWQ=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio,runsh_script=sha256:5eb1e61ba4489740,srv_user=root,extra_deps=YmluL21pbmlvL3BhdGNoZWQ=)",
                 "bin/minio/console(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=minio_console)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio_console,runsh_script=sha256:4ae39edcdd7c28cc,srv_user=minio_console,extra_deps=YmluL21pbmlvL2NvbnNvbGU=)",
@@ -268,7 +268,7 @@
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:6f597760ada00454,srv_user=root,extra_deps=sha256:85f46f21a080ac0b)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:baa4c67e6d611b69)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:084176697a137c8c)"
             ],
             "gofra": {
                 "hostname": "lab1.gofra",
@@ -327,7 +327,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=etcd_2,runsh_script=sha256:435e7d400a83e27b,srv_user=etcd_2,extra_deps=YmluL2V0Y2Qvc2VydmVy)",
                 "bin/minio/patched(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio,runsh_script=sha256:3e51c2976b80bd93,srv_user=root,extra_deps=YmluL21pbmlvL3BhdGNoZWQ=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio,runsh_script=sha256:2e43468b8b6c1dd7,srv_user=root,extra_deps=YmluL21pbmlvL3BhdGNoZWQ=)",
                 "bin/minio/console(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=minio_console)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio_console,runsh_script=sha256:1c02c27ca1dddb06,srv_user=minio_console,extra_deps=YmluL21pbmlvL2NvbnNvbGU=)",
@@ -571,7 +571,7 @@
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:ac86358293f93999,srv_user=root,extra_deps=sha256:85f46f21a080ac0b)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:baa4c67e6d611b69)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:084176697a137c8c)"
             ],
             "gofra": {
                 "hostname": "lab2.gofra",
@@ -630,7 +630,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=etcd_2,runsh_script=sha256:08390988382d42e1,srv_user=etcd_2,extra_deps=YmluL2V0Y2Qvc2VydmVy)",
                 "bin/minio/patched(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio,runsh_script=sha256:cd3ab076788369d1,srv_user=root,extra_deps=YmluL21pbmlvL3BhdGNoZWQ=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio,runsh_script=sha256:c5c0e7a917e86905,srv_user=root,extra_deps=YmluL21pbmlvL3BhdGNoZWQ=)",
                 "bin/minio/console(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=minio_console)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio_console,runsh_script=sha256:7769f156bdd6075b,srv_user=minio_console,extra_deps=YmluL21pbmlvL2NvbnNvbGU=)",
@@ -844,7 +844,7 @@
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:fc3fad331aa34106,srv_user=root,extra_deps=sha256:85f46f21a080ac0b)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:baa4c67e6d611b69)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:084176697a137c8c)"
             ],
             "gofra": {
                 "hostname": "lab3.gofra",
@@ -905,7 +905,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=etcd_2,runsh_script=sha256:622606084ca22467,srv_user=etcd_2,extra_deps=YmluL2V0Y2Qvc2VydmVy)",
                 "bin/minio/patched(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio,runsh_script=sha256:336eefac0787bbd0,srv_user=root,extra_deps=YmluL21pbmlvL3BhdGNoZWQ=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio,runsh_script=sha256:5eb1e61ba4489740,srv_user=root,extra_deps=YmluL21pbmlvL3BhdGNoZWQ=)",
                 "bin/minio/console(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=minio_console)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio_console,runsh_script=sha256:4ae39edcdd7c28cc,srv_user=minio_console,extra_deps=YmluL21pbmlvL2NvbnNvbGU=)",
@@ -1159,7 +1159,7 @@
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:6f597760ada00454,srv_user=root,extra_deps=sha256:85f46f21a080ac0b)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:baa4c67e6d611b69)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:084176697a137c8c)"
             ],
             "gofra": {
                 "hostname": "lab1.gofra",
@@ -1218,7 +1218,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=etcd_2,runsh_script=sha256:435e7d400a83e27b,srv_user=etcd_2,extra_deps=YmluL2V0Y2Qvc2VydmVy)",
                 "bin/minio/patched(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio,runsh_script=sha256:3e51c2976b80bd93,srv_user=root,extra_deps=YmluL21pbmlvL3BhdGNoZWQ=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio,runsh_script=sha256:2e43468b8b6c1dd7,srv_user=root,extra_deps=YmluL21pbmlvL3BhdGNoZWQ=)",
                 "bin/minio/console(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=minio_console)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio_console,runsh_script=sha256:1c02c27ca1dddb06,srv_user=minio_console,extra_deps=YmluL21pbmlvL2NvbnNvbGU=)",
@@ -1462,7 +1462,7 @@
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:ac86358293f93999,srv_user=root,extra_deps=sha256:85f46f21a080ac0b)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:baa4c67e6d611b69)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:084176697a137c8c)"
             ],
             "gofra": {
                 "hostname": "lab2.gofra",
@@ -1521,7 +1521,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=etcd_2,runsh_script=sha256:08390988382d42e1,srv_user=etcd_2,extra_deps=YmluL2V0Y2Qvc2VydmVy)",
                 "bin/minio/patched(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio,runsh_script=sha256:cd3ab076788369d1,srv_user=root,extra_deps=YmluL21pbmlvL3BhdGNoZWQ=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio,runsh_script=sha256:c5c0e7a917e86905,srv_user=root,extra_deps=YmluL21pbmlvL3BhdGNoZWQ=)",
                 "bin/minio/console(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=minio_console)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio_console,runsh_script=sha256:7769f156bdd6075b,srv_user=minio_console,extra_deps=YmluL21pbmlvL2NvbnNvbGU=)",
@@ -1735,7 +1735,7 @@
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:fc3fad331aa34106,srv_user=root,extra_deps=sha256:85f46f21a080ac0b)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:baa4c67e6d611b69)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:084176697a137c8c)"
             ],
             "gofra": {
                 "hostname": "lab3.gofra",
