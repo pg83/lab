@@ -656,7 +656,9 @@ mkdir -p /var/mnt/minio/3
 mount -t xfs LABEL=MINIO_3 /var/mnt/minio/3
 mkdir -p /var/mnt/minio/3/data
 
-exec minio server --address :{port} {cmap}
+chown -R minio:minio /var/mnt/minio/1/data /var/mnt/minio/2/data /var/mnt/minio/3/data
+
+exec su-exec minio minio server --address :{port} {cmap}
 '''
 
 
@@ -676,11 +678,15 @@ class MinIO:
         return 'minio'
 
     def users(self):
-        return ['root']
+        return ['root', 'minio']
 
     def pkgs(self):
         yield {
             'pkg': 'bin/minio/patched',
+        }
+
+        yield {
+            'pkg': 'bin/su/exec',
         }
 
     def run(self):
@@ -2934,6 +2940,7 @@ def do(code):
         'minio_2': 1014,
         'minio_3': 1015,
         'mirror': 1016,
+        'minio': 1017,
         'minio_console': 1018,
         'pf': 1019,
         'socks_proxy': 1021,
