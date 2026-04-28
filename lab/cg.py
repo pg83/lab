@@ -1786,7 +1786,7 @@ class Loki:
                 },
                 'replication_factor': min(3, max(1, len(self.peers))),
                 'ring': {
-                    'instance_addr': f'{self.me}.nebula',
+                    'instance_addr': f'{self.me}.gofra',
                     'kvstore': {
                         'store': 'etcd',
                         'etcd': {
