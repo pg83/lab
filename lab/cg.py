@@ -462,7 +462,7 @@ class Gofra2:
         with memfd('config.ini') as conf:
             with open(conf, 'w') as f:
                 f.write(self.ini())
-            exec_into('gofra2', '--config', conf)
+            exec_into('gofra', '--config', conf)
 
 
 class Ssh3:
