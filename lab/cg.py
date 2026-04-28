@@ -1158,13 +1158,14 @@ def it_nebula_reals(lh, h, port):
 
 
 class EtcdPrivate:
-    def __init__(self, peers, port_peer, port_client, hostname, etcid, addr, user_name, cluster_state):
+    def __init__(self, peers, port_peer, port_client, hostname, etcid, peer_addr, client_addr, user_name, cluster_state):
         self.etcid = etcid
         self.peers = peers
         self.port_peer = port_peer
         self.port_client = port_client
         self.hostname = hostname
-        self.addr = addr
+        self.peer_addr = peer_addr
+        self.client_addr = client_addr
         self.user_name = user_name
         # `new` on first boot to bootstrap; flip to `existing` once
         # all members are up.
@@ -1195,7 +1196,7 @@ class EtcdPrivate:
     def prom_jobs(self):
         yield {
             'job_name': self.name(),
-            'static_configs': [{'targets': [f'{self.addr}:{self.port_client}']}],
+            'static_configs': [{'targets': [f'{self.client_addr}:{self.port_client}']}],
         }
 
     def run(self):
@@ -1209,13 +1210,13 @@ class EtcdPrivate:
             '--name', self.hostname,
             '--data-dir', self.data_dir,
             '--initial-advertise-peer-urls',
-            f'http://{self.addr}:{self.port_peer}',
+            f'http://{self.peer_addr}:{self.port_peer}',
             '--listen-peer-urls',
-            f'http://{self.addr}:{self.port_peer}',
+            f'http://{self.peer_addr}:{self.port_peer}',
             '--listen-client-urls',
-            f'http://{self.addr}:{self.port_client}',
+            f'http://{self.client_addr}:{self.port_client}',
             '--advertise-client-urls',
-            f'http://{self.addr}:{self.port_client}',
+            f'http://{self.client_addr}:{self.port_client}',
             '--initial-cluster-token',
             self.etcid,
             '--initial-cluster',
@@ -2234,7 +2235,7 @@ class ClusterMap:
 
             all_etc_2.append({
                 'hostname': hn,
-                'ip': nb['ip'],
+                'ip': h['gofra']['ip'],
             })
 
             yield {
@@ -2246,6 +2247,7 @@ class ClusterMap:
                     hn,
                     'secrets',
                     nb['ip'],
+                    nb['ip'],
                     'etcd_private',
                     'existing',
                 ),
@@ -2254,7 +2256,8 @@ class ClusterMap:
             # Secondary etcd — holds loki's ring kvstore today; reusable
             # for any future tenant that wants a coordination store
             # outside etcd_private (gorn's queue_v2 is heavy enough that
-            # we keep rings/leases off it).
+            # we keep rings/leases off it). Cluster-internal only:
+            # peer raft on gofra overlay, client API on 127.0.0.1.
             yield {
                 'host': hn,
                 'serv': EtcdPrivate(
@@ -2263,7 +2266,8 @@ class ClusterMap:
                     p['etcd_2_client'],
                     hn,
                     'etcd_2',
-                    nb['ip'],
+                    h['gofra']['ip'],
+                    '127.0.0.1',
                     'etcd_2',
                     'new',
                 ),
@@ -2337,10 +2341,7 @@ class ClusterMap:
                     s3_endpoint=f"http://127.0.0.1:{p['minio']}",
                     peers=[x['hostname'] for x in self.conf['hosts']],
                     me=hn,
-                    etcd_endpoints=[
-                        f"{x['hostname']}.nebula:{p['etcd_2_client']}"
-                        for x in self.conf['hosts']
-                    ],
+                    etcd_endpoints=[f"127.0.0.1:{p['etcd_2_client']}"],
                 ),
             }
 
@@ -2362,10 +2363,7 @@ class ClusterMap:
                 ),
             }
 
-            ogorod_etcd = [
-                f"{x['hostname']}.nebula:{p['etcd_2_client']}"
-                for x in self.conf['hosts']
-            ]
+            ogorod_etcd = [f"127.0.0.1:{p['etcd_2_client']}"]
             ogorod_s3 = f"http://127.0.0.1:{p['minio']}"
 
             for bind, suffix in [(h['nebula']['ip'], None), ('127.0.0.1', 'local')]:
