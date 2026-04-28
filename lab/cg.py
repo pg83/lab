@@ -433,6 +433,9 @@ class Gofra:
     def user(self):
         return 'root'
 
+    def users(self):
+        return ['root', 'gofra']
+
     def pkgs(self):
         yield {'pkg': 'bin/gofra/2'}
 
@@ -445,8 +448,9 @@ class Gofra:
         lines = []
         lines.append('[me]')
         lines.append('vip     = ' + self.vip)
-        lines.append('tun_dev = gofra20')
+        lines.append('tun_dev = gofra0')
         lines.append('tun_mtu = 1400')
+        lines.append('user    = gofra')
         lines.append('')
         lines.append('[peers]')
         for vip, underlays in sorted(self.hosts.items()):
@@ -2960,6 +2964,7 @@ def do(code):
     users['gorn_web'] = 1097
     users['gorn_ctl_nb'] = 1096
     users['gorn_prom'] = 1095
+    users['gofra'] = 1094
     ports['gorn_ctl'] = 8025
     ports['gorn_web'] = 8026
     ports['gorn_ctl_nb'] = 8027
