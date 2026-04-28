@@ -487,7 +487,7 @@ class Gofra2:
         return 'root'
 
     def users(self):
-        return ['root', 'gofra']
+        return ['root', 'gofra2']
 
     def pkgs(self):
         yield {'pkg': 'bin/gofra/staging'}
@@ -498,7 +498,7 @@ class Gofra2:
         lines.append('vip     = ' + self.vip)
         lines.append('tun_dev = gofra1')
         lines.append('tun_mtu = 1400')
-        lines.append('user    = gofra')
+        lines.append('user    = gofra2')
         lines.append('')
         lines.append('[peers]')
         for vip, underlays in sorted(self.hosts.items()):
@@ -3028,6 +3028,7 @@ def do(code):
     users['gorn_ctl_nb'] = 1096
     users['gorn_prom'] = 1095
     users['gofra'] = 1094
+    users['gofra2'] = 1010
     ports['gorn_ctl'] = 8025
     ports['gorn_web'] = 8026
     ports['gorn_ctl_nb'] = 8027
