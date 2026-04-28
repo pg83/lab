@@ -11,7 +11,7 @@
 #
 # Requires (set via /etc/profile.d on lab hosts):
 #   GORN_API         — http://127.0.0.1:8025
-#   MC_HOST_minio    — http://user:pass@<host>.eth1:8012
+#   MC_HOST_minio    — http://user:pass@127.0.0.1:8012
 #
 # Usage:
 #   ./molot_trace.sh <guid> [root]
