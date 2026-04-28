@@ -2155,6 +2155,7 @@ class ClusterMap:
         # driven entirely by gen_host(n) topology. 192.168.103.0/24 is
         # the gofra overlay subnet.
         gofra_hosts = {}
+
         for hn in ['lab1', 'lab2', 'lab3']:
             h = self.conf['by_host'][hn]
             n = int(hn[-1])
@@ -2450,6 +2451,7 @@ class ClusterMap:
             }
 
             gofra_vip = f'192.168.103.{15 + int(hn[-1])}/24'
+
             yield {
                 'host': hn,
                 'serv': Gofra(hn, p['gofra'], gofra_hosts, gofra_vip),
