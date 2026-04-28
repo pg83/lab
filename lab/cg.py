@@ -22,6 +22,7 @@ import urllib.request as ur
 DISABLE_ALL = [
     #'drop_bear_2',
     'co2_mon',  # USB HID device not present; service crash-loops with "hid_open: error"
+    'gofra2',  # staging twin promoted to prod (Gofra); kept in code for next test cycle
 ]
 
 DISABLE = {
@@ -460,6 +461,9 @@ class Gofra:
         lines.append('[udp]')
         lines.append('recv_buf = 16777216')
         lines.append('send_buf = 16777216')
+        lines.append('')
+        lines.append('[probe]')
+        lines.append('timeout_ms = 2000')
         return '\n'.join(lines) + '\n'
 
     def run(self):
