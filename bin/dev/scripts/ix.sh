@@ -35,5 +35,9 @@ base64 -d << EOF > ${out}/bin/disk_await
 {% include 'disk_await.py/base64' %}
 EOF
 
+base64 -d << EOF > ${out}/bin/etcd_migrate
+{% include 'etcd_migrate.py/base64' %}
+EOF
+
 chmod +x ${out}/bin/*
 {% endblock %}
