@@ -22,6 +22,10 @@ import urllib.request as ur
 DISABLE_ALL = [
     #'drop_bear_2',
     'co2_mon',  # USB HID device not present; service crash-loops with "hid_open: error"
+    # Migration to etcd_1 (same payload, peers on gofra overlay, client on
+    # 127.0.0.1). Restore from etcd_migrate dump after this rolls out, then
+    # delete etcd_private code entirely.
+    'etcd_private',
 ]
 
 DISABLE = {
@@ -2207,6 +2211,7 @@ class ClusterMap:
         neb_map = {}
         bal_map = []
         all_etc_private = []
+        all_etc_1 = []
         all_etc_2 = []
 
         # gofra peer table: peer VIP → list of underlay IPs. Static,
@@ -2232,6 +2237,11 @@ class ClusterMap:
                 'ip': nb['ip'],
             })
 
+            all_etc_1.append({
+                'hostname': hn,
+                'ip': h['gofra']['ip'],
+            })
+
             all_etc_2.append({
                 'hostname': hn,
                 'ip': h['gofra']['ip'],
@@ -2249,6 +2259,25 @@ class ClusterMap:
                     nb['ip'],
                     'etcd_private',
                     'existing',
+                ),
+            }
+
+            # Successor of etcd_private — same payload (secrets, ogorod refs,
+            # version keys) but peer raft on gofra overlay and client API on
+            # 127.0.0.1. etcd_private is in DISABLE_ALL; data is migrated
+            # via `etcd_migrate dump | etcd_migrate restore`.
+            yield {
+                'host': hn,
+                'serv': EtcdPrivate(
+                    all_etc_1,
+                    p['etcd_peer_private'],
+                    p['etcd_client_private'],
+                    hn,
+                    'etcd_1',
+                    h['gofra']['ip'],
+                    '127.0.0.1',
+                    'etcd_1',
+                    'new',
                 ),
             }
 
@@ -3008,6 +3037,7 @@ def do(code):
         'ssh_cz_tunnel': 1023,
         'ssh_jopa_tunnel': 1024,
         'etcd_private': 1026,
+        'etcd_1': 2010,
         'etcd_2': 2003,
         'samogon_bot': 2004,
         'job_scheduler': 2005,
