@@ -466,7 +466,7 @@ class Gofra:
         with memfd('config.ini') as conf:
             with open(conf, 'w') as f:
                 f.write(self.ini())
-            exec_into('chrt', '-f', '10', 'gofra', '--config', conf)
+            exec_into('gofra', '--config', conf)
 
 
 class Ssh3:
