@@ -9,7 +9,7 @@
             "extra": [
                 "bin/etcd/server(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=etcd_private)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=etcd_private,runsh_script=sha256:c381a1580af4c1ad,srv_user=etcd_private,extra_deps=YmluL2V0Y2Qvc2VydmVy)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=etcd_private,runsh_script=sha256:90266c83df63ff38,srv_user=etcd_private,extra_deps=YmluL2V0Y2Qvc2VydmVy)",
                 "bin/etcd/server(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=etcd_2)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=etcd_2,runsh_script=sha256:3a36fed7631c0570,srv_user=etcd_2,extra_deps=YmluL2V0Y2Qvc2VydmVy)",
@@ -275,7 +275,7 @@
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:70a413604dc1570a,srv_user=root,extra_deps=sha256:85f46f21a080ac0b)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:5b3d4d9e7eb9ad18)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:235f401b0d28e045)"
             ],
             "gofra": {
                 "hostname": "lab1.gofra",
@@ -329,7 +329,7 @@
             "extra": [
                 "bin/etcd/server(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=etcd_private)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=etcd_private,runsh_script=sha256:b9111695843568a7,srv_user=etcd_private,extra_deps=YmluL2V0Y2Qvc2VydmVy)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=etcd_private,runsh_script=sha256:a1040ea01a482cc2,srv_user=etcd_private,extra_deps=YmluL2V0Y2Qvc2VydmVy)",
                 "bin/etcd/server(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=etcd_2)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=etcd_2,runsh_script=sha256:e230d380f9245c12,srv_user=etcd_2,extra_deps=YmluL2V0Y2Qvc2VydmVy)",
@@ -585,7 +585,7 @@
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:70a413604dc1570a,srv_user=root,extra_deps=sha256:85f46f21a080ac0b)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:5b3d4d9e7eb9ad18)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:235f401b0d28e045)"
             ],
             "gofra": {
                 "hostname": "lab2.gofra",
@@ -639,7 +639,7 @@
             "extra": [
                 "bin/etcd/server(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=etcd_private)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=etcd_private,runsh_script=sha256:2fd8f6cb55ba1185,srv_user=etcd_private,extra_deps=YmluL2V0Y2Qvc2VydmVy)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=etcd_private,runsh_script=sha256:b548a2574b819dfc,srv_user=etcd_private,extra_deps=YmluL2V0Y2Qvc2VydmVy)",
                 "bin/etcd/server(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=etcd_2)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=etcd_2,runsh_script=sha256:c8460491cb41f759,srv_user=etcd_2,extra_deps=YmluL2V0Y2Qvc2VydmVy)",
@@ -865,7 +865,7 @@
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:70a413604dc1570a,srv_user=root,extra_deps=sha256:85f46f21a080ac0b)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:5b3d4d9e7eb9ad18)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:235f401b0d28e045)"
             ],
             "gofra": {
                 "hostname": "lab3.gofra",
@@ -921,7 +921,7 @@
             "extra": [
                 "bin/etcd/server(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=etcd_private)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=etcd_private,runsh_script=sha256:c381a1580af4c1ad,srv_user=etcd_private,extra_deps=YmluL2V0Y2Qvc2VydmVy)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=etcd_private,runsh_script=sha256:90266c83df63ff38,srv_user=etcd_private,extra_deps=YmluL2V0Y2Qvc2VydmVy)",
                 "bin/etcd/server(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=etcd_2)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=etcd_2,runsh_script=sha256:3a36fed7631c0570,srv_user=etcd_2,extra_deps=YmluL2V0Y2Qvc2VydmVy)",
@@ -1187,7 +1187,7 @@
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:70a413604dc1570a,srv_user=root,extra_deps=sha256:85f46f21a080ac0b)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:5b3d4d9e7eb9ad18)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:235f401b0d28e045)"
             ],
             "gofra": {
                 "hostname": "lab1.gofra",
@@ -1241,7 +1241,7 @@
             "extra": [
                 "bin/etcd/server(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=etcd_private)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=etcd_private,runsh_script=sha256:b9111695843568a7,srv_user=etcd_private,extra_deps=YmluL2V0Y2Qvc2VydmVy)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=etcd_private,runsh_script=sha256:a1040ea01a482cc2,srv_user=etcd_private,extra_deps=YmluL2V0Y2Qvc2VydmVy)",
                 "bin/etcd/server(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=etcd_2)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=etcd_2,runsh_script=sha256:e230d380f9245c12,srv_user=etcd_2,extra_deps=YmluL2V0Y2Qvc2VydmVy)",
@@ -1497,7 +1497,7 @@
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:70a413604dc1570a,srv_user=root,extra_deps=sha256:85f46f21a080ac0b)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:5b3d4d9e7eb9ad18)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:235f401b0d28e045)"
             ],
             "gofra": {
                 "hostname": "lab2.gofra",
@@ -1551,7 +1551,7 @@
             "extra": [
                 "bin/etcd/server(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=etcd_private)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=etcd_private,runsh_script=sha256:2fd8f6cb55ba1185,srv_user=etcd_private,extra_deps=YmluL2V0Y2Qvc2VydmVy)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=etcd_private,runsh_script=sha256:b548a2574b819dfc,srv_user=etcd_private,extra_deps=YmluL2V0Y2Qvc2VydmVy)",
                 "bin/etcd/server(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=etcd_2)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=etcd_2,runsh_script=sha256:c8460491cb41f759,srv_user=etcd_2,extra_deps=YmluL2V0Y2Qvc2VydmVy)",
@@ -1777,7 +1777,7 @@
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:70a413604dc1570a,srv_user=root,extra_deps=sha256:85f46f21a080ac0b)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:5b3d4d9e7eb9ad18)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:235f401b0d28e045)"
             ],
             "gofra": {
                 "hostname": "lab3.gofra",

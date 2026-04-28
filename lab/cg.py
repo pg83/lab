@@ -2230,7 +2230,7 @@ class ClusterMap:
 
             all_etc_private.append({
                 'hostname': hn,
-                'ip': h['gofra']['ip'],
+                'ip': nb['ip'],
             })
 
             all_etc_2.append({
@@ -2246,7 +2246,7 @@ class ClusterMap:
                     p['etcd_client_private'],
                     hn,
                     'secrets',
-                    h['gofra']['ip'],
+                    nb['ip'],
                     nb['ip'],
                     'etcd_private',
                     'existing',
