@@ -22,7 +22,7 @@
       "datasource": {"type": "prometheus", "uid": "prom"},
       "fieldConfig": {"defaults": {"unit": "ops"}},
       "targets": [
-        {"expr": "sum by (host) (rate(minio_s3_requests_total{job=~\"minio_.+\"}[1m]))", "legendFormat": "{{host}}", "refId": "A"}
+        {"expr": "sum by (host) (rate(minio_s3_requests_total{job=\"minio\"}[1m]))", "legendFormat": "{{host}}", "refId": "A"}
       ]
     },
     {
@@ -33,9 +33,9 @@
       "datasource": {"type": "prometheus", "uid": "prom"},
       "fieldConfig": {"defaults": {"unit": "ops"}},
       "targets": [
-        {"expr": "sum (rate(minio_s3_requests_4xx_errors_total{job=~\"minio_.+\"}[1m]))", "legendFormat": "4xx", "refId": "A"},
-        {"expr": "sum (rate(minio_s3_requests_5xx_errors_total{job=~\"minio_.+\"}[1m]))", "legendFormat": "5xx", "refId": "B"},
-        {"expr": "sum (rate(minio_s3_requests_errors_total{job=~\"minio_.+\"}[1m]))", "legendFormat": "total", "refId": "C"}
+        {"expr": "sum (rate(minio_s3_requests_4xx_errors_total{job=\"minio\"}[1m]))", "legendFormat": "4xx", "refId": "A"},
+        {"expr": "sum (rate(minio_s3_requests_5xx_errors_total{job=\"minio\"}[1m]))", "legendFormat": "5xx", "refId": "B"},
+        {"expr": "sum (rate(minio_s3_requests_errors_total{job=\"minio\"}[1m]))", "legendFormat": "total", "refId": "C"}
       ]
     },
     {
@@ -46,9 +46,9 @@
       "datasource": {"type": "prometheus", "uid": "prom"},
       "fieldConfig": {"defaults": {"unit": "s"}},
       "targets": [
-        {"expr": "histogram_quantile(0.50, sum by (le) (rate(minio_s3_requests_ttfb_seconds_distribution{job=~\"minio_.+\"}[1m])))", "legendFormat": "p50", "refId": "A"},
-        {"expr": "histogram_quantile(0.95, sum by (le) (rate(minio_s3_requests_ttfb_seconds_distribution{job=~\"minio_.+\"}[1m])))", "legendFormat": "p95", "refId": "B"},
-        {"expr": "histogram_quantile(0.99, sum by (le) (rate(minio_s3_requests_ttfb_seconds_distribution{job=~\"minio_.+\"}[1m])))", "legendFormat": "p99", "refId": "C"}
+        {"expr": "histogram_quantile(0.50, sum by (le) (rate(minio_s3_requests_ttfb_seconds_distribution{job=\"minio\"}[1m])))", "legendFormat": "p50", "refId": "A"},
+        {"expr": "histogram_quantile(0.95, sum by (le) (rate(minio_s3_requests_ttfb_seconds_distribution{job=\"minio\"}[1m])))", "legendFormat": "p95", "refId": "B"},
+        {"expr": "histogram_quantile(0.99, sum by (le) (rate(minio_s3_requests_ttfb_seconds_distribution{job=\"minio\"}[1m])))", "legendFormat": "p99", "refId": "C"}
       ]
     },
     {
@@ -58,8 +58,8 @@
       "gridPos": {"h": 6, "w": 12, "x": 12, "y": 6},
       "datasource": {"type": "prometheus", "uid": "prom"},
       "targets": [
-        {"expr": "sum by (host) (minio_s3_requests_inflight_total{job=~\"minio_.+\"})", "legendFormat": "inflight {{host}}", "refId": "A"},
-        {"expr": "sum by (host) (minio_s3_requests_waiting_total{job=~\"minio_.+\"})", "legendFormat": "waiting {{host}}", "refId": "B"}
+        {"expr": "sum by (host) (minio_s3_requests_inflight_total{job=\"minio\"})", "legendFormat": "inflight {{host}}", "refId": "A"},
+        {"expr": "sum by (host) (minio_s3_requests_waiting_total{job=\"minio\"})", "legendFormat": "waiting {{host}}", "refId": "B"}
       ]
     },
     {
@@ -70,7 +70,7 @@
       "datasource": {"type": "prometheus", "uid": "prom"},
       "fieldConfig": {"defaults": {"unit": "Bps"}},
       "targets": [
-        {"expr": "sum by (host) (rate(minio_s3_traffic_received_bytes{job=~\"minio_.+\"}[1m]))", "legendFormat": "{{host}}", "refId": "A"}
+        {"expr": "sum by (host) (rate(minio_s3_traffic_received_bytes{job=\"minio\"}[1m]))", "legendFormat": "{{host}}", "refId": "A"}
       ]
     },
     {
@@ -81,7 +81,7 @@
       "datasource": {"type": "prometheus", "uid": "prom"},
       "fieldConfig": {"defaults": {"unit": "Bps"}},
       "targets": [
-        {"expr": "sum by (host) (rate(minio_s3_traffic_sent_bytes{job=~\"minio_.+\"}[1m]))", "legendFormat": "{{host}}", "refId": "A"}
+        {"expr": "sum by (host) (rate(minio_s3_traffic_sent_bytes{job=\"minio\"}[1m]))", "legendFormat": "{{host}}", "refId": "A"}
       ]
     },
     {
@@ -92,10 +92,10 @@
       "datasource": {"type": "prometheus", "uid": "prom"},
       "fieldConfig": {"defaults": {"unit": "ops"}},
       "targets": [
-        {"expr": "sum (rate(minio_s3_requests_rejected_auth_total{job=~\"minio_.+\"}[1m]))", "legendFormat": "auth", "refId": "A"},
-        {"expr": "sum (rate(minio_s3_requests_rejected_header_total{job=~\"minio_.+\"}[1m]))", "legendFormat": "header", "refId": "B"},
-        {"expr": "sum (rate(minio_s3_requests_rejected_invalid_total{job=~\"minio_.+\"}[1m]))", "legendFormat": "invalid", "refId": "C"},
-        {"expr": "sum (rate(minio_s3_requests_rejected_timestamp_total{job=~\"minio_.+\"}[1m]))", "legendFormat": "timestamp", "refId": "D"}
+        {"expr": "sum (rate(minio_s3_requests_rejected_auth_total{job=\"minio\"}[1m]))", "legendFormat": "auth", "refId": "A"},
+        {"expr": "sum (rate(minio_s3_requests_rejected_header_total{job=\"minio\"}[1m]))", "legendFormat": "header", "refId": "B"},
+        {"expr": "sum (rate(minio_s3_requests_rejected_invalid_total{job=\"minio\"}[1m]))", "legendFormat": "invalid", "refId": "C"},
+        {"expr": "sum (rate(minio_s3_requests_rejected_timestamp_total{job=\"minio\"}[1m]))", "legendFormat": "timestamp", "refId": "D"}
       ]
     },
     {
@@ -105,8 +105,8 @@
       "gridPos": {"h": 6, "w": 12, "x": 12, "y": 18},
       "datasource": {"type": "prometheus", "uid": "prom"},
       "targets": [
-        {"expr": "sum by (host) (minio_cluster_nodes_online_total{job=~\"minio_.+\"})", "legendFormat": "online {{host}}", "refId": "A"},
-        {"expr": "sum by (host) (minio_cluster_nodes_offline_total{job=~\"minio_.+\"})", "legendFormat": "offline {{host}}", "refId": "B"}
+        {"expr": "sum by (host) (minio_cluster_nodes_online_total{job=\"minio\"})", "legendFormat": "online {{host}}", "refId": "A"},
+        {"expr": "sum by (host) (minio_cluster_nodes_offline_total{job=\"minio\"})", "legendFormat": "offline {{host}}", "refId": "B"}
       ]
     },
     {
@@ -116,7 +116,7 @@
       "gridPos": {"h": 10, "w": 24, "x": 0, "y": 24},
       "datasource": {"type": "loki", "uid": "loki"},
       "targets": [
-        {"expr": "{service=~\"minio_.+\"} |~ \"(?i)error|fatal|panic|fail|corrupt|broken pipe|offline\"", "refId": "A"}
+        {"expr": "{service=\"minio\"} |~ \"(?i)error|fatal|panic|fail|corrupt|broken pipe|offline\"", "refId": "A"}
       ]
     }
   ]
