@@ -656,8 +656,6 @@ mkdir -p /var/mnt/minio/3
 mount -t xfs LABEL=MINIO_3 /var/mnt/minio/3
 mkdir -p /var/mnt/minio/3/data
 
-chown -R minio:minio /var/mnt/minio/1/data /var/mnt/minio/2/data /var/mnt/minio/3/data
-
 exec su-exec minio minio server --address :{port} {cmap}
 '''
 
