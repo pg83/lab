@@ -508,6 +508,9 @@ class Gofra2:
         lines.append('[udp]')
         lines.append('recv_buf = 16777216')
         lines.append('send_buf = 16777216')
+        lines.append('')
+        lines.append('[probe]')
+        lines.append('timeout_ms = 2000')
         return '\n'.join(lines) + '\n'
 
     def run(self):
