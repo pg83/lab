@@ -80,6 +80,7 @@ def cmd_dump(args):
 
 def cmd_restore(args):
     n = 0
+    skipped_locks = 0
 
     for line in sys.stdin:
         line = line.strip()
@@ -90,15 +91,26 @@ def cmd_restore(args):
         rec = json.loads(line)
         key = base64.b64decode(rec['k'])
         val = base64.b64decode(rec['v'])
+        skey = key.decode('utf-8')
+
+        # Lock keys (etcd Mutex) are stored with empty value and an
+        # attached lease. Restoring them as plain non-leased keys would
+        # block future Mutex acquisitions until manually deleted —
+        # they're ephemeral, drop on the floor.
+        if not val:
+            log(f'skip lock key {skey!r}')
+            skipped_locks += 1
+            continue
 
         if args.dry_run:
-            log(f'would put {key!r} ({len(val)} bytes)')
+            log(f'would put {skey!r} ({len(val)} bytes)')
         else:
-            etcdctl(args.endpoints, 'put', '--', key.decode('utf-8'), input_bytes=val)
+            log(f'put {skey!r} ({len(val)} bytes) [{n + 1}]')
+            etcdctl(args.endpoints, 'put', '--', skey, input_bytes=val)
 
         n += 1
 
-    log(f'{"would restore" if args.dry_run else "restored"} {n} keys')
+    log(f'{"would restore" if args.dry_run else "restored"} {n} keys, skipped {skipped_locks} empty-value (lock) keys')
 
 
 def main():
