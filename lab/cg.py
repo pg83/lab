@@ -2210,7 +2210,7 @@ class ClusterMap:
         for hn in ['lab1', 'lab2', 'lab3']:
             h = self.conf['by_host'][hn]
             nb = h['nebula']
-            mio_cmap = f'http://lab{{1...3}}.gofra:{p["minio"]}/var/mnt/minio/{{1...3}}/data'
+            mio_cmap = 'http://lab{1...3}.gofra:' + str(p['minio']) + '/var/mnt/minio/{1...3}/data'
 
             minio = MinIO(h['gofra']['ip'], p['minio'], mio_cmap)
 
