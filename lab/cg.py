@@ -2533,6 +2533,7 @@ class ClusterMap:
         for hn, n in GORN_N.items():
             h = self.conf['by_host'][hn]
             nb = h['nebula']
+            gofra_ip = h['gofra']['ip']
 
             for i in range(n):
                 port = p[f'gorn_{i}']
@@ -2540,11 +2541,11 @@ class ClusterMap:
 
                 yield {
                     'host': hn,
-                    'serv': GornSsh(i, nb['ip'], port, nb['hostname']),
+                    'serv': GornSsh(i, gofra_ip, port, nb['hostname']),
                 }
 
                 gorn_endpoints.append({
-                    'host': nb['ip'],
+                    'host': gofra_ip,
                     'port': port,
                     'user': user,
                     # `work/` is the per-task scratch root. gorn wrap
