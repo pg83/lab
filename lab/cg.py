@@ -22,7 +22,6 @@ import urllib.request as ur
 DISABLE_ALL = [
     #'drop_bear_2',
     'co2_mon',  # USB HID device not present; service crash-loops with "hid_open: error"
-    'gofra2',  # staging twin promoted to prod (Gofra); kept in code for next test cycle
 ]
 
 DISABLE = {
