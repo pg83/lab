@@ -643,20 +643,20 @@ class SftpD:
 
 MINIO_SCRIPT = '''
 set -xue
-mkdir -p /var/mnt/minio/my
-mount -t xfs LABEL=MINIO_{n} /var/mnt/minio/my
-mkdir -p /var/mnt/minio/my/data
-chown {user} /var/mnt/minio/my/data
-exec su-exec {user} minio server --address {addr} {cmap}
+for i in 1 2 3; do
+    mkdir -p /var/mnt/minio/${i}
+    mount -t xfs LABEL=MINIO_${i} /var/mnt/minio/${i}
+    mkdir -p /var/mnt/minio/${i}/data
+done
+exec minio server --address :{port} {cmap}
 '''
 
 
 class MinIO:
-    def __init__(self, uniq, ipv4, port, cmap):
+    def __init__(self, ipv4, port, cmap):
         self.v = MINIO_SCRIPT
         self.ipv4 = ipv4
         self.port = port
-        self.uniq = uniq
         self.cmap = cmap
         self.script = MINIO_SCRIPT
 
@@ -665,30 +665,21 @@ class MinIO:
         return f'{self.ipv4}:{self.port}'
 
     def name(self):
-        return f'minio_{self.uniq}'
+        return 'minio'
 
     def users(self):
-        return [
-            'root',
-            self.name(),
-        ]
+        return ['root']
 
     def pkgs(self):
         yield {
             'pkg': 'bin/minio/patched',
         }
 
-        yield {
-            'pkg': 'bin/su/exec',
-        }
-
     def run(self):
         s = self.script
 
-        s = s.replace('{n}', str(self.uniq))
-        s = s.replace('{addr}', self.addr)
+        s = s.replace('{port}', str(self.port))
         s = s.replace('{cmap}', self.cmap)
-        s = s.replace('{user}', self.name())
 
         with memfd('script') as ss:
             with open(ss, 'w') as f:
@@ -2211,22 +2202,18 @@ class ClusterMap:
         for hn in ['lab1', 'lab2', 'lab3']:
             h = self.conf['by_host'][hn]
             nb = h['nebula']
-            mio_cmap = 'http://lab{1...3}.eth{1...3}/var/mnt/minio/my/data'
+            mio_cmap = f'http://lab{{1...3}}.gofra:{p["minio"]}/var/mnt/minio/{{1...3}}/data'
 
-            def mio_srv(i):
-                return MinIO(i, h['net'][i]['ip'], p['minio'], mio_cmap)
+            minio = MinIO(h['gofra']['ip'], p['minio'], mio_cmap)
 
-            minios = [mio_srv(i) for i in (1, 2, 3)]
-
-            for m in minios:
-                yield {
-                    'host': hn,
-                    'serv': m,
-                }
+            yield {
+                'host': hn,
+                'serv': minio,
+            }
 
             mc_host = nb['ip']
             mc_port = p['minio_web']
-            mc_serv = 'http://' + minios[0].addr
+            mc_serv = 'http://' + minio.addr
 
             yield {
                 'host': hn,
@@ -2450,11 +2437,9 @@ class ClusterMap:
                 'serv': NebulaNode(hn, nn_port, neb_map, p['nebula_node_prom'], nn_adv, nb['ip']),
             }
 
-            gofra_vip = f'192.168.103.{15 + int(hn[-1])}/24'
-
             yield {
                 'host': hn,
-                'serv': Gofra(hn, p['gofra'], gofra_hosts, gofra_vip),
+                'serv': Gofra(hn, p['gofra'], gofra_hosts, h['gofra']['ip'] + '/24'),
             }
 
             if lh := h.get('nebula', {}).get('lh', None):
@@ -2875,6 +2860,11 @@ def do(code):
 
     for x in hosts:
         x['ip'] = x['net'][0]['ip']
+        n = int(x['hostname'][-1])
+        x['gofra'] = {
+            'hostname': f'{x["hostname"]}.gofra',
+            'ip': f'192.168.103.{15 + n}',
+        }
 
     ports = {
         'sshd': 22,
