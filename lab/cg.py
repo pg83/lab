@@ -984,7 +984,7 @@ class GornBase:
                 for ep in self.endpoints
             },
             'etcd': {
-                'endpoints': [],
+                'endpoints': list(self.etcd_endpoints),
             },
             's3': {
                 'endpoint': self.s3['endpoint'],
@@ -1003,13 +1003,19 @@ class GornBase:
             with open(fn, 'w') as f:
                 f.write(json.dumps(cfg))
 
-            exec_into('gorn', self.subcommand(), '--config', fn, user=self.name(), PATH='/bin')
+            exec_into(
+                'gorn', self.subcommand(), '--config', fn,
+                user=self.name(),
+                PATH='/bin',
+                ETCDCTL_ENDPOINTS=','.join(self.etcd_endpoints),
+            )
 
 
 class Gorn(GornBase):
-    def __init__(self, endpoints, s3):
+    def __init__(self, endpoints, s3, etcd_endpoints):
         self.endpoints = endpoints
         self.s3 = s3
+        self.etcd_endpoints = list(etcd_endpoints)
 
     def name(self):
         return 'gorn'
@@ -1022,10 +1028,11 @@ class Gorn(GornBase):
 
 
 class GornCtl(GornBase):
-    def __init__(self, endpoints, s3, listen):
+    def __init__(self, endpoints, s3, listen, etcd_endpoints):
         self.endpoints = endpoints
         self.s3 = s3
         self.listen = listen
+        self.etcd_endpoints = list(etcd_endpoints)
 
     def name(self):
         return 'gorn_ctl'
@@ -1045,10 +1052,11 @@ class GornCtlNebula(GornCtl):
 
 
 class GornProm(GornBase):
-    def __init__(self, endpoints, s3, port):
+    def __init__(self, endpoints, s3, port, etcd_endpoints):
         self.endpoints = endpoints
         self.s3 = s3
         self.port = port
+        self.etcd_endpoints = list(etcd_endpoints)
 
     def name(self):
         return 'gorn_prom'
@@ -1661,12 +1669,13 @@ class JobScheduler:
     # realm view collects them into /etc/cron/.
     #
     # Env carries every secret a scheduled cmd might want expanded
-    # via $VAR in its argv: S3 creds, gorn API, ETCDCTL_ENDPOINTS
-    # (inherited from the service env). Cron files pick what they
-    # use; scheduler itself doesn't know what any of them mean.
-    def __init__(self, gorn_api, s3_endpoint):
+    # via $VAR in its argv: S3 creds, gorn API, ETCDCTL_ENDPOINTS.
+    # Cron files pick what they use; scheduler itself doesn't know
+    # what any of them mean.
+    def __init__(self, gorn_api, s3_endpoint, etcd_endpoints):
         self.gorn_api = gorn_api
         self.s3_endpoint = s3_endpoint
+        self.etcd_endpoints = list(etcd_endpoints)
 
     def name(self):
         return 'job_scheduler'
@@ -1696,6 +1705,7 @@ class JobScheduler:
             'TMPDIR': os.getcwd(),
             'GORN_API': self.gorn_api,
             'S3_ENDPOINT': self.s3_endpoint,
+            'ETCDCTL_ENDPOINTS': ','.join(self.etcd_endpoints),
             'AWS_ACCESS_KEY_ID': get_key('/s3/user').decode().strip(),
             'AWS_SECRET_ACCESS_KEY': get_key('/s3/password').decode().strip(),
             # Tokens for the HF / GHCR sync crons. Scheduler holds
@@ -2449,6 +2459,7 @@ class ClusterMap:
                 'serv': JobScheduler(
                     gorn_api=f"http://127.0.0.1:{p['gorn_ctl']}",
                     s3_endpoint=f"http://127.0.0.1:{p['minio']}",
+                    etcd_endpoints=[f"127.0.0.1:{p['etcd_client_private']}"],
                 ),
             }
 
@@ -2583,6 +2594,13 @@ class ClusterMap:
                     'nebula_host': nb['hostname'],
                 })
 
+        # Local etcd_1 — gorn services and the job scheduler use it for
+        # leader election, queue state and `etcdctl lock`. Pinning the
+        # endpoint into the service constructor (instead of leaving it
+        # to /etc/profile.d) means a topology change rebakes the
+        # pickle and triggers a clean restart through autoupdate.
+        gorn_etcd = [f"127.0.0.1:{p['etcd_client_private']}"]
+
         for hn in GORN_N:
             h = self.conf['by_host'][hn]
 
@@ -2595,17 +2613,17 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': Gorn(gorn_endpoints, s3),
+                'serv': Gorn(gorn_endpoints, s3, gorn_etcd),
             }
 
             yield {
                 'host': hn,
-                'serv': GornCtl(gorn_endpoints, s3, f"127.0.0.1:{p['gorn_ctl']}"),
+                'serv': GornCtl(gorn_endpoints, s3, f"127.0.0.1:{p['gorn_ctl']}", gorn_etcd),
             }
 
             yield {
                 'host': hn,
-                'serv': GornCtlNebula(gorn_endpoints, s3, f"{h['nebula']['ip']}:{p['gorn_ctl_nb']}"),
+                'serv': GornCtlNebula(gorn_endpoints, s3, f"{h['nebula']['ip']}:{p['gorn_ctl_nb']}", gorn_etcd),
             }
 
             yield {
@@ -2615,7 +2633,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': GornProm(gorn_endpoints, s3, p['gorn_prom']),
+                'serv': GornProm(gorn_endpoints, s3, p['gorn_prom'], gorn_etcd),
             }
 
 
