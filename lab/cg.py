@@ -469,6 +469,54 @@ class Gofra:
             exec_into('gofra', '--config', conf)
 
 
+class Gofra2:
+    # Staging twin of Gofra: parallel build on a separate overlay
+    # subnet (192.168.104.0/24), TUN gofra1, port 8051, binary
+    # gofra-staging from bin/gofra/staging. Lets us soak new gofra
+    # commits without touching the prod gofra service.
+    def __init__(self, host, port, hosts, vip):
+        self.host = host
+        self.port = port
+        self.hosts = hosts
+        self.vip = vip
+
+    def name(self):
+        return 'gofra2'
+
+    def user(self):
+        return 'root'
+
+    def users(self):
+        return ['root', 'gofra']
+
+    def pkgs(self):
+        yield {'pkg': 'bin/gofra/staging'}
+
+    def ini(self):
+        lines = []
+        lines.append('[me]')
+        lines.append('vip     = ' + self.vip)
+        lines.append('tun_dev = gofra1')
+        lines.append('tun_mtu = 1400')
+        lines.append('user    = gofra')
+        lines.append('')
+        lines.append('[peers]')
+        for vip, underlays in sorted(self.hosts.items()):
+            eps = ', '.join(f'{u}:{self.port}' for u in underlays)
+            lines.append(f'{vip} = {eps}')
+        lines.append('')
+        lines.append('[udp]')
+        lines.append('recv_buf = 16777216')
+        lines.append('send_buf = 16777216')
+        return '\n'.join(lines) + '\n'
+
+    def run(self):
+        with memfd('config.ini') as conf:
+            with open(conf, 'w') as f:
+                f.write(self.ini())
+            exec_into('gofra-staging', '--config', conf)
+
+
 class Ssh3:
     def __init__(self, port):
         self.port = port
@@ -2156,14 +2204,17 @@ class ClusterMap:
 
         # gofra peer table: peer VIP → list of underlay IPs. Static,
         # driven entirely by gen_host(n) topology. 192.168.103.0/24 is
-        # the gofra overlay subnet.
+        # the gofra overlay subnet; 192.168.104.0/24 is the staging
+        # twin (Gofra2 service, bin/gofra/staging).
         gofra_hosts = {}
+        gofra2_hosts = {}
 
         for hn in ['lab1', 'lab2', 'lab3']:
             h = self.conf['by_host'][hn]
             n = int(hn[-1])
             underlay = [net['ip'] for net in h['net']]
             gofra_hosts[f'192.168.103.{15 + n}'] = underlay
+            gofra2_hosts[f'192.168.104.{15 + n}'] = underlay
 
         for hn in ['lab1', 'lab2', 'lab3']:
             h = self.conf['by_host'][hn]
@@ -2454,6 +2505,11 @@ class ClusterMap:
                 'serv': Gofra(hn, p['gofra'], gofra_hosts, h['gofra']['ip'] + '/24'),
             }
 
+            yield {
+                'host': hn,
+                'serv': Gofra2(hn, p['gofra2'], gofra2_hosts, f'192.168.104.{15 + int(hn[-1])}/24'),
+            }
+
             if lh := h.get('nebula', {}).get('lh', None):
                 lh_port = p['nebula_lh']
                 pm = (h['ip'], lh_port, int(lh['port']))
@@ -2536,6 +2592,7 @@ sys.modules['builtins'].Collector = Collector
 sys.modules['builtins'].NebulaNode = NebulaNode
 sys.modules['builtins'].NebulaLh = NebulaLh
 sys.modules['builtins'].Gofra = Gofra
+sys.modules['builtins'].Gofra2 = Gofra2
 sys.modules['builtins'].Ssh3 = Ssh3
 sys.modules['builtins'].SftpD = SftpD
 sys.modules['builtins'].MinIO = MinIO
@@ -2920,6 +2977,7 @@ def do(code):
         'ogorod_serve': 8035,
         'ogorod_thin': 8038,
         'gofra': 8050,
+        'gofra2': 8051,
     }
 
     users = {
