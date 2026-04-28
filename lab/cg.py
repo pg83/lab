@@ -1357,7 +1357,7 @@ class Federator:
                     'params': {'match[]': ['{job=~".+"}']},
                     'static_configs': [
                         {
-                            'targets': [f'{h}.nebula:{self.collector_port}' for h in self.hosts],
+                            'targets': [f'{h}.gofra:{self.collector_port}' for h in self.hosts],
                         },
                     ],
                 },
@@ -2230,7 +2230,7 @@ class ClusterMap:
 
             all_etc_private.append({
                 'hostname': hn,
-                'ip': nb['ip'],
+                'ip': h['gofra']['ip'],
             })
 
             all_etc_2.append({
@@ -2246,7 +2246,7 @@ class ClusterMap:
                     p['etcd_client_private'],
                     hn,
                     'secrets',
-                    nb['ip'],
+                    h['gofra']['ip'],
                     nb['ip'],
                     'etcd_private',
                     'existing',
@@ -2366,7 +2366,7 @@ class ClusterMap:
             ogorod_etcd = [f"127.0.0.1:{p['etcd_2_client']}"]
             ogorod_s3 = f"http://127.0.0.1:{p['minio']}"
 
-            for bind, suffix in [(h['nebula']['ip'], None), ('127.0.0.1', 'local')]:
+            for bind, suffix in [(h['gofra']['ip'], None), ('127.0.0.1', 'local')]:
                 yield {
                     'host': hn,
                     'serv': OgorodServe(
