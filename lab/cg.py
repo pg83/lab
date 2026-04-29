@@ -734,7 +734,7 @@ class MinIO:
 
     def pkgs(self):
         yield {
-            'pkg': 'bin/minio/patched',
+            'pkg': 'bin/minio/daemon',
         }
 
         yield {
@@ -758,7 +758,6 @@ class MinIO:
             ]
 
             kwargs = {
-                'LAB_LOCAL_IP': self.ipv4,
                 'MINIO_ROOT_USER': get_key('/s3/user').decode().strip(),
                 'MINIO_ROOT_PASSWORD': get_key('/s3/password').decode().strip(),
                 'MINIO_BROWSER': 'off',
