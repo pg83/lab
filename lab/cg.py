@@ -139,7 +139,7 @@ class NodeExporter:
         return self.port
 
     def run(self):
-        exec_into('node_exporter', f'--web.listen-address=:{self.port}')
+        exec_into('node_exporter', f'--web.listen-address=127.0.0.1:{self.port}')
 
 
 def make_dirs(path, owner=None):
