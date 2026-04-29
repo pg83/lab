@@ -19,8 +19,14 @@
    roots don't collide.
 #}
 
-{% if not root %}{{ undefined_root_would_nuke_the_whole_bucket }}{% endif %}
-{% if not root.startswith('/') %}{{ root_must_be_absolute_starts_with_slash }}{% endif %}
+{# Hard fail at render time on bad/missing root so we never emit a
+   cron command that mc-rm's a whole bucket. flt_defined raises if
+   its input is Undefined; we feed it `root` for the missing-arg
+   check and a deliberately-undefined name for the empty / not-
+   absolute checks (its message string carries the diagnostic). #}
+{% set root = root | defined('mc_gc cron: root must be set') %}
+{% if not root %}{{ mc_gc_root_empty | defined('mc_gc cron: root must be non-empty') }}{% endif %}
+{% if not root.startswith('/') %}{{ mc_gc_root_not_absolute | defined('mc_gc cron: root must start with /') }}{% endif %}
 {% set period = period | default('3600') %}
 {% set hours = hours | default('24') %}
 {% set safe_root = root.lstrip('/') | replace('/', '-') %}
