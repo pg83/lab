@@ -2,6 +2,10 @@
 
 Notes for working in this repo. Read `README.md` first for the high-level picture; this file captures the mechanical facts that make edits go smoothly.
 
+## Coding conventions
+
+- Git author: `claude <claude@users.noreply.github.com>`. Commit messages in English.
+
 ## Mental model
 
 - Single source of truth is `lab/cg.py`. It generates a `cluster_map` (`hosts`, `ports`, `users`, `by_host`) and yields a list of `{host, serv}` records via `ClusterMap.it_cluster()`.
