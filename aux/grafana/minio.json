@@ -118,6 +118,51 @@
       "targets": [
         {"expr": "{service=\"minio\"} |~ \"(?i)error|fatal|panic|fail|corrupt|broken pipe|offline\"", "refId": "A"}
       ]
+    },
+    {
+      "id": 10,
+      "title": "Inter-node TX per host (sum across remote peers)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 34},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "Bps"}},
+      "targets": [
+        {"expr": "sum by (host) (rate(minio_inter_node_traffic_sent_bytes{job=\"minio\"}[1m]))", "legendFormat": "{{host}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Inter-node RX per host (sum across remote peers)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 34},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "Bps"}},
+      "targets": [
+        {"expr": "sum by (host) (rate(minio_inter_node_traffic_received_bytes{job=\"minio\"}[1m]))", "legendFormat": "{{host}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Inter-node TX by peer pair (host → server, includes self-loops)",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 40},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "Bps"}},
+      "targets": [
+        {"expr": "rate(minio_inter_node_traffic_sent_bytes{job=\"minio\"}[1m])", "legendFormat": "{{host}} → {{server}}", "refId": "A"}
+      ]
+    },
+    {
+      "id": 13,
+      "title": "Inter-node dial errors / s",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 48},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "ops"}},
+      "targets": [
+        {"expr": "rate(minio_inter_node_traffic_dial_errors{job=\"minio\"}[1m])", "legendFormat": "{{host}} → {{server}}", "refId": "A"},
+        {"expr": "rate(minio_inter_node_traffic_errors_total{job=\"minio\"}[1m])", "legendFormat": "{{host}} errors_total", "refId": "B"}
+      ]
     }
   ]
 }
