@@ -5,5 +5,5 @@ bin/oras
 bin/python
 bin/ghcr/cron
 bin/ghcr/scripts
-bin/mc/gc/cron(root=/gorn/ghcr_sync,hours=24)
+bin/mc/gc/cron(root=/gorn/ghcr_sync,hours=1)
 {% endblock %}

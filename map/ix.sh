@@ -28,9 +28,9 @@ bin/kernel/6/16
 bin/mirror/fetch
 bin/ogorod/mirror
 bin/smart/mon/tools
-bin/mc/gc/cron(root=/gorn/cli,hours=24)
 bin/fixits(delay=10)
 bin/auto/update(user=ix)
+bin/mc/gc/cron(root=/gorn/cli,hours=24)
 bin/kernel/gengrub(kernel_boot_flags=rootdelay=20)
 
 set/fs

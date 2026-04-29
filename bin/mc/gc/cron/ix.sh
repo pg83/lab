@@ -24,11 +24,12 @@
    its input is Undefined; we feed it `root` for the missing-arg
    check and a deliberately-undefined name for the empty / not-
    absolute checks (its message string carries the diagnostic). #}
+
 {% set root = root | defined('mc_gc cron: root must be set') %}
 {% if not root %}{{ mc_gc_root_empty | defined('mc_gc cron: root must be non-empty') }}{% endif %}
 {% if not root.startswith('/') %}{{ mc_gc_root_not_absolute | defined('mc_gc cron: root must start with /') }}{% endif %}
 {% set period = period | default('3600') %}
-{% set hours = hours | default('24') %}
+{% set hours = hours | default('1') %}
 {% set safe_root = root.lstrip('/') | replace('/', '-') %}
 
 {% block install %}
