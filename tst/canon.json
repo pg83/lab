@@ -90,8 +90,9 @@
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=samogon)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon,runsh_script=sha256:b5ed318e691f11e2,srv_user=root,extra_deps=sha256:87197c26aae767c0)",
                 "bin/samogon(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
+                "bin/mc/gc/cron(root=/gorn/samogon,hours=24)(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=samogon_bot)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon_bot,runsh_script=sha256:e7b523202de881ad,srv_user=samogon_bot,extra_deps=YmluL3NhbW9nb24=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon_bot,runsh_script=sha256:86635934c6e7d161,srv_user=samogon_bot,extra_deps=sha256:e5c908bade7d3f79)",
                 "bin/job/scheduler(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=job_scheduler)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:2b40172145565e3b,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
@@ -274,7 +275,7 @@
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:ca1ac12ad1d46785,srv_user=root,extra_deps=sha256:85f46f21a080ac0b)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:09af18c5e6e63ef5)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:ceeab4baa25a629d)"
             ],
             "gofra": {
                 "hostname": "lab1.gofra",
@@ -409,8 +410,9 @@
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=samogon)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon,runsh_script=sha256:b5ed318e691f11e2,srv_user=root,extra_deps=sha256:87197c26aae767c0)",
                 "bin/samogon(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
+                "bin/mc/gc/cron(root=/gorn/samogon,hours=24)(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=samogon_bot)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon_bot,runsh_script=sha256:e7b523202de881ad,srv_user=samogon_bot,extra_deps=YmluL3NhbW9nb24=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon_bot,runsh_script=sha256:86635934c6e7d161,srv_user=samogon_bot,extra_deps=sha256:e5c908bade7d3f79)",
                 "bin/job/scheduler(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=job_scheduler)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:2b40172145565e3b,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
@@ -583,7 +585,7 @@
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:ca1ac12ad1d46785,srv_user=root,extra_deps=sha256:85f46f21a080ac0b)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:09af18c5e6e63ef5)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:ceeab4baa25a629d)"
             ],
             "gofra": {
                 "hostname": "lab2.gofra",
@@ -718,8 +720,9 @@
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=samogon)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon,runsh_script=sha256:b5ed318e691f11e2,srv_user=root,extra_deps=sha256:87197c26aae767c0)",
                 "bin/samogon(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
+                "bin/mc/gc/cron(root=/gorn/samogon,hours=24)(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=samogon_bot)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon_bot,runsh_script=sha256:e7b523202de881ad,srv_user=samogon_bot,extra_deps=YmluL3NhbW9nb24=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon_bot,runsh_script=sha256:86635934c6e7d161,srv_user=samogon_bot,extra_deps=sha256:e5c908bade7d3f79)",
                 "bin/job/scheduler(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=job_scheduler)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:2b40172145565e3b,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
@@ -862,7 +865,7 @@
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:ca1ac12ad1d46785,srv_user=root,extra_deps=sha256:85f46f21a080ac0b)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:09af18c5e6e63ef5)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:ceeab4baa25a629d)"
             ],
             "gofra": {
                 "hostname": "lab3.gofra",
@@ -999,8 +1002,9 @@
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=samogon)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon,runsh_script=sha256:b5ed318e691f11e2,srv_user=root,extra_deps=sha256:87197c26aae767c0)",
                 "bin/samogon(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
+                "bin/mc/gc/cron(root=/gorn/samogon,hours=24)(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=samogon_bot)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon_bot,runsh_script=sha256:e7b523202de881ad,srv_user=samogon_bot,extra_deps=YmluL3NhbW9nb24=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon_bot,runsh_script=sha256:86635934c6e7d161,srv_user=samogon_bot,extra_deps=sha256:e5c908bade7d3f79)",
                 "bin/job/scheduler(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=job_scheduler)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:2b40172145565e3b,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
@@ -1183,7 +1187,7 @@
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:ca1ac12ad1d46785,srv_user=root,extra_deps=sha256:85f46f21a080ac0b)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:09af18c5e6e63ef5)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:ceeab4baa25a629d)"
             ],
             "gofra": {
                 "hostname": "lab1.gofra",
@@ -1318,8 +1322,9 @@
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=samogon)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon,runsh_script=sha256:b5ed318e691f11e2,srv_user=root,extra_deps=sha256:87197c26aae767c0)",
                 "bin/samogon(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
+                "bin/mc/gc/cron(root=/gorn/samogon,hours=24)(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=samogon_bot)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon_bot,runsh_script=sha256:e7b523202de881ad,srv_user=samogon_bot,extra_deps=YmluL3NhbW9nb24=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon_bot,runsh_script=sha256:86635934c6e7d161,srv_user=samogon_bot,extra_deps=sha256:e5c908bade7d3f79)",
                 "bin/job/scheduler(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=job_scheduler)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:2b40172145565e3b,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
@@ -1492,7 +1497,7 @@
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:ca1ac12ad1d46785,srv_user=root,extra_deps=sha256:85f46f21a080ac0b)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:09af18c5e6e63ef5)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:ceeab4baa25a629d)"
             ],
             "gofra": {
                 "hostname": "lab2.gofra",
@@ -1627,8 +1632,9 @@
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=samogon)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon,runsh_script=sha256:b5ed318e691f11e2,srv_user=root,extra_deps=sha256:87197c26aae767c0)",
                 "bin/samogon(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
+                "bin/mc/gc/cron(root=/gorn/samogon,hours=24)(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=samogon_bot)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon_bot,runsh_script=sha256:e7b523202de881ad,srv_user=samogon_bot,extra_deps=YmluL3NhbW9nb24=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon_bot,runsh_script=sha256:86635934c6e7d161,srv_user=samogon_bot,extra_deps=sha256:e5c908bade7d3f79)",
                 "bin/job/scheduler(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=job_scheduler)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:2b40172145565e3b,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
@@ -1771,7 +1777,7 @@
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=gorn_prom,user_home=/var/run/gorn_prom/std/home)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gorn_prom,runsh_script=sha256:ca1ac12ad1d46785,srv_user=root,extra_deps=sha256:85f46f21a080ac0b)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:09af18c5e6e63ef5)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:ceeab4baa25a629d)"
             ],
             "gofra": {
                 "hostname": "lab3.gofra",

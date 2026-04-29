@@ -1630,6 +1630,7 @@ class SamogonBot:
 
     def pkgs(self):
         yield {'pkg': 'bin/samogon'}
+        yield {'pkg': 'bin/mc/gc/cron(root=/gorn/samogon,hours=24)'}
 
     def run(self):
         env = {

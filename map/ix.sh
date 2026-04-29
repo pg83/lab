@@ -9,6 +9,7 @@ bin/ci
 bin/mc
 bin/dev
 bin/mtr
+bin/mc/gc
 bin/ghcr
 bin/htop
 bin/persdb
@@ -28,6 +29,7 @@ bin/kernel/6/16
 bin/mirror/fetch
 bin/ogorod/mirror
 bin/smart/mon/tools
+bin/mc/gc/cron(root=/gorn/cli,hours=24)
 bin/fixits(delay=10)
 bin/auto/update(user=ix)
 bin/kernel/gengrub(kernel_boot_flags=rootdelay=20)

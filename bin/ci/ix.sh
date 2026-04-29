@@ -11,4 +11,5 @@ bin/ci/metrics
 bin/git/unwrap
 bin/ci/scripts
 bin/minio/patched/client
+bin/mc/gc/cron(root=/gorn/ci,hours=24)
 {% endblock %}
