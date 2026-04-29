@@ -1,0 +1,76 @@
+{% set metrics = [
+  {
+    'title': 'gofra0 TX rate',
+    'expr': 'rate(node_network_transmit_bytes_total{device="gofra0",host="HOST"}[1m])',
+    'unit': 'Bps',
+    'legend': None,
+  },
+  {
+    'title': 'gofra0 RX rate',
+    'expr': 'rate(node_network_receive_bytes_total{device="gofra0",host="HOST"}[1m])',
+    'unit': 'Bps',
+    'legend': None,
+  },
+  {
+    'title': 'underlay TX per NIC (eth0..3)',
+    'expr': 'rate(node_network_transmit_bytes_total{device=~"eth[0-3]",host="HOST"}[1m])',
+    'unit': 'Bps',
+    'legend': 'device',
+  },
+  {
+    'title': 'underlay RX per NIC (eth0..3)',
+    'expr': 'rate(node_network_receive_bytes_total{device=~"eth[0-3]",host="HOST"}[1m])',
+    'unit': 'Bps',
+    'legend': 'device',
+  },
+  {
+    'title': 'gofra0 packets/s (tx+rx)',
+    'expr': 'rate(node_network_transmit_packets_total{device="gofra0",host="HOST"}[1m]) + rate(node_network_receive_packets_total{device="gofra0",host="HOST"}[1m])',
+    'unit': 'pps',
+    'legend': None,
+  },
+  {
+    'title': 'eth* errors + drops /s',
+    'expr': 'rate(node_network_transmit_errs_total{device=~"eth[0-3]",host="HOST"}[1m]) + rate(node_network_receive_errs_total{device=~"eth[0-3]",host="HOST"}[1m]) + rate(node_network_transmit_drop_total{device=~"eth[0-3]",host="HOST"}[1m]) + rate(node_network_receive_drop_total{device=~"eth[0-3]",host="HOST"}[1m])',
+    'unit': 'short',
+    'legend': 'device',
+  },
+] %}
+{% set hosts = ['lab1', 'lab2', 'lab3'] %}
+{
+  "uid": "gofra",
+  "title": "gofra",
+  "tags": ["gofra", "network"],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "graphTooltip": 0,
+  "time": {"from": "now-30m", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "refresh": "15s",
+  "annotations": {"list": []},
+  "templating": {"list": []},
+  "links": [],
+  "panels": [
+{% for m in metrics %}
+{% set is_last_metric = loop.last %}
+{% set row = loop.index0 * 6 %}
+{% set mi = loop.index0 %}
+{% for host in hosts %}
+{% set col = loop.index0 * 8 %}
+    {
+      "id": {{ mi * 3 + loop.index }},
+      "title": "{{ m.title }} — {{ host }}",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 8, "x": {{ col }}, "y": {{ row }}},
+      "datasource": {"type": "prometheus", "uid": "prom"},
+      "fieldConfig": {"defaults": {"unit": "{{ m.unit }}"}},
+      "targets": [
+        {"expr": "{{ m.expr | replace('HOST', host) }}", "legendFormat": "{% if m.legend %}{% raw %}{{ {% endraw %}{{ m.legend }}{% raw %} }}{% endraw %}{% else %}{{ host }}{% endif %}", "refId": "A"}
+      ]
+    }{% if not (loop.last and is_last_metric) %},{% endif %}
+{% endfor %}
+{% endfor %}
+  ]
+}

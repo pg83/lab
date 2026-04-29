@@ -65,6 +65,10 @@ cat > ${out}/share/grafana-provisioning/dashboards-json/{{cluster}}.json <<'JSON
 JSON
 {% endfor %}
 
+cat > ${out}/share/grafana-provisioning/dashboards-json/gofra.json <<'JSON'
+{% include 'gofra.json' %}
+JSON
+
 base64 -d << EOF > ${out}/share/grafana-provisioning/dashboards-json/nebula.json
 {% include 'nebula.json/base64' %}
 EOF
