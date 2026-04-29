@@ -1,39 +1,53 @@
 {% set metrics = [
   {
     'title': 'gofra0 TX rate',
-    'expr': '8 * rate(node_network_transmit_bytes_total{device="gofra0",host="HOST"}[1m])',
+    'host_expr': '8 * rate(node_network_transmit_bytes_total{device="gofra0",host="HOST"}[1m])',
+    'cluster_expr': '8 * sum(rate(node_network_transmit_bytes_total{device="gofra0"}[1m]))',
     'unit': 'bps',
-    'legend': None,
+    'multi': False,
   },
   {
     'title': 'gofra0 RX rate',
-    'expr': '8 * rate(node_network_receive_bytes_total{device="gofra0",host="HOST"}[1m])',
+    'host_expr': '8 * rate(node_network_receive_bytes_total{device="gofra0",host="HOST"}[1m])',
+    'cluster_expr': '8 * sum(rate(node_network_receive_bytes_total{device="gofra0"}[1m]))',
     'unit': 'bps',
-    'legend': None,
+    'multi': False,
   },
   {
     'title': 'underlay TX per NIC (eth0..3)',
-    'expr': '8 * rate(node_network_transmit_bytes_total{device=~"eth[0-3]",host="HOST"}[1m])',
+    'host_expr': '8 * rate(node_network_transmit_bytes_total{device=~"eth[0-3]",host="HOST"}[1m])',
+    'cluster_expr': '8 * sum by (device) (rate(node_network_transmit_bytes_total{device=~"eth[0-3]"}[1m]))',
     'unit': 'bps',
-    'legend': 'device',
+    'multi': True,
   },
   {
     'title': 'underlay RX per NIC (eth0..3)',
-    'expr': '8 * rate(node_network_receive_bytes_total{device=~"eth[0-3]",host="HOST"}[1m])',
+    'host_expr': '8 * rate(node_network_receive_bytes_total{device=~"eth[0-3]",host="HOST"}[1m])',
+    'cluster_expr': '8 * sum by (device) (rate(node_network_receive_bytes_total{device=~"eth[0-3]"}[1m]))',
     'unit': 'bps',
-    'legend': 'device',
+    'multi': True,
   },
   {
     'title': 'gofra0 packets/s (tx+rx)',
-    'expr': 'rate(node_network_transmit_packets_total{device="gofra0",host="HOST"}[1m]) + rate(node_network_receive_packets_total{device="gofra0",host="HOST"}[1m])',
+    'host_expr': 'rate(node_network_transmit_packets_total{device="gofra0",host="HOST"}[1m]) + rate(node_network_receive_packets_total{device="gofra0",host="HOST"}[1m])',
+    'cluster_expr': 'sum(rate(node_network_transmit_packets_total{device="gofra0"}[1m]) + rate(node_network_receive_packets_total{device="gofra0"}[1m]))',
     'unit': 'pps',
-    'legend': None,
+    'multi': False,
   },
   {
     'title': 'eth* errors + drops /s',
-    'expr': 'rate(node_network_transmit_errs_total{device=~"eth[0-3]",host="HOST"}[1m]) + rate(node_network_receive_errs_total{device=~"eth[0-3]",host="HOST"}[1m]) + rate(node_network_transmit_drop_total{device=~"eth[0-3]",host="HOST"}[1m]) + rate(node_network_receive_drop_total{device=~"eth[0-3]",host="HOST"}[1m])',
+    'host_expr': 'rate(node_network_transmit_errs_total{device=~"eth[0-3]",host="HOST"}[1m]) + rate(node_network_receive_errs_total{device=~"eth[0-3]",host="HOST"}[1m]) + rate(node_network_transmit_drop_total{device=~"eth[0-3]",host="HOST"}[1m]) + rate(node_network_receive_drop_total{device=~"eth[0-3]",host="HOST"}[1m])',
+    'cluster_expr': 'sum by (device) (rate(node_network_transmit_errs_total{device=~"eth[0-3]"}[1m]) + rate(node_network_receive_errs_total{device=~"eth[0-3]"}[1m]) + rate(node_network_transmit_drop_total{device=~"eth[0-3]"}[1m]) + rate(node_network_receive_drop_total{device=~"eth[0-3]"}[1m]))',
     'unit': 'short',
-    'legend': 'device',
+    'multi': True,
+  },
+  {
+    'title': 'gofra dead slots (now)',
+    'host_expr': 'last_over_time({service="gofra",host="HOST"} |~ "gofra slot_health" | regexp `dead=(?P<dead>[0-9]+)` | unwrap dead [1m])',
+    'cluster_expr': 'sum(last_over_time({service="gofra"} |~ "gofra slot_health" | regexp `dead=(?P<dead>[0-9]+)` | unwrap dead [1m]))',
+    'unit': 'short',
+    'multi': False,
+    'ds': 'loki',
   },
 ] %}
 {% set hosts = ['lab1', 'lab2', 'lab3'] %}
@@ -57,20 +71,34 @@
 {% set is_last_metric = loop.last %}
 {% set row = loop.index0 * 6 %}
 {% set mi = loop.index0 %}
+{% set ds_uid = m.ds | default('prom') %}
+{% set ds_type = 'loki' if ds_uid == 'loki' else 'prometheus' %}
+{% set multi = m.multi | default(false) %}
 {% for host in hosts %}
-{% set col = loop.index0 * 8 %}
+{% set col = loop.index0 * 6 %}
     {
-      "id": {{ mi * 3 + loop.index }},
+      "id": {{ mi * 4 + loop.index }},
       "title": "{{ m.title }} — {{ host }}",
       "type": "timeseries",
-      "gridPos": {"h": 6, "w": 8, "x": {{ col }}, "y": {{ row }}},
-      "datasource": {"type": "prometheus", "uid": "prom"},
+      "gridPos": {"h": 6, "w": 6, "x": {{ col }}, "y": {{ row }}},
+      "datasource": {"type": "{{ ds_type }}", "uid": "{{ ds_uid }}"},
       "fieldConfig": {"defaults": {"unit": "{{ m.unit }}"}},
       "targets": [
-        {"expr": "{{ m.expr | replace('HOST', host) | replace('"', '\\"') }}", "legendFormat": "{% if m.legend %}{% raw %}{{ {% endraw %}{{ m.legend }}{% raw %} }}{% endraw %}{% else %}{{ host }}{% endif %}", "refId": "A"}
+        {"expr": "{{ m.host_expr | replace('HOST', host) | replace('"', '\\"') }}", "legendFormat": "{% if multi %}{% raw %}{{device}}{% endraw %}{% else %}{{ host }}{% endif %}", "refId": "A"}
       ]
-    }{% if not (loop.last and is_last_metric) %},{% endif %}
+    },
 {% endfor %}
+    {
+      "id": {{ mi * 4 + 4 }},
+      "title": "{{ m.title }} — cluster",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 6, "x": 18, "y": {{ row }}},
+      "datasource": {"type": "{{ ds_type }}", "uid": "{{ ds_uid }}"},
+      "fieldConfig": {"defaults": {"unit": "{{ m.unit }}"}},
+      "targets": [
+        {"expr": "{{ m.cluster_expr | replace('"', '\\"') }}", "legendFormat": "{% if multi %}{% raw %}{{device}}{% endraw %}{% else %}sum{% endif %}", "refId": "A"}
+      ]
+    }{% if not is_last_metric %},{% endif %}
 {% endfor %}
   ]
 }
