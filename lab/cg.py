@@ -1630,7 +1630,11 @@ class SamogonBot:
 
     def pkgs(self):
         yield {'pkg': 'bin/samogon'}
-        yield {'pkg': 'bin/mc/gc/cron(root=/gorn/samogon,hours=24)'}
+        # Params go as separate dict keys, not baked into 'pkg' — to_srv()
+        # appends its own (k=v,...) tail with py_extra_modules and friends,
+        # so embedding parens here ends up as 'pkg(a=1)(b=2)' which the
+        # downstream parser mangles.
+        yield {'pkg': 'bin/mc/gc/cron', 'root': '/gorn/samogon', 'hours': 24}
 
     def run(self):
         env = {
