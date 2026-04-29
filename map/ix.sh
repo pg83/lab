@@ -9,7 +9,6 @@ bin/ci
 bin/mc
 bin/dev
 bin/mtr
-bin/mc/gc
 bin/ghcr
 bin/htop
 bin/persdb

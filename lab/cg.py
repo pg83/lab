@@ -1699,6 +1699,13 @@ class JobScheduler:
         yield {'pkg': 'bin/job/scheduler'}
 
     def run(self):
+        aws_key = get_key('/s3/user').decode().strip()
+        aws_secret = get_key('/s3/password').decode().strip()
+        # Pre-baked MC_HOST_minio so cron files can `--env` it through
+        # to gorn workers without each one re-deriving the alias from
+        # S3_ENDPOINT + creds.
+        mc_host = self.s3_endpoint.replace('://', f'://{aws_key}:{aws_secret}@', 1)
+
         env = {
             'PATH': '/bin',
             'HOME': os.getcwd(),
@@ -1706,8 +1713,9 @@ class JobScheduler:
             'GORN_API': self.gorn_api,
             'S3_ENDPOINT': self.s3_endpoint,
             'ETCDCTL_ENDPOINTS': ','.join(self.etcd_endpoints),
-            'AWS_ACCESS_KEY_ID': get_key('/s3/user').decode().strip(),
-            'AWS_SECRET_ACCESS_KEY': get_key('/s3/password').decode().strip(),
+            'AWS_ACCESS_KEY_ID': aws_key,
+            'AWS_SECRET_ACCESS_KEY': aws_secret,
+            'MC_HOST_minio': mc_host,
             # Tokens for the HF / GHCR sync crons. Scheduler holds
             # them so cron files can $-expand into gorn ignite
             # --env pairs without every job needing its own secrets

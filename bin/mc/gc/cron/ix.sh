@@ -3,18 +3,20 @@
 {# Parametric mc-gc cron: cron(root=/<absolute-path-inside-bucket>,
    hours=<retention-hours>, period=<seconds>=3600).
 
-   `root` MUST start with '/'  — it's an absolute path inside the
+   `root` MUST start with '/' — it's an absolute path inside the
    `minio` mc-alias (bucket + key prefix). Concatenation with the
    alias is therefore stitch-free: minio{{root}} → minio/gorn/ci.
 
-   Emits /etc/cron/<period>-mc-gc-<sanitized-root>.json that takes the
-   /lock/mc/gc<root> etcd lock + dedup on /mc/gc<root>, then ships
-   `mc_gc minio<root> <hours>` to a gorn worker via ignite (so the
-   listing + bulk delete don't run against the scheduler's 10s timeout).
+   Emits /etc/cron/<period>-mc-gc-<sanitized-root>.json: take
+   /lock/mc/gc<root> + dedup on /mc/gc<root>, then ship the
+   `minio-client rm --recursive --force --bypass --older-than=<H>h`
+   call to a gorn worker via ignite (so the bulk delete doesn't run
+   against the scheduler's 10s timeout). The mc alias is forwarded
+   in MC_HOST_minio (JobScheduler bakes it from S3 creds + endpoint).
 
    Each consuming service registers its own cron with its own root +
-   retention — they share the script binary (bin/mc/gc/scripts) but the
-   etcd keys derive from <root>, so multiple roots don't collide.
+   retention; the etcd lock/dedup keys derive from <root>, so multiple
+   roots don't collide.
 #}
 
 {% if not root %}{{ undefined_root_would_nuke_the_whole_bucket }}{% endif %}
@@ -34,12 +36,10 @@ cat << 'EOF' > ${out}/etc/cron/{{period}}-mc-gc-{{safe_root}}.json
         "gorn", "ignite",
         "--root", "mc_gc",
         "--retry-error",
-        "--env", "S3_ENDPOINT=$S3_ENDPOINT",
-        "--env", "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID",
-        "--env", "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY",
+        "--env", "MC_HOST_minio=$MC_HOST_minio",
         "--",
         "/bin/env", "PATH=/bin",
-        "mc_gc", "minio{{root}}", "{{hours}}"
+        "minio-client", "rm", "--recursive", "--force", "--bypass", "--older-than={{hours}}h", "minio{{root}}"
     ]
 }
 EOF
