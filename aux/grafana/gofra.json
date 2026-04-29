@@ -67,7 +67,7 @@
       "datasource": {"type": "prometheus", "uid": "prom"},
       "fieldConfig": {"defaults": {"unit": "{{ m.unit }}"}},
       "targets": [
-        {"expr": "{{ m.expr | replace('HOST', host) }}", "legendFormat": "{% if m.legend %}{% raw %}{{ {% endraw %}{{ m.legend }}{% raw %} }}{% endraw %}{% else %}{{ host }}{% endif %}", "refId": "A"}
+        {"expr": "{{ m.expr | replace('HOST', host) | replace('"', '\\"') }}", "legendFormat": "{% if m.legend %}{% raw %}{{ {% endraw %}{{ m.legend }}{% raw %} }}{% endraw %}{% else %}{{ host }}{% endif %}", "refId": "A"}
       ]
     }{% if not (loop.last and is_last_metric) %},{% endif %}
 {% endfor %}
