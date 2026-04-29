@@ -1,26 +1,26 @@
 {% set metrics = [
   {
     'title': 'gofra0 TX rate',
-    'expr': 'rate(node_network_transmit_bytes_total{device="gofra0",host="HOST"}[1m])',
-    'unit': 'Bps',
+    'expr': '8 * rate(node_network_transmit_bytes_total{device="gofra0",host="HOST"}[1m])',
+    'unit': 'bps',
     'legend': None,
   },
   {
     'title': 'gofra0 RX rate',
-    'expr': 'rate(node_network_receive_bytes_total{device="gofra0",host="HOST"}[1m])',
-    'unit': 'Bps',
+    'expr': '8 * rate(node_network_receive_bytes_total{device="gofra0",host="HOST"}[1m])',
+    'unit': 'bps',
     'legend': None,
   },
   {
     'title': 'underlay TX per NIC (eth0..3)',
-    'expr': 'rate(node_network_transmit_bytes_total{device=~"eth[0-3]",host="HOST"}[1m])',
-    'unit': 'Bps',
+    'expr': '8 * rate(node_network_transmit_bytes_total{device=~"eth[0-3]",host="HOST"}[1m])',
+    'unit': 'bps',
     'legend': 'device',
   },
   {
     'title': 'underlay RX per NIC (eth0..3)',
-    'expr': 'rate(node_network_receive_bytes_total{device=~"eth[0-3]",host="HOST"}[1m])',
-    'unit': 'Bps',
+    'expr': '8 * rate(node_network_receive_bytes_total{device=~"eth[0-3]",host="HOST"}[1m])',
+    'unit': 'bps',
     'legend': 'device',
   },
   {

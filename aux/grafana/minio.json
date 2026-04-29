@@ -125,9 +125,9 @@
       "type": "timeseries",
       "gridPos": {"h": 6, "w": 12, "x": 0, "y": 34},
       "datasource": {"type": "prometheus", "uid": "prom"},
-      "fieldConfig": {"defaults": {"unit": "Bps"}},
+      "fieldConfig": {"defaults": {"unit": "bps"}},
       "targets": [
-        {"expr": "sum by (host) (rate(minio_inter_node_traffic_sent_bytes{job=\"minio\"}[1m]))", "legendFormat": "{{host}}", "refId": "A"}
+        {"expr": "8 * sum by (host) (rate(minio_inter_node_traffic_sent_bytes{job=\"minio\"}[1m]))", "legendFormat": "{{host}}", "refId": "A"}
       ]
     },
     {
@@ -136,9 +136,9 @@
       "type": "timeseries",
       "gridPos": {"h": 6, "w": 12, "x": 12, "y": 34},
       "datasource": {"type": "prometheus", "uid": "prom"},
-      "fieldConfig": {"defaults": {"unit": "Bps"}},
+      "fieldConfig": {"defaults": {"unit": "bps"}},
       "targets": [
-        {"expr": "sum by (host) (rate(minio_inter_node_traffic_received_bytes{job=\"minio\"}[1m]))", "legendFormat": "{{host}}", "refId": "A"}
+        {"expr": "8 * sum by (host) (rate(minio_inter_node_traffic_received_bytes{job=\"minio\"}[1m]))", "legendFormat": "{{host}}", "refId": "A"}
       ]
     },
     {
@@ -147,9 +147,9 @@
       "type": "timeseries",
       "gridPos": {"h": 8, "w": 24, "x": 0, "y": 40},
       "datasource": {"type": "prometheus", "uid": "prom"},
-      "fieldConfig": {"defaults": {"unit": "Bps"}},
+      "fieldConfig": {"defaults": {"unit": "bps"}},
       "targets": [
-        {"expr": "rate(minio_inter_node_traffic_sent_bytes{job=\"minio\"}[1m])", "legendFormat": "{{host}} → {{server}}", "refId": "A"}
+        {"expr": "8 * rate(minio_inter_node_traffic_sent_bytes{job=\"minio\"}[1m])", "legendFormat": "{{host}} → {{server}}", "refId": "A"}
       ]
     },
     {
