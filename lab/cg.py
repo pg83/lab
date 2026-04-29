@@ -2509,13 +2509,21 @@ class ClusterMap:
 
             nn_port = p['nebula_node']
             nn_adv = [x['ip'] + f':{nn_port}' for x in h['net']]
-            # Register this host's nebula VIP → all LAN NIC endpoints in
-            # the static_host_map. Without this, peer discovery goes
-            # through the lighthouse which may hand out a public IP via
-            # UPnP — flaky and lossy. Giving every peer direct LAN
-            # fallbacks lets nebula form tunnels on the healthy
-            # 10.0.0.0/24 path first.
-            neb_map[nb['ip']] = list(nn_adv)
+            # static_host_map = how cluster peers find each other. Pin
+            # to the gofra overlay only: the route to 192.168.103.0/24
+            # exits via the gofra TUN, gofra fans out across all four
+            # underlay NICs through SO_BINDTODEVICE-bound sockets, so
+            # peer-to-peer nebula traffic gets striped on eth0..eth3
+            # instead of pinning to eth0 (which is what kernel pick
+            # with the LAN /24 list did).
+            #
+            # advertise_addrs (advr below) keeps the LAN list — that is
+            # what we tell the lighthouse, so external clients (laptop
+            # on the LAN, anything beyond the cluster) still discover
+            # us at 10.0.0.x and reach in over the underlay directly.
+            # listen.host stays 0.0.0.0 so we accept inbound on any
+            # NIC.
+            neb_map[nb['ip']] = [h['gofra']['ip'] + f':{nn_port}']
 
             yield {
                 'host': hn,
