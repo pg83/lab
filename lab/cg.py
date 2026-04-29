@@ -22,10 +22,6 @@ import urllib.request as ur
 DISABLE_ALL = [
     #'drop_bear_2',
     'co2_mon',  # USB HID device not present; service crash-loops with "hid_open: error"
-    # Migration to etcd_1 (same payload, peers on gofra overlay, client on
-    # 127.0.0.1). Restore from etcd_migrate dump after this rolls out, then
-    # delete etcd_private code entirely.
-    'etcd_private',
 ]
 
 DISABLE = {
@@ -2227,7 +2223,6 @@ class ClusterMap:
 
         neb_map = {}
         bal_map = []
-        all_etc_private = []
         all_etc_1 = []
         all_etc_2 = []
 
@@ -2247,12 +2242,6 @@ class ClusterMap:
 
         for hn in ['lab1', 'lab2', 'lab3']:
             h = self.conf['by_host'][hn]
-            nb = h['nebula']
-
-            all_etc_private.append({
-                'hostname': hn,
-                'ip': nb['ip'],
-            })
 
             all_etc_1.append({
                 'hostname': hn,
@@ -2264,31 +2253,15 @@ class ClusterMap:
                 'ip': h['gofra']['ip'],
             })
 
-            yield {
-                'host': hn,
-                'serv': EtcdPrivate(
-                    all_etc_private,
-                    p['etcd_peer_private'],
-                    p['etcd_client_private'],
-                    hn,
-                    'secrets',
-                    nb['ip'],
-                    nb['ip'],
-                    'etcd_private',
-                    'existing',
-                ),
-            }
-
-            # Successor of etcd_private — same payload (secrets, ogorod refs,
-            # version keys) but peer raft on gofra overlay and client API on
-            # 127.0.0.1. etcd_private is in DISABLE_ALL; data is migrated
-            # via `etcd_migrate dump | etcd_migrate restore`.
+            # Primary etcd cluster — secrets, ogorod refs, version keys,
+            # gorn election. Peer raft on gofra overlay, client API on
+            # 127.0.0.1.
             yield {
                 'host': hn,
                 'serv': EtcdPrivate(
                     all_etc_1,
-                    p['etcd_peer_private'],
-                    p['etcd_client_private'],
+                    p['etcd_1_peer'],
+                    p['etcd_1_client'],
                     hn,
                     'etcd_1',
                     h['gofra']['ip'],
@@ -2441,7 +2414,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': Secrets(p['secrets'], etcd_endpoints=[f"127.0.0.1:{p['etcd_client_private']}"]),
+                'serv': Secrets(p['secrets'], etcd_endpoints=[f"127.0.0.1:{p['etcd_1_client']}"]),
             }
 
             yield {
@@ -2458,7 +2431,7 @@ class ClusterMap:
                     s3_endpoint=f"http://127.0.0.1:{p['minio']}",
                     gorn_api=f"http://127.0.0.1:{p['gorn_ctl']}",
                     tg_allow_users=TG_ALLOW_USERS,
-                    etcd_endpoints=[f"127.0.0.1:{p['etcd_client_private']}"],
+                    etcd_endpoints=[f"127.0.0.1:{p['etcd_1_client']}"],
                 ),
             }
 
@@ -2467,7 +2440,7 @@ class ClusterMap:
                 'serv': JobScheduler(
                     gorn_api=f"http://127.0.0.1:{p['gorn_ctl']}",
                     s3_endpoint=f"http://127.0.0.1:{p['minio']}",
-                    etcd_endpoints=[f"127.0.0.1:{p['etcd_client_private']}"],
+                    etcd_endpoints=[f"127.0.0.1:{p['etcd_1_client']}"],
                 ),
             }
 
@@ -2483,12 +2456,12 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': SecondIP('10.0.0.32/24', etcd_endpoints=[f"127.0.0.1:{p['etcd_client_private']}"]),
+                'serv': SecondIP('10.0.0.32/24', etcd_endpoints=[f"127.0.0.1:{p['etcd_1_client']}"]),
             }
 
             yield {
                 'host': hn,
-                'serv': SecondIP('10.0.0.33/24', etcd_endpoints=[f"127.0.0.1:{p['etcd_client_private']}"]),
+                'serv': SecondIP('10.0.0.33/24', etcd_endpoints=[f"127.0.0.1:{p['etcd_1_client']}"]),
             }
 
             nb = h['nebula']
@@ -2607,7 +2580,7 @@ class ClusterMap:
         # endpoint into the service constructor (instead of leaving it
         # to /etc/profile.d) means a topology change rebakes the
         # pickle and triggers a clean restart through autoupdate.
-        gorn_etcd = [f"127.0.0.1:{p['etcd_client_private']}"]
+        gorn_etcd = [f"127.0.0.1:{p['etcd_1_client']}"]
 
         for hn in GORN_N:
             h = self.conf['by_host'][hn]
@@ -3021,8 +2994,8 @@ def do(code):
         'proxy_http': 8080,
         'proxy_http_mgmt': 8081,
         'proxy_https': 8090,
-        'etcd_client_private': 8020,
-        'etcd_peer_private': 8021,
+        'etcd_1_client': 8020,
+        'etcd_1_peer': 8021,
         'etcd_2_client': 8036,
         'etcd_2_peer': 8037,
         'secrets': 8022,
@@ -3062,7 +3035,6 @@ def do(code):
         'socks_proxy': 1021,
         'ssh_cz_tunnel': 1023,
         'ssh_jopa_tunnel': 1024,
-        'etcd_private': 1026,
         'etcd_1': 2010,
         'etcd_2': 2003,
         'samogon_bot': 2004,
