@@ -1109,8 +1109,9 @@ exec etcdctl lock /lock/{name} -- /bin/sh -c "set -xue; ip addr add {addr} dev e
 
 
 class SecondIP:
-    def __init__(self, addr):
+    def __init__(self, addr, etcd_endpoints):
         self.addr = addr
+        self.etcd_endpoints = list(etcd_endpoints)
         self.script = SECOND_IP
 
     def name(self):
@@ -1128,7 +1129,10 @@ class SecondIP:
             with open(fn, 'w') as f:
                 f.write(s)
 
-            exec_into('/bin/sh', fn)
+            exec_into(
+                '/bin/sh', fn,
+                ETCDCTL_ENDPOINTS=','.join(self.etcd_endpoints),
+            )
 
 
 class BalancerHttp:
@@ -1619,10 +1623,11 @@ class SamogonBot:
     # TG_ALLOW_USERS is configuration data that lives in cg.py.
     # S3 creds + endpoints land as env into the bot so `gorn ignite`
     # below can forward them via --env to the worker-side fetch.
-    def __init__(self, s3_endpoint, gorn_api, tg_allow_users):
+    def __init__(self, s3_endpoint, gorn_api, tg_allow_users, etcd_endpoints):
         self.s3_endpoint = s3_endpoint
         self.gorn_api = gorn_api
         self.tg_allow_users = tg_allow_users
+        self.etcd_endpoints = list(etcd_endpoints)
 
     def name(self):
         return 'samogon_bot'
@@ -1641,6 +1646,7 @@ class SamogonBot:
             'TG_BOT_TOKEN': get_key('/samogon/bot/token').decode().strip(),
             'TG_ALLOW_USERS': self.tg_allow_users,
             'GORN_API': self.gorn_api,
+            'ETCDCTL_ENDPOINTS': ','.join(self.etcd_endpoints),
             'AWS_ACCESS_KEY_ID': get_key('/s3/user').decode().strip(),
             'AWS_SECRET_ACCESS_KEY': get_key('/s3/password').decode().strip(),
             'S3_ENDPOINT': self.s3_endpoint,
@@ -2131,8 +2137,9 @@ class OgorodThin:
 
 
 class Secrets:
-    def __init__(self, port):
+    def __init__(self, port, etcd_endpoints):
         self.port = port
+        self.etcd_endpoints = list(etcd_endpoints)
 
     def name(self):
         return 'secrets'
@@ -2152,7 +2159,7 @@ class Secrets:
             self.port,
         ]
 
-        exec_into(*args)
+        exec_into(*args, ETCDCTL_ENDPOINTS=','.join(self.etcd_endpoints))
 
 
 class SecretsV2:
@@ -2434,7 +2441,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': Secrets(p['secrets']),
+                'serv': Secrets(p['secrets'], etcd_endpoints=[f"127.0.0.1:{p['etcd_client_private']}"]),
             }
 
             yield {
@@ -2451,6 +2458,7 @@ class ClusterMap:
                     s3_endpoint=f"http://127.0.0.1:{p['minio']}",
                     gorn_api=f"http://127.0.0.1:{p['gorn_ctl']}",
                     tg_allow_users=TG_ALLOW_USERS,
+                    etcd_endpoints=[f"127.0.0.1:{p['etcd_client_private']}"],
                 ),
             }
 
@@ -2475,12 +2483,12 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': SecondIP('10.0.0.32/24'),
+                'serv': SecondIP('10.0.0.32/24', etcd_endpoints=[f"127.0.0.1:{p['etcd_client_private']}"]),
             }
 
             yield {
                 'host': hn,
-                'serv': SecondIP('10.0.0.33/24'),
+                'serv': SecondIP('10.0.0.33/24', etcd_endpoints=[f"127.0.0.1:{p['etcd_client_private']}"]),
             }
 
             nb = h['nebula']
