@@ -150,10 +150,9 @@ def make_dirs(path, owner=None):
 
 
 class Collector:
-    def __init__(self, port, host, bind_addr):
+    def __init__(self, port, host):
         self.port = port
         self.host = host
-        self.bind_addr = bind_addr
         self.jobs = []
 
     def prom_port(self):
@@ -1323,11 +1322,10 @@ class Federator:
     # of at its local Collector so dashboards see the whole cluster,
     # and cross-host queries (sum by host, compare latency, etc.) work
     # directly. One per host — no SPOF.
-    def __init__(self, port, collector_port, hosts, bind_addr):
+    def __init__(self, port, collector_port, hosts):
         self.port = port
         self.collector_port = collector_port
         self.hosts = list(hosts)
-        self.bind_addr = bind_addr
 
     def name(self):
         return 'federator'
@@ -1401,11 +1399,10 @@ GRAFANA_ADMIN_PASSWORD = 'grafana'
 
 
 class Grafana:
-    def __init__(self, port, collector_port, loki_port, bind_addr, services):
+    def __init__(self, port, collector_port, loki_port, services):
         self.port = port
         self.collector_port = collector_port
         self.loki_port = loki_port
-        self.bind_addr = bind_addr
         # Sorted unique list of cluster service names — used to fan
         # out the deploy-convergence dashboard panels (one per
         # service).
@@ -2334,7 +2331,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': Collector(p['collector'], hn, h['nebula']['ip']),
+                'serv': Collector(p['collector'], hn),
             }
 
             yield {
@@ -2344,12 +2341,12 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': Federator(p['federator'], p['collector'], [x['hostname'] for x in self.conf['hosts']], h['nebula']['ip']),
+                'serv': Federator(p['federator'], p['collector'], [x['hostname'] for x in self.conf['hosts']]),
             }
 
             yield {
                 'host': hn,
-                'serv': Grafana(p['grafana'], p['federator'], p['loki'], h['nebula']['ip'], self.conf['services']),
+                'serv': Grafana(p['grafana'], p['federator'], p['loki'], self.conf['services']),
             }
 
             yield {
