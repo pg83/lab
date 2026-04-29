@@ -557,7 +557,7 @@ defaults
     timeout server 50000
 
 listen socks5
-    bind :{port}
+    bind 127.0.0.1:{port}
     mode tcp
     balance roundrobin
     retries 10
@@ -2490,7 +2490,7 @@ class ClusterMap:
                 yield {
                     'host': hn,
                     'serv': SshTunnel(
-                        '0.0.0.0:' + str(p[k]),
+                        '127.0.0.1:' + str(p[k]),
                         tun['addr'],
                         tun['keyn'],
                         k,
@@ -2499,7 +2499,7 @@ class ClusterMap:
                     ),
                 }
 
-                all_s5s.append(hn + ':' + str(p[k]))
+                all_s5s.append('127.0.0.1:' + str(p[k]))
 
             yield {
                 'host': hn,
