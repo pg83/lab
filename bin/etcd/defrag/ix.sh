@@ -5,5 +5,5 @@ bin/python
 bin/etcd/ctl
 bin/etcd/defrag/cron
 bin/etcd/defrag/scripts
-bin/mc/gc/cron(root=/gorn/etcd_defrag,hours=1)
+bin/mc/gc/cron(root=/gorn/etcd_defrag,hours=24)
 {% endblock %}

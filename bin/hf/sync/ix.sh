@@ -6,5 +6,5 @@ bin/hf/sync/cron
 bin/hf/sync/client
 bin/hf/sync/scripts
 bin/mirror/fetch/scripts
-bin/mc/gc/cron(root=/gorn/hf_sync,hours=1)
+bin/mc/gc/cron(root=/gorn/hf_sync,hours=2)
 {% endblock %}
