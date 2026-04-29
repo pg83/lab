@@ -1,6 +1,6 @@
 {
-  "uid": "etcd",
-  "title": "etcd",
+  "uid": "{{cluster}}",
+  "title": "{{cluster}}",
   "tags": ["etcd"],
   "schemaVersion": 39,
   "version": 1,
@@ -22,7 +22,7 @@
       "datasource": {"type": "prometheus", "uid": "prom"},
       "fieldConfig": {"defaults": {"unit": "short", "min": 0, "max": 1}},
       "targets": [
-        {"expr": "etcd_server_has_leader{job=\"etcd_private\"}", "legendFormat": "{{host}}", "refId": "A"}
+        {"expr": "etcd_server_has_leader{job=\"{{cluster}}\"}", "legendFormat": "{% raw %}{{host}}{% endraw %}", "refId": "A"}
       ]
     },
     {
@@ -33,7 +33,7 @@
       "datasource": {"type": "prometheus", "uid": "prom"},
       "fieldConfig": {"defaults": {"unit": "short"}},
       "targets": [
-        {"expr": "etcd_server_leader_changes_seen_total{job=\"etcd_private\"}", "legendFormat": "{{host}}", "refId": "A"}
+        {"expr": "etcd_server_leader_changes_seen_total{job=\"{{cluster}}\"}", "legendFormat": "{% raw %}{{host}}{% endraw %}", "refId": "A"}
       ]
     },
     {
@@ -44,9 +44,9 @@
       "datasource": {"type": "prometheus", "uid": "prom"},
       "fieldConfig": {"defaults": {"unit": "ops"}},
       "targets": [
-        {"expr": "sum by (host) (rate(etcd_server_proposals_committed_total{job=\"etcd_private\"}[1m]))", "legendFormat": "{{host}} committed", "refId": "A"},
-        {"expr": "sum by (host) (rate(etcd_server_proposals_applied_total{job=\"etcd_private\"}[1m]))", "legendFormat": "{{host}} applied", "refId": "B"},
-        {"expr": "sum by (host) (rate(etcd_server_proposals_failed_total{job=\"etcd_private\"}[1m]))", "legendFormat": "{{host}} failed", "refId": "C"}
+        {"expr": "sum by (host) (rate(etcd_server_proposals_committed_total{job=\"{{cluster}}\"}[1m]))", "legendFormat": "{% raw %}{{host}}{% endraw %} committed", "refId": "A"},
+        {"expr": "sum by (host) (rate(etcd_server_proposals_applied_total{job=\"{{cluster}}\"}[1m]))", "legendFormat": "{% raw %}{{host}}{% endraw %} applied", "refId": "B"},
+        {"expr": "sum by (host) (rate(etcd_server_proposals_failed_total{job=\"{{cluster}}\"}[1m]))", "legendFormat": "{% raw %}{{host}}{% endraw %} failed", "refId": "C"}
       ]
     },
     {
@@ -57,7 +57,7 @@
       "datasource": {"type": "prometheus", "uid": "prom"},
       "fieldConfig": {"defaults": {"unit": "short"}},
       "targets": [
-        {"expr": "etcd_server_proposals_pending{job=\"etcd_private\"}", "legendFormat": "{{host}}", "refId": "A"}
+        {"expr": "etcd_server_proposals_pending{job=\"{{cluster}}\"}", "legendFormat": "{% raw %}{{host}}{% endraw %}", "refId": "A"}
       ]
     },
     {
@@ -68,7 +68,7 @@
       "datasource": {"type": "prometheus", "uid": "prom"},
       "fieldConfig": {"defaults": {"unit": "s"}},
       "targets": [
-        {"expr": "histogram_quantile(0.99, sum by (le, host) (rate(etcd_disk_wal_fsync_duration_seconds_bucket{job=\"etcd_private\"}[5m])))", "legendFormat": "{{host}}", "refId": "A"}
+        {"expr": "histogram_quantile(0.99, sum by (le, host) (rate(etcd_disk_wal_fsync_duration_seconds_bucket{job=\"{{cluster}}\"}[5m])))", "legendFormat": "{% raw %}{{host}}{% endraw %}", "refId": "A"}
       ]
     },
     {
@@ -79,7 +79,7 @@
       "datasource": {"type": "prometheus", "uid": "prom"},
       "fieldConfig": {"defaults": {"unit": "s"}},
       "targets": [
-        {"expr": "histogram_quantile(0.99, sum by (le, host) (rate(etcd_disk_backend_commit_duration_seconds_bucket{job=\"etcd_private\"}[5m])))", "legendFormat": "{{host}}", "refId": "A"}
+        {"expr": "histogram_quantile(0.99, sum by (le, host) (rate(etcd_disk_backend_commit_duration_seconds_bucket{job=\"{{cluster}}\"}[5m])))", "legendFormat": "{% raw %}{{host}}{% endraw %}", "refId": "A"}
       ]
     },
     {
@@ -90,8 +90,8 @@
       "datasource": {"type": "prometheus", "uid": "prom"},
       "fieldConfig": {"defaults": {"unit": "bytes"}},
       "targets": [
-        {"expr": "etcd_mvcc_db_total_size_in_bytes{job=\"etcd_private\"}", "legendFormat": "{{host}} total", "refId": "A"},
-        {"expr": "etcd_mvcc_db_total_size_in_use_in_bytes{job=\"etcd_private\"}", "legendFormat": "{{host}} in-use", "refId": "B"}
+        {"expr": "etcd_mvcc_db_total_size_in_bytes{job=\"{{cluster}}\"}", "legendFormat": "{% raw %}{{host}}{% endraw %} total", "refId": "A"},
+        {"expr": "etcd_mvcc_db_total_size_in_use_in_bytes{job=\"{{cluster}}\"}", "legendFormat": "{% raw %}{{host}}{% endraw %} in-use", "refId": "B"}
       ]
     },
     {
@@ -102,8 +102,8 @@
       "datasource": {"type": "prometheus", "uid": "prom"},
       "fieldConfig": {"defaults": {"unit": "Bps"}},
       "targets": [
-        {"expr": "sum by (host) (rate(etcd_network_client_grpc_received_bytes_total{job=\"etcd_private\"}[1m]))", "legendFormat": "{{host}} rx", "refId": "A"},
-        {"expr": "sum by (host) (rate(etcd_network_client_grpc_sent_bytes_total{job=\"etcd_private\"}[1m]))", "legendFormat": "{{host}} tx", "refId": "B"}
+        {"expr": "sum by (host) (rate(etcd_network_client_grpc_received_bytes_total{job=\"{{cluster}}\"}[1m]))", "legendFormat": "{% raw %}{{host}}{% endraw %} rx", "refId": "A"},
+        {"expr": "sum by (host) (rate(etcd_network_client_grpc_sent_bytes_total{job=\"{{cluster}}\"}[1m]))", "legendFormat": "{% raw %}{{host}}{% endraw %} tx", "refId": "B"}
       ]
     },
     {
@@ -114,7 +114,7 @@
       "datasource": {"type": "prometheus", "uid": "prom"},
       "fieldConfig": {"defaults": {"unit": "s"}},
       "targets": [
-        {"expr": "histogram_quantile(0.99, sum by (le, To) (rate(etcd_network_peer_round_trip_time_seconds_bucket{job=\"etcd_private\"}[5m])))", "legendFormat": "to {{To}}", "refId": "A"}
+        {"expr": "histogram_quantile(0.99, sum by (le, To) (rate(etcd_network_peer_round_trip_time_seconds_bucket{job=\"{{cluster}}\"}[5m])))", "legendFormat": "to {% raw %}{{To}}{% endraw %}", "refId": "A"}
       ]
     },
     {
@@ -124,7 +124,7 @@
       "gridPos": {"h": 10, "w": 24, "x": 0, "y": 30},
       "datasource": {"type": "loki", "uid": "loki"},
       "targets": [
-        {"expr": "{service=\"etcd_private\"} |~ \"\\\"level\\\":\\\"(warn|error|fatal)\\\"\"", "refId": "A"}
+        {"expr": "{service=\"{{cluster}}\"} |~ \"\\\"level\\\":\\\"(warn|error|fatal)\\\"\"", "refId": "A"}
       ]
     }
   ]
