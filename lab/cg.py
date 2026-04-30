@@ -438,6 +438,7 @@ class Gofra:
 
     def pkgs(self):
         yield {'pkg': 'bin/gofra/2'}
+        yield {'pkg': 'bin/sched/hugepages', 'delay': '10'}
 
     def ini(self):
         # gofra INI: [me].vip identifies us, [peers] holds the full
