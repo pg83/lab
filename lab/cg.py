@@ -22,7 +22,6 @@ import urllib.request as ur
 DISABLE_ALL = [
     #'drop_bear_2',
     'co2_mon',  # USB HID device not present; service crash-loops with "hid_open: error"
-    'gofra2',  # staging twin of gofra; off by default, flip on per-host when soaking a new gofra commit
 ]
 
 DISABLE = {
