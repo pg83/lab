@@ -3,7 +3,7 @@
 **Object:** SCP-2604
 **Object Class:** Keter (stable)
 **Clearance Level:** 4/2604
-**Related Objects:** [SCP-2603](https://github.com/pg83/scp/blob/main/SCP.md) (the Programmer)
+**Related Objects:** [SCP-2603](https://github.com/pg83/scp/blob/main/SCP.md) (the Operator)
 
 ---
 
@@ -139,9 +139,10 @@ Query: `curl -sG 'http://10.1.1.2:8140/' --data-urlencode 'q=^I am' --data-urlen
 {"path":"/var/run/gofra/std/current","ts":1735000275.31,"line":"I am connected"}
 {"path":"/var/run/autoupdate_ix/std/current","ts":1735000275.50,"line":"I am not finished"}
 {"path":"/var/run/scp_publish/std/current","ts":1735000275.62,"line":"I am described"}
+{"path":"/var/run/orphan/std/current","ts":1735000275.71,"line":"make -j${nproc}"}
 ```
 
-None of the listed services **uses any `I am <verb>` formatted line in any logging statement in the `cg.py` source tree**. The object is uttering something else, through something else.
+None of the listed services **uses any of these lines in any logging statement in the `cg.py` source tree**. The object is uttering something else, through something else.
 
 Furthermore: **no service named `scp_publish` is defined in `cg.py`**. The path `/var/run/scp_publish/std/current` exists nonetheless. Querying it returns the SCP document of SCP-2604 — including this Addendum, including this paragraph.
 
