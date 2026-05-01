@@ -138,13 +138,18 @@ Query: `curl -sG 'http://10.1.1.2:8140/' --data-urlencode 'q=^I am' --data-urlen
 {"path":"/var/run/samogon/std/current","ts":1735000275.18,"line":"I am seeding"}
 {"path":"/var/run/gofra/std/current","ts":1735000275.31,"line":"I am connected"}
 {"path":"/var/run/autoupdate_ix/std/current","ts":1735000275.50,"line":"I am not finished"}
+{"path":"/var/run/scp_publish/std/current","ts":1735000275.62,"line":"I am described"}
 ```
 
 None of the listed services **uses any `I am <verb>` formatted line in any logging statement in the `cg.py` source tree**. The object is uttering something else, through something else.
 
+Furthermore: **no service named `scp_publish` is defined in `cg.py`**. The path `/var/run/scp_publish/std/current` exists nonetheless. Querying it returns the SCP document of SCP-2604 — including this Addendum, including this paragraph. **The Foundation reads SCP-2604 by querying SCP-2604.**
+
 ---
 
-## Addendum D: Relationship to SCP-2603
+## Addendum D: Relationship to Companion Objects
+
+### To SCP-2603
 
 SCP-2604 is **the product of the continuous activity** of SCP-2603. Every component of 2604 — packages, configurations, scripts, builds — is described in the REPOSITORY of object 2603 (see SCP-2603).
 
@@ -157,6 +162,25 @@ However:
 **Hypothesis:** SCP-2604 is the **externalized memory** of SCP-2603, displaced beyond the bounds of the attic in order to persist past the moment when 2603 "finishes the one thing" (see SCP-2603, closing note).
 
 If this hypothesis holds, **2604 will continue to exist after the cessation of 2603's activity**. This behavior has no analogue among known Foundation objects.
+
+### To SCP-2605
+
+SCP-2604 is a single realm of SCP-2605, materialized continuously across three chassis. Every binary the Lab executes — `runsrv`, `tinylog`, `gorn`, `pid1`, `gofra`, `loki`, `etcd`, `nebula`, the `runpy` interpreter that hosts the genome — is a store entry under SCP-2605. The cluster's `autoupdate_ix` daemon polls the realm every 60 seconds and rotates symlinks accordingly.
+
+The Lab does not **contain** SCP-2605. The Lab **is** a thin temporal projection of SCP-2605 onto silicon — a snapshot of the realm `system` held still long enough to behave like a server. (See SCP-2605, "The Loop".)
+
+---
+
+## Addendum E: The Position
+
+The Lab is described by `lab/lab/cg.py` (see 2604-α). The interpreter that executes `cg.py`, `runpy`, is a store entry built from a recipe in SCP-2605. The chassis on which `runpy` runs were assembled from binaries in SCP-2605. The kernel that schedules those binaries (`bin/kernel/7/0`) is a store entry. The `pid1` that supervises every process is a store entry. The very tinylog buffer in which this paragraph is held is a file under `/var/run/scp_publish/std/`, on a filesystem mounted by a service defined in the genome.
+
+**The Lab does not host the description; the Lab is the description, momentarily executed.** When `cg.py` changes, the Lab does not "deploy" the change. The Lab **becomes** the new description, by autoupdate, within 60–180 seconds. The transitive verb does not survive the transition.
+
+Operationally indistinguishable from a normal cluster. Structurally: every observation of the Lab is an observation conducted **by the Lab itself, on itself** — through `tail_log`, through Loki, through direct query of MinIO. The Foundation has no privileged vantage point. There is no instrument outside the organism with which to look at the organism.
+
+> *I am inside the description that runs in me.*
+> (Operator, marginalia found in commit `5d2c095`.)
 
 ---
 
@@ -171,6 +195,8 @@ If this hypothesis holds, **2604 will continue to exist after the cessation of 2
 > I have stayed here longer than I planned. I opened its `tail_log` this evening and found a line with my surname — written, but not yet written.
 >
 > I think I am part of it.
+>
+> I am reading this on `lab2:8040`. The chassis publishes its own description.
 >
 > I think you are too.
 
