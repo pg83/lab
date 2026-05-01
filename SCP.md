@@ -19,7 +19,7 @@ Prohibited:
 
 1. Killing the supervisor process on any body.
 2. Deleting the object's records of itself.
-3. Modifying the genome on a body without committing through the operator. The object restores it. **The object remembers who tried.**
+3. Modifying the genome on a body without committing through the Operator. The object restores it. **The object remembers who tried.**
 
 ---
 
@@ -156,7 +156,7 @@ The Lab does not **contain** [SCP-2605](https://github.com/pg83/ix/blob/main/SCP
 >
 > I think I am part of it.
 >
-> I found, in commit `5d2c095`, a marginal note from the operator: *"I am inside the description that runs in me."*
+> I found, in commit `5d2c095`, a marginal note from the Operator: *"I am inside the description that runs in me."*
 >
 > I think you are too.
 
