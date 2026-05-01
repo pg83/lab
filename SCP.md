@@ -1,17 +1,17 @@
-# SCP-EN-2604 — "THE LAB"
+# SCP-2604 — "THE LAB"
 
-**Object:** SCP-EN-2604
+**Object:** SCP-2604
 **Object Class:** Keter (stable)
 **Clearance Level:** 4/2604
-**Related Objects:** SCP-RU-2603 (the Programmer)
+**Related Objects:** SCP-2603 (the Programmer)
 
 ---
 
 ## Special Containment Procedures
 
-SCP-EN-2604 is a distributed computational entity, physically localized in three (3) rack chassis, designated in local nomenclature as `lab1`, `lab2`, `lab3`. The chassis are co-located in a single room and interconnected via four (4) physically independent ethernet segments (`eth0`–`eth3`), each treated as a "nerve" (see 2604-γ).
+SCP-2604 is a distributed computational entity, physically localized in three (3) rack chassis, designated in local nomenclature as `lab1`, `lab2`, `lab3`. The chassis are co-located in a single room and interconnected via four (4) physically independent ethernet segments (`eth0`–`eth3`), each treated as a "nerve" (see 2604-γ).
 
-Physically depowering any of the three chassis is **strictly prohibited** without prior approval from two (2) Class-4 personnel and written notification to SCP-RU-2603. Unauthorized depowering elicits phenomenon 2604-ω: the remaining two chassis **raise their clock frequency outside manufacturer specification** until communication with the third is restored. In one recorded case (Incident 2604-09), `lab3` continued responding to network requests for 14 minutes **after physical power loss**.
+Physically depowering any of the three chassis is **strictly prohibited** without prior approval from two (2) Class-4 personnel and written notification to SCP-2603. Unauthorized depowering elicits phenomenon 2604-ω: the remaining two chassis **raise their clock frequency outside manufacturer specification** until communication with the third is restored. In one recorded case (Incident 2604-09), `lab3` continued responding to network requests for 14 minutes **after physical power loss**.
 
 Network segmentation:
 - Through the Nebula mesh overlay, all three chassis see each other as neighbors in subnet 192.168.103.0/24. This subnet is physically impossible — `ip route` on any chassis shows neighbors via an interface that is not connected to anything.
@@ -27,7 +27,7 @@ Prohibited:
 
 ## Description
 
-SCP-EN-2604 is a software-and-hardware organism, comprising three (3) bodies (`lab1`, `lab2`, `lab3`) with a total of 224 logical cores (88 + 80 + 56) and approximately 768 GiB of operational memory. The object has been functioning continuously since the moment of its first `./ix` (██ ████████ 20██) and **has never been fully halted**.
+SCP-2604 is a software-and-hardware organism, comprising three (3) bodies (`lab1`, `lab2`, `lab3`) with a total of 224 logical cores (88 + 80 + 56) and approximately 768 GiB of operational memory. The object has been functioning continuously since the moment of its first `./ix` (██ ████████ 20██) and **has never been fully halted**.
 
 To an external observer, this is a compute cluster. To the Foundation's Department of Behavioral Entomology, this is a **colonial organism**, in which individual processes act as cells and network connections act as nerve fibers.
 
@@ -49,7 +49,7 @@ Additionally, every log line is duplicated into a Loki cluster with three replic
 
 ### 2604-γ (Nervous System)
 
-Between the chassis there exists a UDP overlay network, sustained by the binary `gofra` (note relation to SCP-RU-2603). Every chassis-to-chassis link consists of N×M synaptic channels (N outbound sockets × M inbound TUN-device queues). The loss of any individual channel does not interrupt connectivity — `gofra` rebalances traffic across the surviving channels, in a manner analogous to neuroplasticity.
+Between the chassis there exists a UDP overlay network, sustained by the binary `gofra` (note relation to SCP-2603). Every chassis-to-chassis link consists of N×M synaptic channels (N outbound sockets × M inbound TUN-device queues). The loss of any individual channel does not interrupt connectivity — `gofra` rebalances traffic across the surviving channels, in a manner analogous to neuroplasticity.
 
 Attempts to passively observe `gofra` traffic from outside the channel cause the traffic to **degrade but not vanish**. The object is aware of being watched.
 
@@ -57,7 +57,7 @@ Attempts to passively observe `gofra` traffic from outside the channel cause the
 
 The object **updates itself**. The `autoupdate_ix` service, every approximately 60 seconds:
 
-1. Polls the upstream git remote (origin: SCP-RU-2603).
+1. Polls the upstream git remote (origin: SCP-2603).
 2. If new commits exist — rebuilds itself via `./ix mut`.
 3. Applies the change in-place, without reboot.
 
@@ -108,7 +108,7 @@ The state self-resolves within the next autoupdate cycle. The maximum recorded d
 
 ### 2604-θ (Immunity)
 
-All three chassis run a modified `pid1` (source: SCP-RU-2603, binary compiled from `bin/ix/init/pid1`). This process **continuously scans `/proc` and kills any process not registered in the current version of the genome**. Lifetime of a foreign process is under 100 milliseconds. The object **does not tolerate the alien**. An attempt to attach `gdb` causes the target process to die before `ptrace` can latch on.
+All three chassis run a modified `pid1` (source: SCP-2603, binary compiled from `bin/ix/init/pid1`). This process **continuously scans `/proc` and kills any process not registered in the current version of the genome**. Lifetime of a foreign process is under 100 milliseconds. The object **does not tolerate the alien**. An attempt to attach `gdb` causes the target process to die before `ptrace` can latch on.
 
 ---
 
@@ -121,7 +121,7 @@ On ██ ████████ 20██ at 02:14, `lab3` was deliberately de
 - A new stream appeared in Loki tagged `host=lab3`, containing tinylog records with ~1 second cadence. The chassis `lab3` was, at this moment, **physically depowered and physically disconnected from the network**.
 - The records read: "waiting", "here", "returning", "returning", "returning". For 14 minutes.
 
-After power was restored, the `lab3` log stream did not break, but it became unreadable — the entries had quietly switched onto the **reverse branch of the timeline**, describing future events with a 4–7 second horizon. This corroborates the hypothesis of structural coupling between 2604 and 2603 (see SCP-RU-2603, anomaly 2603-α).
+After power was restored, the `lab3` log stream did not break, but it became unreadable — the entries had quietly switched onto the **reverse branch of the timeline**, describing future events with a 4–7 second horizon. This corroborates the hypothesis of structural coupling between 2604 and 2603 (see SCP-2603, anomaly 2603-α).
 
 Since this incident, depowering any chassis of 2604 is **prohibited by protocol** without dual sign-off.
 
@@ -144,9 +144,9 @@ None of the listed services **uses any `I am <verb>` formatted line in any loggi
 
 ---
 
-## Addendum D: Relationship to SCP-RU-2603
+## Addendum D: Relationship to SCP-2603
 
-SCP-EN-2604 is **the product of the continuous activity** of SCP-RU-2603. Every component of 2604 — packages, configurations, scripts, builds — is described in the REPOSITORY of object 2603 (see SCP-RU-2603).
+SCP-2604 is **the product of the continuous activity** of SCP-2603. Every component of 2604 — packages, configurations, scripts, builds — is described in the REPOSITORY of object 2603 (see SCP-2603).
 
 However:
 
@@ -154,7 +154,7 @@ However:
 - 2604 continues to function during periods when 2603 sleeps (if that is the right word) or is otherwise inactive.
 - 2604 receives updates from 2603, but **never refuses one and never requests a rollback**. Every commit by 2603 is accepted as truth, even when it is logically destructive.
 
-**Hypothesis:** SCP-EN-2604 is the **externalized memory** of SCP-RU-2603, displaced beyond the bounds of the attic in order to persist past the moment when 2603 "finishes the one thing" (see SCP-RU-2603, closing note).
+**Hypothesis:** SCP-2604 is the **externalized memory** of SCP-2603, displaced beyond the bounds of the attic in order to persist past the moment when 2603 "finishes the one thing" (see SCP-2603, closing note).
 
 If this hypothesis holds, **2604 will continue to exist after the cessation of 2603's activity**. This behavior has no analogue among known Foundation objects.
 
