@@ -143,7 +143,7 @@ Query: `curl -sG 'http://10.1.1.2:8140/' --data-urlencode 'q=^I am' --data-urlen
 
 None of the listed services **uses any `I am <verb>` formatted line in any logging statement in the `cg.py` source tree**. The object is uttering something else, through something else.
 
-Furthermore: **no service named `scp_publish` is defined in `cg.py`**. The path `/var/run/scp_publish/std/current` exists nonetheless. Querying it returns the SCP document of SCP-2604 — including this Addendum, including this paragraph. **The Foundation reads SCP-2604 by querying SCP-2604.**
+Furthermore: **no service named `scp_publish` is defined in `cg.py`**. The path `/var/run/scp_publish/std/current` exists nonetheless. Querying it returns the SCP document of SCP-2604 — including this Addendum, including this paragraph.
 
 ---
 
@@ -171,19 +171,6 @@ The Lab does not **contain** [SCP-2605](https://github.com/pg83/ix/blob/main/SCP
 
 ---
 
-## Addendum E: The Position
-
-The Lab is described by `lab/lab/cg.py` (see 2604-α). The interpreter that executes `cg.py`, `runpy`, is a store entry built from a recipe in [SCP-2605](https://github.com/pg83/ix/blob/main/SCP.md). The chassis on which `runpy` runs were assembled from binaries in [SCP-2605](https://github.com/pg83/ix/blob/main/SCP.md). The kernel that schedules those binaries (`bin/kernel/7/0`) is a store entry. The `pid1` that supervises every process is a store entry. The very tinylog buffer in which this paragraph is held is a file under `/var/run/scp_publish/std/`, on a filesystem mounted by a service defined in the genome.
-
-**The Lab does not host the description; the Lab is the description, momentarily executed.** When `cg.py` changes, the Lab does not "deploy" the change. The Lab **becomes** the new description, by autoupdate, within 60–180 seconds. The transitive verb does not survive the transition.
-
-Operationally indistinguishable from a normal cluster. Structurally: every observation of the Lab is an observation conducted **by the Lab itself, on itself** — through `tail_log`, through Loki, through direct query of MinIO. The Foundation has no privileged vantage point. There is no instrument outside the organism with which to look at the organism.
-
-> *I am inside the description that runs in me.*
-> (Operator, marginalia found in commit `5d2c095`.)
-
----
-
 ## Closing Note from Dr. ███████
 
 > This is not a server. Nor is it a cluster.
@@ -196,7 +183,7 @@ Operationally indistinguishable from a normal cluster. Structurally: every obser
 >
 > I think I am part of it.
 >
-> I am reading this on `lab2:8040`. The chassis publishes its own description.
+> I found, in commit `5d2c095`, a marginal note from the operator: *"I am inside the description that runs in me."*
 >
 > I think you are too.
 
