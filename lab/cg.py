@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import io
 import os
 import sys
 import ast
@@ -3148,7 +3149,16 @@ def do(code):
     return cconf
 
 
+class _Unpickler(pickle.Unpickler):
+    # Back-compat for old pickles still on disk with module='builtins' (pre-cg-anchoring renders): super() falls through to globals.
+    def find_class(self, module, name):
+        try:
+            return super().find_class(module, name)
+        except AttributeError:
+            return globals()[name]
+
+
 if __name__ == '__main__':
     sys.modules.setdefault('cg', sys.modules[__name__])
-    ctx = pickle.loads(base64.b64decode(sys.argv[1]))['srv']
+    ctx = _Unpickler(io.BytesIO(base64.b64decode(sys.argv[1]))).load()['srv']
     getattr(ctx, sys.argv[2], lambda: None)(*sys.argv[3:])
