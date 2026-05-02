@@ -1104,8 +1104,8 @@ class MolotWeb:
     # them. One instance per host, no leader election — manifests are
     # cluster-shared in MinIO, each instance reads independently.
     # No L7 balancer in front: reach as <host>.nebula:port directly.
-    def __init__(self, port, gorn_api, s3_endpoint, s3_bucket):
-        self.port = port
+    def __init__(self, listen, gorn_api, s3_endpoint, s3_bucket):
+        self.listen = listen
         self.gorn_api = gorn_api
         self.s3_endpoint = s3_endpoint
         self.s3_bucket = s3_bucket
@@ -1124,7 +1124,7 @@ class MolotWeb:
 
         exec_into(
             'molot', 'web',
-            '--listen', f'0.0.0.0:{self.port}',
+            '--listen', self.listen,
             GORN_API=self.gorn_api,
             S3_ENDPOINT=self.s3_endpoint,
             S3_BUCKET=self.s3_bucket,
@@ -2676,7 +2676,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': MolotWeb(p['molot_web'], f"http://127.0.0.1:{p['gorn_ctl']}", f"http://127.0.0.1:{p['minio']}", 'molot'),
+                'serv': MolotWeb(f"{h['nebula']['ip']}:{p['molot_web']}", f"http://127.0.0.1:{p['gorn_ctl']}", f"http://127.0.0.1:{p['minio']}", 'molot'),
             }
 
 
