@@ -1098,6 +1098,42 @@ class GornWeb:
             exec_into('gorn', 'web', '--config', fn, PATH='/bin')
 
 
+class MolotWeb:
+    # Per-run ledger browser. molot writes a manifest to s3://molot/runs/
+    # at the end of every ./ix build invocation; this service renders
+    # them. One instance per host, no leader election — manifests are
+    # cluster-shared in MinIO, each instance reads independently.
+    # No L7 balancer in front: reach as <host>.nebula:port directly.
+    def __init__(self, port, gorn_api, s3_endpoint, s3_bucket):
+        self.port = port
+        self.gorn_api = gorn_api
+        self.s3_endpoint = s3_endpoint
+        self.s3_bucket = s3_bucket
+
+    def name(self):
+        return 'molot_web'
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/molot',
+        }
+
+    def run(self):
+        aws_key = get_key('/s3/iam/molot/key').decode().strip()
+        aws_secret = get_key('/s3/iam/molot/secret').decode().strip()
+
+        exec_into(
+            'molot', 'web',
+            '--listen', f'0.0.0.0:{self.port}',
+            GORN_API=self.gorn_api,
+            S3_ENDPOINT=self.s3_endpoint,
+            S3_BUCKET=self.s3_bucket,
+            AWS_ACCESS_KEY_ID=aws_key,
+            AWS_SECRET_ACCESS_KEY=aws_secret,
+            PATH='/bin',
+        )
+
+
 SECOND_IP = '''
 set -x
 ip addr del {addr} dev eth0
@@ -2638,6 +2674,11 @@ class ClusterMap:
                 'serv': GornProm(gorn_endpoints, s3, p['gorn_prom'], gorn_etcd),
             }
 
+            yield {
+                'host': hn,
+                'serv': MolotWeb(p['molot_web'], f"http://127.0.0.1:{p['gorn_ctl']}", f"http://127.0.0.1:{p['minio']}", 'molot'),
+            }
+
 
 def exec_into(*args, user=None, **kwargs):
     args = [str(x) for x in args]
@@ -3046,12 +3087,14 @@ def do(code):
     users['gorn_web'] = 1097
     users['gorn_ctl_nb'] = 1096
     users['gorn_prom'] = 1095
+    users['molot_web'] = 1026
     users['gofra'] = 1094
     users['gofra2'] = 1010
     ports['gorn_ctl'] = 8025
     ports['gorn_web'] = 8026
     ports['gorn_ctl_nb'] = 8027
     ports['gorn_prom'] = 8028
+    ports['molot_web'] = 8052
 
     gorn_max = max(GORN_N.values(), default=0)
 
