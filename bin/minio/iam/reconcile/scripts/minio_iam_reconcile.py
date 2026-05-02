@@ -136,6 +136,11 @@ def ensure_etcd_creds(user):
     return key, sec
 
 
+def ensure_buckets(env):
+    for b in BUCKETS:
+        mc('mb', '--ignore-existing', f'minio/{b}', env=env)
+
+
 def reconcile_policies(env):
     for name, doc in SPEC['policies'].items():
         path = f'./policy.{name}.json'
@@ -197,6 +202,7 @@ def main():
 
     env = mc_env()
 
+    ensure_buckets(env)
     reconcile_policies(env)
 
     for name, cfg in SPEC['users'].items():
