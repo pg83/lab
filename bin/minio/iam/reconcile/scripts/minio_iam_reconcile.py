@@ -16,6 +16,7 @@ BUCKETS = (
     'gorn',
     'loki',
     'mirror',
+    'molot',
     'ogorod',
     'samogon',
 )
