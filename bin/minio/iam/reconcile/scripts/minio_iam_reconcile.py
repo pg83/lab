@@ -8,34 +8,47 @@ import subprocess
 import sys
 
 
+BUCKETS = (
+    'cas',
+    'cix',
+    'etcd',
+    'geesefs',
+    'gorn',
+    'loki',
+    'mirror',
+    'ogorod',
+    'samogon',
+)
+
+
+def bucket_policy(bucket):
+    return {
+        'Version': '2012-10-17',
+        'Statement': [
+            {
+                'Effect': 'Allow',
+                'Action': [
+                    's3:GetObject',
+                    's3:PutObject',
+                    's3:DeleteObject',
+                    's3:GetBucketLocation',
+                    's3:ListBucket',
+                    's3:ListBucketMultipartUploads',
+                    's3:ListMultipartUploadParts',
+                    's3:AbortMultipartUpload',
+                ],
+                'Resource': [
+                    f'arn:aws:s3:::{bucket}',
+                    f'arn:aws:s3:::{bucket}/*',
+                ],
+            },
+        ],
+    }
+
+
 SPEC = {
-    'policies': {
-        'loki-rw': {
-            'Version': '2012-10-17',
-            'Statement': [
-                {
-                    'Effect': 'Allow',
-                    'Action': [
-                        's3:GetObject',
-                        's3:PutObject',
-                        's3:DeleteObject',
-                        's3:GetBucketLocation',
-                        's3:ListBucket',
-                        's3:ListBucketMultipartUploads',
-                        's3:ListMultipartUploadParts',
-                        's3:AbortMultipartUpload',
-                    ],
-                    'Resource': [
-                        'arn:aws:s3:::loki',
-                        'arn:aws:s3:::loki/*',
-                    ],
-                },
-            ],
-        },
-    },
-    'users': {
-        'loki': {'policy': 'loki-rw'},
-    },
+    'policies': {f'{b}-rw': bucket_policy(b) for b in BUCKETS},
+    'users': {b: {'policy': f'{b}-rw'} for b in BUCKETS},
 }
 
 
