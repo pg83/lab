@@ -26,6 +26,7 @@ bin/etcd/defrag
 bin/kernel/6/14
 bin/kernel/6/16
 bin/mirror/fetch
+bin/minio/iam/reconcile
 bin/ogorod/mirror
 bin/smart/mon/tools
 bin/fixits(delay=10)
