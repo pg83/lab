@@ -1805,8 +1805,8 @@ class Loki:
                     's3': {
                         'endpoint': rest,
                         'bucketnames': 'loki',
-                        'access_key_id': get_key('/s3/user').decode().strip(),
-                        'secret_access_key': get_key('/s3/password').decode().strip(),
+                        'access_key_id': get_key('/s3/iam/loki/key').decode().strip(),
+                        'secret_access_key': get_key('/s3/iam/loki/secret').decode().strip(),
                         's3forcepathstyle': True,
                         'insecure': scheme == 'http',
                     },
