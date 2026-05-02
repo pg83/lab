@@ -1749,6 +1749,7 @@ class Loki:
     # dance: ring forms on first contact, stale entries don't survive
     # past the lease.
     def __init__(self, port, s3_endpoint, peers, me, etcd_endpoints):
+        self.v = 1
         self.port = port
         self.s3_endpoint = s3_endpoint
         self.peers = list(peers)
