@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import io
 import os
 import sys
 import ast
@@ -2638,48 +2639,6 @@ class ClusterMap:
             }
 
 
-sys.modules['builtins'].IPerf = IPerf
-sys.modules['builtins'].IPerf3 = IPerf3
-sys.modules['builtins'].NodeExporter = NodeExporter
-sys.modules['builtins'].Collector = Collector
-sys.modules['builtins'].NebulaNode = NebulaNode
-sys.modules['builtins'].NebulaLh = NebulaLh
-sys.modules['builtins'].Gofra = Gofra
-sys.modules['builtins'].Gofra2 = Gofra2
-sys.modules['builtins'].Ssh3 = Ssh3
-sys.modules['builtins'].SftpD = SftpD
-sys.modules['builtins'].MinIO = MinIO
-sys.modules['builtins'].DropBear = DropBear
-sys.modules['builtins'].BalancerHttp = BalancerHttp
-sys.modules['builtins'].EtcdPrivate = EtcdPrivate
-sys.modules['builtins'].MinioConsole = MinioConsole
-sys.modules['builtins'].SecondIP = SecondIP
-sys.modules['builtins'].DropBear2 = DropBear2
-sys.modules['builtins'].GornSsh = GornSsh
-sys.modules['builtins'].Gorn = Gorn
-sys.modules['builtins'].GornCtl = GornCtl
-sys.modules['builtins'].GornCtlNebula = GornCtlNebula
-sys.modules['builtins'].GornWeb = GornWeb
-sys.modules['builtins'].GornProm = GornProm
-sys.modules['builtins'].Perses = Perses
-sys.modules['builtins'].Grafana = Grafana
-sys.modules['builtins'].Federator = Federator
-sys.modules['builtins'].SshTunnel = SshTunnel
-sys.modules['builtins'].SocksProxy = SocksProxy
-sys.modules['builtins'].CO2Mon = CO2Mon
-sys.modules['builtins'].Samogon = Samogon
-sys.modules['builtins'].SamogonBot = SamogonBot
-sys.modules['builtins'].JobScheduler = JobScheduler
-sys.modules['builtins'].Loki = Loki
-sys.modules['builtins'].Promtail = Promtail
-sys.modules['builtins'].TailLog = TailLog
-sys.modules['builtins'].OgorodServe = OgorodServe
-sys.modules['builtins'].OgorodThin = OgorodThin
-sys.modules['builtins'].Secrets = Secrets
-sys.modules['builtins'].SecretsV2 = SecretsV2
-sys.modules['builtins'].Heat = Heat
-
-
 def exec_into(*args, user=None, **kwargs):
     args = [str(x) for x in args]
 
@@ -3183,6 +3142,15 @@ def do(code):
     return cconf
 
 
+class _Unpickler(pickle.Unpickler):
+    # Service classes get module='builtins' from Env.eval's exec(code, {}, {}); resolve via globals instead of polluting sys.modules['builtins'].
+    def find_class(self, module, name):
+        try:
+            return super().find_class(module, name)
+        except AttributeError:
+            return globals()[name]
+
+
 if __name__ == '__main__':
-    ctx = pickle.loads(base64.b64decode(sys.argv[1]))['srv']
+    ctx = _Unpickler(io.BytesIO(base64.b64decode(sys.argv[1]))).load()['srv']
     getattr(ctx, sys.argv[2], lambda: None)(*sys.argv[3:])
