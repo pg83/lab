@@ -26,15 +26,25 @@ def bucket_policy(bucket):
         'Version': '2012-10-17',
         'Statement': [
             {
+                'Sid': 'ReadAll',
                 'Effect': 'Allow',
                 'Action': [
                     's3:GetObject',
-                    's3:PutObject',
-                    's3:DeleteObject',
                     's3:GetBucketLocation',
                     's3:ListBucket',
                     's3:ListBucketMultipartUploads',
                     's3:ListMultipartUploadParts',
+                ],
+                'Resource': [
+                    'arn:aws:s3:::*',
+                ],
+            },
+            {
+                'Sid': 'WriteOwn',
+                'Effect': 'Allow',
+                'Action': [
+                    's3:PutObject',
+                    's3:DeleteObject',
                     's3:AbortMultipartUpload',
                 ],
                 'Resource': [
