@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 
-import io
 import os
 import sys
 import ast
 import zlib
 import time
 import json
+import types
 import shutil
 import pickle
 import base64
 import random
-import inspect
 import hashlib
 import contextlib
 import subprocess
@@ -2660,23 +2659,18 @@ def gen_runner(srv):
     return base64.b64encode(scr.encode()).decode()
 
 
+_CLASS_SRC_TEXT = {}
+
+
 def class_src_hash(cls):
-    # Walk the MRO and hash each class's source. ast.dump gives us
-    # a canonical form that ignores whitespace/comments, so cosmetic
-    # edits don't churn every service's derivation; real code
-    # changes do.
+    # ast.dump gives a canonical form that ignores whitespace/comments, so cosmetic edits don't churn every service's derivation; real code changes do.
     parts = []
 
     for c in cls.__mro__:
         if c is object:
             continue
 
-        try:
-            src = inspect.getsource(c)
-        except (OSError, TypeError):
-            continue
-
-        parts.append(ast.dump(ast.parse(src)))
+        parts.append(ast.dump(ast.parse(_CLASS_SRC_TEXT[c.__name__])))
 
     return hashlib.sha256('\n'.join(parts).encode()).hexdigest()[:16]
 
@@ -2937,6 +2931,18 @@ def it_srvs(srvs, code, flags):
 
 
 def do(code):
+    for node in ast.parse(code).body:
+        if isinstance(node, ast.ClassDef):
+            _CLASS_SRC_TEXT[node.name] = ast.get_source_segment(code, node)
+
+    # Anchor service classes to a synthetic 'cg' module so pickle's whichmodule() resolves them. ix's Env.eval execs us with no __name__, leaving classes at __module__='builtins' which doesn't accept new attrs.
+    cg_mod = sys.modules.setdefault('cg', types.ModuleType('cg'))
+
+    for name, obj in list(globals().items()):
+        if isinstance(obj, type) and obj.__module__ == 'builtins':
+            obj.__module__ = 'cg'
+            setattr(cg_mod, name, obj)
+
     hosts = [gen_host(h) for h in (1, 2, 3)]
 
     for x in hosts:
@@ -3142,15 +3148,7 @@ def do(code):
     return cconf
 
 
-class _Unpickler(pickle.Unpickler):
-    # Service classes get module='builtins' from Env.eval's exec(code, {}, {}); resolve via globals instead of polluting sys.modules['builtins'].
-    def find_class(self, module, name):
-        try:
-            return super().find_class(module, name)
-        except AttributeError:
-            return globals()[name]
-
-
 if __name__ == '__main__':
-    ctx = _Unpickler(io.BytesIO(base64.b64decode(sys.argv[1]))).load()['srv']
+    sys.modules.setdefault('cg', sys.modules[__name__])
+    ctx = pickle.loads(base64.b64decode(sys.argv[1]))['srv']
     getattr(ctx, sys.argv[2], lambda: None)(*sys.argv[3:])
