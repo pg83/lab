@@ -39,5 +39,9 @@ base64 -d << EOF > ${out}/bin/etcd_migrate
 {% include 'etcd_migrate.py/base64' %}
 EOF
 
+base64 -d << EOF > ${out}/bin/drop_molot_legacy_caches
+{% include 'drop_molot_legacy_caches.sh/base64' %}
+EOF
+
 chmod +x ${out}/bin/*
 {% endblock %}

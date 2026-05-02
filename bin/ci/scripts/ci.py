@@ -175,7 +175,7 @@ def check(tier):
 
     env = os.environ.copy()
     env['IX_EXEC_KIND'] = 'molot'
-    env.setdefault('S3_BUCKET', 'gorn')
+    env.setdefault('S3_BUCKET', 'molot')
 
     # Molot-complete cache: pull the shared union from S3, hand it to
     # molot as its local cache, push any additions back via `ci update`
