@@ -1415,8 +1415,10 @@ class EtcdEphemeral:
             '--', 'etcd',
         ]
 
+        # No user= here: runpy is already running as etcd_3 (srv_user
+        # in the runit wrapper). Adding `su-exec etcd_3` would re-call
+        # setgroups from a non-root process and trip CAP_SETGID.
         exec_into(*wrap_argv, *etcd_argv,
-                  user=self.name(),
                   PATH='/bin',
                   HOME=os.getcwd(),
                   TMPDIR=os.getcwd(),
