@@ -9,31 +9,27 @@ the member-remove/member-add ceremony — member_id, raft state and
 cluster_id are byte-preserved, leader catches us up with whatever raft
 entries accumulated since the last backup via standard replication.
 
-Flow:
+Flow (linear, no subprocess supervision):
   1. If data_dir is empty:
-       - mc cp <backup-uri> ./restore.tar.zstd. Failed (no backup yet,
-         or transient minio error) -> log and exit 0; runit will retry.
+       - mc cp <backup-uri> ./restore.tar.zstd. Failed (no backup yet
+         or transient minio error) -> exit 0; runit will retry.
          Genesis is an admin operation: seed the first backup once.
        - tar+zstd extract into data_dir. Failed -> rename archive to
-         .broken and exit 0; we won't try empty-start with cluster_state
-         that doesn't exist in our config anyway.
-  2. Pick a randomized timeout in [timeout, timeout + jitter] — each
-     host gets a different shutdown deadline so the 3 nodes don't all
-     SIGTERM simultaneously and drop quorum. With jitter = timeout/2,
-     restarts spread across a 50%-of-base window.
-  3. exec etcd as child with signal.alarm(actual_timeout) -> SIGTERM.
-     Forward SIGTERM/SIGINT/SIGHUP from runit so graceful shutdown
-     propagates.
-  4. After etcd exits, if data_dir is non-empty: tar+zstd, mc cp back
-     to the same uri. Atomic at S3 level (multipart-upload completes
-     atomically).
-  5. exit; runit re-runs us.
+         .broken and exit 0.
+  2. Backup current data_dir to MinIO BEFORE running etcd. The data_dir
+     at this moment is the consistent state from the previous iteration's
+     graceful shutdown (`timeout` SIGTERM is what etcd handles cleanly),
+     or a freshly-restored archive — either way it's a valid checkpoint.
+     Doing backup-at-start lets us exec into `timeout` and forget; we
+     don't need to come back after etcd exits.
+  3. exec `timeout <actual>s etcd ...`. actual = base + random(0, jitter)
+     so each host gets a different shutdown deadline (50%-of-base window
+     when jitter == base/2) — 3 nodes don't all SIGTERM together.
 """
 
 import argparse
 import os
 import random
-import signal
 import subprocess
 import sys
 
@@ -48,9 +44,9 @@ def parse():
     ap.add_argument('--backup-uri', required=True,
                     help='mc-alias-prefixed path, e.g. minio/etcd/3/lab1.tar.zstd')
     ap.add_argument('--timeout', type=int, required=True,
-                    help='SIGTERM the child after N seconds')
+                    help='base timeout (seconds); actual = base + rand(0, jitter)')
     ap.add_argument('--jitter', type=int, required=True,
-                    help='random sleep [0, jitter] on start')
+                    help='random extra timeout to add to base (seconds)')
     ap.add_argument('etcd_argv', nargs=argparse.REMAINDER,
                     help='-- followed by etcd binary + args')
 
@@ -69,15 +65,10 @@ def have_data(data_dir):
     return os.path.isdir(os.path.join(data_dir, 'member'))
 
 
-def mc(*args, check=True, capture=False):
+def mc(*args, check=True):
     log('minio-client', *args)
 
-    return subprocess.run(
-        ('minio-client',) + args,
-        check=check,
-        stdout=subprocess.PIPE if capture else None,
-        text=True if capture else None,
-    )
+    return subprocess.run(('minio-client',) + args, check=check)
 
 
 def tar_extract_zstd(src, dst):
@@ -141,11 +132,6 @@ def restore(data_dir, backup_uri):
 
 
 def backup(data_dir, backup_uri):
-    if not have_data(data_dir):
-        log('data_dir empty after etcd run; skip backup')
-
-        return
-
     tmp_archive = './backup.tar.zstd'
 
     try:
@@ -157,43 +143,6 @@ def backup(data_dir, backup_uri):
             os.unlink(tmp_archive)
 
 
-def run_etcd(argv, timeout, jitter):
-    actual = timeout + random.randint(0, jitter)
-    log(f'effective timeout {actual}s (base {timeout}s + {actual - timeout}s jitter)')
-    log('exec', *argv)
-
-    proc = subprocess.Popen(argv)
-
-    def alarm_handler(_signo, _frame):
-        log(f'timeout {actual}s reached; SIGTERM etcd pid={proc.pid}')
-
-        try:
-            proc.terminate()
-        except ProcessLookupError:
-            pass
-
-    def fwd_handler(signo, _frame):
-        log(f'forwarding signal {signo} to etcd pid={proc.pid}')
-
-        try:
-            proc.send_signal(signo)
-        except ProcessLookupError:
-            pass
-
-    signal.signal(signal.SIGALRM, alarm_handler)
-    signal.signal(signal.SIGTERM, fwd_handler)
-    signal.signal(signal.SIGINT, fwd_handler)
-    signal.signal(signal.SIGHUP, fwd_handler)
-
-    signal.alarm(actual)
-
-    rc = proc.wait()
-    signal.alarm(0)
-    log(f'etcd exited rc={rc}')
-
-    return rc
-
-
 def main():
     args = parse()
 
@@ -203,11 +152,14 @@ def main():
         if not restore(args.data_dir, args.backup_uri):
             sys.exit(0)
 
-    rc = run_etcd(args.etcd_argv, args.timeout, args.jitter)
-
     backup(args.data_dir, args.backup_uri)
 
-    sys.exit(rc)
+    actual = args.timeout + random.randint(0, args.jitter)
+    log(f'effective timeout {actual}s (base {args.timeout}s + {actual - args.timeout}s jitter)')
+
+    cmd = ['timeout', f'{actual}s'] + args.etcd_argv
+    log('exec', *cmd)
+    os.execvp(cmd[0], cmd)
 
 
 if __name__ == '__main__':
