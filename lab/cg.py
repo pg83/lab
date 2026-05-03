@@ -1639,7 +1639,7 @@ class JobScheduler:
 
         # Per-bucket creds — each cron file forwards the one bucket it
         # touches as AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID_<BUCKET>.
-        for bucket in ('cas', 'gorn', 'mirror'):
+        for bucket in ('cas', 'cix', 'gorn', 'mirror'):
             bk = get_key(f'/s3/iam/{bucket}/key').decode().strip()
             bs = get_key(f'/s3/iam/{bucket}/secret').decode().strip()
             env[f'AWS_ACCESS_KEY_ID_{bucket.upper()}'] = bk
