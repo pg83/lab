@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Smoke tests for _class_src_hash in lab/cg.py.
+Smoke tests for class_src_hash in lab/cg.py.
 
 Checks:
     1. Hash is deterministic for a given class (same ref, two calls).
@@ -37,6 +37,13 @@ sys.path.insert(0, str(ROOT / 'lab'))
 import cg  # noqa: E402
 
 
+# Populate cg._CLASS_SRC_TEXT (cg.do() does this; we don't call do()).
+_cg_src = (ROOT / 'lab' / 'cg.py').read_text()
+for _node in ast.parse(_cg_src).body:
+    if isinstance(_node, ast.ClassDef):
+        cg._CLASS_SRC_TEXT[_node.name] = ast.get_source_segment(_cg_src, _node)
+
+
 def _ast_hash(src):
     return hashlib.sha256(ast.dump(ast.parse(src)).encode()).hexdigest()[:16]
 
@@ -54,8 +61,8 @@ def fail(name, msg):
 
 
 # 1. determinism
-h1 = cg._class_src_hash(cg.Loki)
-h2 = cg._class_src_hash(cg.Loki)
+h1 = cg.class_src_hash(cg.Loki)
+h2 = cg.class_src_hash(cg.Loki)
 if h1 == h2 and len(h1) == 16:
     ok('deterministic')
 else:
@@ -65,7 +72,7 @@ else:
 # 2. cross-class uniqueness across cg's hash-using classes.
 seen = {}
 for c in (cg.Loki, cg.Grafana, cg.Samogon, cg.Promtail):
-    h = cg._class_src_hash(c)
+    h = cg.class_src_hash(c)
     if h in seen:
         fail('cross-class-unique',
              f'{c.__name__} and {seen[h].__name__} share hash {h}')
@@ -128,7 +135,7 @@ else:
          f'body change left ast hash stable: {_ast_hash(e)}')
 
 
-# 6. MRO change moves the hash; _class_src_hash walks __mro__.
+# 6. MRO change moves the hash; class_src_hash walks __mro__.
 g = '''
 class Base:
     def h(self):
@@ -151,7 +158,7 @@ class X(Base):
 ns_g, ns_h = {}, {}
 exec(g, ns_g)
 exec(h_source, ns_h)
-# Mirror _class_src_hash; feed sources manually for exec'd classes.
+# Mirror class_src_hash; feed sources manually for exec'd classes.
 def _hash_with_src(src_per_mro):
     parts = [ast.dump(ast.parse(s)) for s in src_per_mro]
     return hashlib.sha256('\n'.join(parts).encode()).hexdigest()[:16]
@@ -190,7 +197,7 @@ else:
 EMPTY_SHA_PREFIX = hashlib.sha256(b'').hexdigest()[:16]
 bad = []
 for c in (cg.Loki, cg.Grafana, cg.Samogon, cg.Promtail):
-    h = cg._class_src_hash(c)
+    h = cg.class_src_hash(c)
     if h == EMPTY_SHA_PREFIX:
         bad.append(c.__name__)
 
