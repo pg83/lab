@@ -1206,7 +1206,7 @@ def it_nebula_reals(lh, h, port):
 
 
 class EtcdPrivate:
-    def __init__(self, peers, port_peer, port_client, hostname, etcid, peer_addr, client_addr, user_name, cluster_state):
+    def __init__(self, peers, port_peer, port_client, hostname, etcid, peer_addr, client_addr, user_name, cluster_state, data_dir=None):
         self.etcid = etcid
         self.peers = peers
         self.port_peer = port_peer
@@ -1218,6 +1218,12 @@ class EtcdPrivate:
         # `new` on first boot to bootstrap; flip to `existing` once
         # all members are up.
         self.cluster_state = cluster_state
+        # data_dir override — when set (e.g. /var/run/etcd_3/data),
+        # data lives outside /home and survives only inside the
+        # service's tmpfs. Designed for the etcd_3 ephemeral cluster
+        # used by gorn queue + cron locks/dedup. Cold-start of all 3
+        # hosts together is the only safe restart path with this on.
+        self._data_dir = data_dir
 
     def name(self):
         return self.user_name
@@ -1226,7 +1232,8 @@ class EtcdPrivate:
         return self.user_name
 
     def prepare(self):
-        make_dirs(f'/home/{self.user_name}', owner=self.user_name)
+        if self._data_dir is None:
+            make_dirs(f'/home/{self.user_name}', owner=self.user_name)
 
     def pkgs(self):
         yield {
@@ -1235,7 +1242,7 @@ class EtcdPrivate:
 
     @property
     def data_dir(self):
-        return f'/home/{self.user_name}/{self.etcid}'
+        return self._data_dir or f'/home/{self.user_name}/{self.etcid}'
 
     def it_all(self):
         for x in self.peers:
@@ -2274,6 +2281,7 @@ class ClusterMap:
         bal_map = []
         all_etc_1 = []
         all_etc_2 = []
+        all_etc_3 = []
 
         # gofra peer table: peer VIP → list of underlay IPs. Static,
         # driven entirely by gen_host(n) topology. 192.168.103.0/24 is
@@ -2298,6 +2306,11 @@ class ClusterMap:
             })
 
             all_etc_2.append({
+                'hostname': hn,
+                'ip': h['gofra']['ip'],
+            })
+
+            all_etc_3.append({
                 'hostname': hn,
                 'ip': h['gofra']['ip'],
             })
@@ -2337,6 +2350,30 @@ class ClusterMap:
                     '127.0.0.1',
                     'etcd_2',
                     'new',
+                ),
+            }
+
+            # Tertiary etcd — ephemeral, data on tmpfs (/var/run).
+            # Hosts gorn queue + election and cron locks + dedup state
+            # so etcd_1's slow-disk + 1.1GB MVCC history doesn't drag
+            # the dispatch loop down. Whole DB evaporates on host
+            # reboot; safe because contents are entirely transient
+            # (in-flight tasks, lock leases, dedup last-fired guids).
+            # Single-host reboot needs `member remove`+`add` ceremony,
+            # cold-start of all 3 together is the only no-touch path.
+            yield {
+                'host': hn,
+                'serv': EtcdPrivate(
+                    all_etc_3,
+                    p['etcd_3_peer'],
+                    p['etcd_3_client'],
+                    hn,
+                    'etcd_3',
+                    h['gofra']['ip'],
+                    '127.0.0.1',
+                    'etcd_3',
+                    'new',
+                    data_dir='/var/run/etcd_3/data',
                 ),
             }
 
@@ -2489,7 +2526,7 @@ class ClusterMap:
                 'serv': JobScheduler(
                     gorn_api=f"http://127.0.0.1:{p['gorn_ctl']}",
                     s3_endpoint=f"http://127.0.0.1:{p['minio']}",
-                    etcd_endpoints=[f"127.0.0.1:{p['etcd_1_client']}"],
+                    etcd_endpoints=[f"127.0.0.1:{p['etcd_3_client']}"],
                 ),
             }
 
@@ -2632,12 +2669,14 @@ class ClusterMap:
                     'nebula_host': nb['hostname'],
                 })
 
-        # Local etcd_1 — gorn services and the job scheduler use it for
-        # leader election, queue state and `etcdctl lock`. Pinning the
+        # Local etcd_3 — gorn services use it for leader election +
+        # queue state. etcd_3 is the in-memory cluster, fast disk
+        # bypasses the etcd_1 slow-fsync hell that was tipping
+        # gorn-session keepalive into Done() every 5–15s. Pinning the
         # endpoint into the service constructor (instead of leaving it
         # to /etc/profile.d) means a topology change rebakes the
         # pickle and triggers a clean restart through autoupdate.
-        gorn_etcd = [f"127.0.0.1:{p['etcd_1_client']}"]
+        gorn_etcd = [f"127.0.0.1:{p['etcd_3_client']}"]
 
         for hn in GORN_N:
             h = self.conf['by_host'][hn]
@@ -3025,6 +3064,8 @@ def do(code):
         'etcd_1_peer': 8021,
         'etcd_2_client': 8036,
         'etcd_2_peer': 8037,
+        'etcd_3_client': 8042,
+        'etcd_3_peer': 8043,
         'secrets': 8022,
         'sshd_rec': 8023,
         'secrets_v2': 8034,
@@ -3064,6 +3105,7 @@ def do(code):
         'ssh_jopa_tunnel': 1024,
         'etcd_1': 2010,
         'etcd_2': 2003,
+        'etcd_3': 2011,
         'samogon_bot': 2004,
         'job_scheduler': 2005,
         'secrets': 1027,
