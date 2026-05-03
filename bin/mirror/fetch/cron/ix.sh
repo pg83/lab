@@ -14,8 +14,8 @@ cat << 'EOF' > ${out}/etc/cron/100-mirror-fetch.json
         "--root", "mirror_fetch",
         "--env", "GORN_API=$GORN_API",
         "--env", "S3_ENDPOINT=$S3_ENDPOINT",
-        "--env", "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID",
-        "--env", "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY",
+        "--env", "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID_MIRROR",
+        "--env", "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY_MIRROR",
         "--",
         "/bin/env", "PATH=/bin",
         "cache_ix_sources"

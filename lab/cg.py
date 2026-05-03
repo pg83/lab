@@ -1624,10 +1624,9 @@ class JobScheduler:
         yield {'pkg': 'bin/job/scheduler'}
 
     def run(self):
-        aws_key = get_key('/s3/user').decode().strip()
-        aws_secret = get_key('/s3/password').decode().strip()
-        # Pre-baked MC_HOST_minio so cron files forward without re-deriving.
-        mc_host = self.s3_endpoint.replace('://', f'://{aws_key}:{aws_secret}@', 1)
+        scheme, host = self.s3_endpoint.split('://', 1)
+        root_key = get_key('/s3/user').decode().strip()
+        root_secret = get_key('/s3/password').decode().strip()
 
         env = {
             'PATH': '/bin',
@@ -1637,13 +1636,22 @@ class JobScheduler:
             'S3_ENDPOINT': self.s3_endpoint,
             'ETCDCTL_ENDPOINTS': ','.join(self.etcd_endpoints),
             'ETCDCTL_ENDPOINTS_PERSIST': ','.join(self.etcd_persist_endpoints),
-            'AWS_ACCESS_KEY_ID': aws_key,
-            'AWS_SECRET_ACCESS_KEY': aws_secret,
-            'MC_HOST_minio': mc_host,
-            # HF/GHCR sync tokens; cron files $-expand.
+            # Root admin creds — only minio_iam_reconcile cron forwards these.
+            'ROOT_S3_USER': root_key,
+            'ROOT_S3_PASSWORD': root_secret,
+            'MC_HOST_minio_root': f'{scheme}://{root_key}:{root_secret}@{host}',
             'HF_TOKEN': get_key('/hf/token').decode().strip(),
             'GHCR_TOKEN': get_key('/ghcr/token').decode().strip(),
         }
+
+        # Per-bucket creds — each cron file forwards the one bucket it
+        # touches as AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID_<BUCKET>.
+        for bucket in ('cas', 'gorn', 'mirror'):
+            bk = get_key(f'/s3/iam/{bucket}/key').decode().strip()
+            bs = get_key(f'/s3/iam/{bucket}/secret').decode().strip()
+            env[f'AWS_ACCESS_KEY_ID_{bucket.upper()}'] = bk
+            env[f'AWS_SECRET_ACCESS_KEY_{bucket.upper()}'] = bs
+            env[f'MC_HOST_minio_{bucket}'] = f'{scheme}://{bk}:{bs}@{host}'
 
         # Stagger lock attempts across hosts.
         time.sleep(random.random() * 10)
