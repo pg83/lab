@@ -19,7 +19,7 @@ cat << 'EOF' > ${out}/etc/cron/3600-etcd-defrag.json
         "gorn", "ignite",
         "--root", "etcd_defrag",
         "--env", "GORN_API=$GORN_API",
-        "--env", "ETCDCTL_ENDPOINTS=$ETCDCTL_ENDPOINTS",
+        "--env", "ETCDCTL_ENDPOINTS=$ETCDCTL_ENDPOINTS_PERSIST",
         "--",
         "/bin/env", "PATH=/bin",
         "etcd_defrag"

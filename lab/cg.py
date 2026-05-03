@@ -1313,6 +1313,116 @@ class EtcdPrivate:
         exec_into(*args)
 
 
+class EtcdEphemeral:
+    # Ephemeral etcd member: data_dir on tmpfs, persisted to MinIO via
+    # tar.zstd between restarts. The bin/etcd/wrap shim runs etcd as a
+    # child with a SIGTERM-after-timeout, and on graceful exit (or
+    # SIGTERM from runit) tars/zstds the data_dir and uploads to
+    # s3://<bucket>/<key>. On member boot: if data_dir is empty (tmpfs
+    # lost), `mc cp` the backup down and untar; member-id, raft state
+    # and cluster_id are preserved byte-for-byte, so the member rejoins
+    # the existing cluster without ceremony — leader catches it up via
+    # standard raft replication for whatever entries accumulated since
+    # the last backup.
+    #
+    # Genesis (no backup yet in MinIO): wrapper exits cleanly without
+    # starting etcd. Admin seeds the first backup once; from then on
+    # the wrap loop is self-sufficient.
+    #
+    # NOT a subclass of EtcdPrivate: kept independent so the persistent
+    # etcd_1/etcd_2 path stays untouched and ephemeral logic doesn't
+    # accidentally leak into them.
+    def __init__(self, peers, port_peer, port_client, hostname, etcid,
+                 peer_addr, client_addr, user_name, cluster_state, data_dir,
+                 backup_uri, timeout_sec, jitter_sec, s3_endpoint,
+                 s3_user_key, s3_pass_key):
+        self.peers = peers
+        self.port_peer = port_peer
+        self.port_client = port_client
+        self.hostname = hostname
+        self.etcid = etcid
+        self.peer_addr = peer_addr
+        self.client_addr = client_addr
+        self.user_name = user_name
+        self.cluster_state = cluster_state
+        self.data_dir = data_dir
+        self.backup_uri = backup_uri
+        self.timeout_sec = timeout_sec
+        self.jitter_sec = jitter_sec
+        self.s3_endpoint = s3_endpoint
+        self.s3_user_key = s3_user_key
+        self.s3_pass_key = s3_pass_key
+
+    def name(self):
+        return self.user_name
+
+    def user(self):
+        return self.user_name
+
+    def pkgs(self):
+        yield {'pkg': 'bin/etcd/wrap'}
+
+    def it_all(self):
+        for x in self.peers:
+            yield f'{x["hostname"]}=http://{x["ip"]}:{self.port_peer}'
+
+    def prom_jobs(self):
+        yield {
+            'job_name': self.name(),
+            'static_configs': [{'targets': [f'{self.client_addr}:{self.port_client}']}],
+        }
+
+    def run(self):
+        os.makedirs(self.data_dir, exist_ok=True)
+
+        if 'ETCDCTL_ENDPOINTS' in os.environ:
+            os.environ.pop('ETCDCTL_ENDPOINTS')
+
+        aws_key = get_key(self.s3_user_key).decode().strip()
+        aws_secret = get_key(self.s3_pass_key).decode().strip()
+        scheme, host = self.s3_endpoint.split('://', 1)
+        mc_host = f'{scheme}://{aws_key}:{aws_secret}@{host}'
+
+        etcd_argv = [
+            '--name', self.hostname,
+            '--data-dir', self.data_dir,
+            '--initial-advertise-peer-urls',
+            f'http://{self.peer_addr}:{self.port_peer}',
+            '--listen-peer-urls',
+            f'http://{self.peer_addr}:{self.port_peer}',
+            '--listen-client-urls',
+            f'http://{self.client_addr}:{self.port_client}',
+            '--advertise-client-urls',
+            f'http://{self.client_addr}:{self.port_client}',
+            '--initial-cluster-token', self.etcid,
+            '--initial-cluster', ','.join(self.it_all()),
+            '--initial-cluster-state', self.cluster_state,
+            '--auto-compaction-mode', 'periodic',
+            '--auto-compaction-retention', '1h',
+            '--quota-backend-bytes', str(8 * 1024 * 1024 * 1024),
+            '--grpc-keepalive-min-time', '1s',
+            '--heartbeat-interval', '1000',
+            '--election-timeout', '10000',
+            '--warning-apply-duration', '2s',
+        ]
+
+        wrap_argv = [
+            'etcd_wrap',
+            '--data-dir', self.data_dir,
+            '--backup-uri', self.backup_uri,
+            '--timeout', str(self.timeout_sec),
+            '--jitter', str(self.jitter_sec),
+            '--', 'etcd',
+        ]
+
+        exec_into(*wrap_argv, *etcd_argv,
+                  user=self.name(),
+                  PATH='/bin',
+                  HOME=os.getcwd(),
+                  TMPDIR=os.getcwd(),
+                  MC_HOST_minio=mc_host)
+
+
 class Perses:
     def __init__(self, port):
         self.port = port
@@ -1721,10 +1831,17 @@ class JobScheduler:
     # via $VAR in its argv: S3 creds, gorn API, ETCDCTL_ENDPOINTS.
     # Cron files pick what they use; scheduler itself doesn't know
     # what any of them mean.
-    def __init__(self, gorn_api, s3_endpoint, etcd_endpoints):
+    def __init__(self, gorn_api, s3_endpoint, etcd_endpoints, etcd_persist_endpoints):
         self.gorn_api = gorn_api
         self.s3_endpoint = s3_endpoint
+        # `etcd_endpoints` — for `etcdctl lock` and `dedup` (ephemeral state,
+        # OK to live on etcd_3 in tmpfs). `etcd_persist_endpoints` — for cron
+        # jobs that write/read state which must survive cluster cold-restart
+        # (IAM creds in /s3/iam/*, etcd snapshot/defrag of the persistent
+        # cluster). Cron files pick which one to forward via $ETCDCTL_ENDPOINTS
+        # / $ETCDCTL_ENDPOINTS_PERSIST in their --env.
         self.etcd_endpoints = list(etcd_endpoints)
+        self.etcd_persist_endpoints = list(etcd_persist_endpoints)
 
     def name(self):
         return 'job_scheduler'
@@ -1762,6 +1879,7 @@ class JobScheduler:
             'GORN_API': self.gorn_api,
             'S3_ENDPOINT': self.s3_endpoint,
             'ETCDCTL_ENDPOINTS': ','.join(self.etcd_endpoints),
+            'ETCDCTL_ENDPOINTS_PERSIST': ','.join(self.etcd_persist_endpoints),
             'AWS_ACCESS_KEY_ID': aws_key,
             'AWS_SECRET_ACCESS_KEY': aws_secret,
             'MC_HOST_minio': mc_host,
@@ -2355,15 +2473,23 @@ class ClusterMap:
 
             # Tertiary etcd — ephemeral, data on tmpfs (/var/run).
             # Hosts gorn queue + election and cron locks + dedup state
-            # so etcd_1's slow-disk + 1.1GB MVCC history doesn't drag
-            # the dispatch loop down. Whole DB evaporates on host
-            # reboot; safe because contents are entirely transient
-            # (in-flight tasks, lock leases, dedup last-fired guids).
-            # Single-host reboot needs `member remove`+`add` ceremony,
-            # cold-start of all 3 together is the only no-touch path.
+            # so etcd_1's slow-disk + MVCC history doesn't drag the
+            # dispatch loop down. Whole DB evaporates on host reboot;
+            # contents are entirely transient (in-flight tasks, lock
+            # leases, dedup last-fired guids).
+            #
+            # Member-identity is preserved across reboots via tar.zstd
+            # backup to MinIO (bucket=etcd, key=etcd/3/<host>.tar.zstd).
+            # On boot: bin/etcd/wrap pulls the backup down, untar's, and
+            # exec's etcd — leader replicates whatever raft entries
+            # accumulated since the backup. No member-remove/add needed.
+            #
+            # Genesis (first deploy, no backup in MinIO yet): wrapper
+            # exits cleanly without starting etcd. Admin seeds the
+            # initial backup once.
             yield {
                 'host': hn,
-                'serv': EtcdPrivate(
+                'serv': EtcdEphemeral(
                     all_etc_3,
                     p['etcd_3_peer'],
                     p['etcd_3_client'],
@@ -2372,8 +2498,14 @@ class ClusterMap:
                     h['gofra']['ip'],
                     '127.0.0.1',
                     'etcd_3',
-                    'new',
+                    'existing',
                     data_dir='/var/run/etcd_3/data',
+                    backup_uri=f'minio/etcd/3/{hn}.tar.zstd',
+                    timeout_sec=12 * 3600,
+                    jitter_sec=6 * 3600,
+                    s3_endpoint=f"http://127.0.0.1:{p['minio']}",
+                    s3_user_key='/s3/iam/etcd/key',
+                    s3_pass_key='/s3/iam/etcd/secret',
                 ),
             }
 
@@ -2527,6 +2659,7 @@ class ClusterMap:
                     gorn_api=f"http://127.0.0.1:{p['gorn_ctl']}",
                     s3_endpoint=f"http://127.0.0.1:{p['minio']}",
                     etcd_endpoints=[f"127.0.0.1:{p['etcd_3_client']}"],
+                    etcd_persist_endpoints=[f"127.0.0.1:{p['etcd_1_client']}"],
                 ),
             }
 

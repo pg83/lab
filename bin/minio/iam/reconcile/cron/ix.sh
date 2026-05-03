@@ -14,7 +14,7 @@ cat << 'EOF' > ${out}/etc/cron/300-minio-iam-reconcile.json
         "--env", "S3_ENDPOINT=$S3_ENDPOINT",
         "--env", "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID",
         "--env", "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY",
-        "--env", "ETCDCTL_ENDPOINTS=$ETCDCTL_ENDPOINTS",
+        "--env", "ETCDCTL_ENDPOINTS=$ETCDCTL_ENDPOINTS_PERSIST",
         "--",
         "/bin/env", "PATH=/bin",
         "minio_iam_reconcile"

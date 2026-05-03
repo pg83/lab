@@ -19,7 +19,7 @@ cat << 'EOF' > ${out}/etc/cron/3600-etcd-backup.json
         "--env", "S3_ENDPOINT=$S3_ENDPOINT",
         "--env", "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID",
         "--env", "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY",
-        "--env", "ETCDCTL_ENDPOINTS=$ETCDCTL_ENDPOINTS",
+        "--env", "ETCDCTL_ENDPOINTS=$ETCDCTL_ENDPOINTS_PERSIST",
         "--",
         "/bin/env", "PATH=/bin",
         "etcd_backup"
