@@ -1,10 +1,6 @@
 {% extends '//die/gen.sh' %}
 
-{# Every 100s: take the cluster lock, dedup on /mirror/fetch, fire
-   cache_ix_sources on a gorn worker. Script pulls the manifest,
-   samples 100 random new URLs, fetches them, merges back. Small
-   batches × fast cadence keeps upstream bandwidth smooth and any
-   single tick well under the 1h make timeout. #}
+{# Every 100s: cache_ix_sources via gorn worker; small batched fetches. #}
 
 {% block install %}
 mkdir -p ${out}/etc/cron

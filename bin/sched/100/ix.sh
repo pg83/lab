@@ -1,12 +1,6 @@
 {% extends '//die/hub.sh' %}
 
-{#
-  Fast-bucket diagnostics. Every 100s a runit service `sched100` iterates
-  scripts from /etc/sched/100/ and logs the output to tinylog — queryable
-  via `logcli query '{service="sched100"} |~ "<prefix>"'`.
-
-  Pulls in bin/sched(delay=100) transitively through the collector hubs.
-#}
+{# 100s-bucket diagnostics. #}
 
 {% block run_deps %}
 bin/sched/psi(delay=100)

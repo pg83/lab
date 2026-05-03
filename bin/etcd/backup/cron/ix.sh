@@ -1,9 +1,6 @@
 {% extends '//die/gen.sh' %}
 
-{# Every 1h: take the lock, dedup on /backup/etcd (skip if the
-   previous snapshot is still queued), fire etcd_backup on a gorn
-   worker. The worker-side script lives in bin/etcd/backup/scripts,
-   writing into one of 16 Tower-of-Hanoi slots. #}
+{# Hourly etcd_backup via gorn worker; Tower-of-Hanoi slots in MinIO. #}
 
 {% block install %}
 mkdir -p ${out}/etc/cron

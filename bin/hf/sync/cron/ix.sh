@@ -1,8 +1,6 @@
 {% extends '//die/gen.sh' %}
 
-{# Every 10m: take the cluster lock, dedup on /hf/sync, fire hf_sync
-   on a gorn worker. hf_sync lists minio/cas, diffs against the
-   huggingface pkgsrc repo, uploads anything missing. #}
+{# Every 10m: hf_sync via gorn worker; uploads minio/cas → huggingface. #}
 
 {% block install %}
 mkdir -p ${out}/etc/cron

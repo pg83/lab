@@ -47,8 +47,7 @@ def log(*args):
 
 
 def parse_delay(fn):
-    # '100-ci.json' → 100. Fail-loud on a mis-named file: this is
-    # config error, not a runtime blip to swallow.
+    # '100-ci.json' → 100; fail-loud on mis-named file.
     head = fn.split('-', 1)[0]
     return int(head)
 
@@ -71,9 +70,7 @@ def tick(state):
 
         delay = parse_delay(fn)
 
-        # First sight: seed randomly in [now-delay, now] so the first
-        # fire falls somewhere in [now, now+delay] instead of all
-        # files firing together on boot.
+        # First sight: seed randomly in [now-delay, now] to spread fires.
         if fn not in state:
             state[fn] = now - random.uniform(0, delay)
 

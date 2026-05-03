@@ -35,8 +35,7 @@ DEFAULT_EPS = ','.join([
 
 ENDPOINTS = os.environ.get('LOG_FOLLOW_ENDPOINTS', DEFAULT_EPS).split(',')
 
-# tail_log's in-memory deque is maxlen=50_000; doubling past that
-# just returns the same buffer twice.
+# tail_log's deque is maxlen=50_000; doubling past that just repeats.
 DEPTH_CAP = 50000
 POLL_INTERVAL_S = 1.0
 
@@ -46,8 +45,6 @@ def uid_of(raw_line):
 
 
 def label_of(ep):
-    # http://<host>:<port> → <host> (strip scheme, strip port, strip
-    # the `.nebula` suffix if present for compact output).
     hostport = ep.split('://', 1)[-1]
     host = hostport.rsplit(':', 1)[0]
 
@@ -58,7 +55,6 @@ def label_of(ep):
 
 
 def short_path(p):
-    # /var/run/<service>/std/<file> → <service>/<file>
     segs = p.split('/')
 
     if len(segs) >= 5 and segs[1] == 'var' and segs[2] == 'run':
@@ -110,16 +106,11 @@ def poll_new(ep, seen_ep):
 
         uids = {u for u, _ in recs}
 
-        # Any overlap with the last-known set means we've reached the
-        # point where new and old meet; everything older is covered.
+        # Overlap with last-known set: window covers everything older.
         if seen_ep & uids:
             return [(u, r) for u, r in recs if u not in seen_ep]
 
-        # No overlap yet: cold start, or the window we asked for is
-        # still entirely newer than everything we've seen. Double and
-        # retry, unless we already hit the ring cap or the server
-        # returned fewer entries than requested (= buffer exhausted,
-        # all of it is fresh).
+        # No overlap: cold start or window too small. Stop at cap or short read.
         if n >= DEPTH_CAP or len(recs) < n:
             return recs
 

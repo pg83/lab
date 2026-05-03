@@ -1,21 +1,6 @@
 {% extends '//die/gen.sh' %}
 
-{# Persist per-uid policy routing used by multi-home MinIO.
-   Drops a stage-1 init script that, after NICs are up (runs after
-   20-<iface>.sh), programs three routing tables + matching rules:
-
-     - table per minio_N uid (1013→eth1, 1014→eth2, 1015→eth3),
-       each scoped to 10.0.0.0/24 with src = that NIC's address
-     - uidrange rule per uid — catches minio's own outbound
-     - `from <src>` rule per NIC — catches anything else that
-       explicitly binds to that NIC's IP (iperf, mc, etc.)
-
-   Self-sufficient: pulls per-host NIC list from cluster_map, bakes
-   IPs in at render time → generated script is fully static, no
-   runtime ip-addr lookup. Uses /ix/realm/ip/bin/ip because the
-   busybox applet lacks `uidrange`.
-
-   See lab/NET.md Option A for rationale. #}
+{# Per-uid policy routing for multi-home MinIO; see lab/NET.md Option A. #}
 
 {% set cm = cluster_map | des %}
 {% set hm = cm.by_host[hostname] %}

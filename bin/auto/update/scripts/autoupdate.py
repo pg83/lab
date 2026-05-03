@@ -70,12 +70,7 @@ def local_head(dst):
 
 
 def build(checkout):
-    # The bin/auto/update/scripts wrapper at /bin/ix hard-codes
-    # /var/run/autoupdate_ix/ix as the entrypoint, which pins
-    # to DST. We're operating on a staged tree, so call its own
-    # ./ix wrapper instead — IX_PATH then derives from the
-    # script's own dirname and we work entirely inside the
-    # staged checkout.
+    # Use staged tree's own ./ix; /bin/ix is pinned to DST.
     ix = os.path.abspath(os.path.join(checkout, 'ix'))
 
     run(ix, 'mut', 'system')
@@ -90,8 +85,7 @@ def main():
 
     log(f'autoupdate_ix: runpy-sha256={runpy_sha()}')
 
-    # First-time bootstrap: nothing to stage against, just clone
-    # straight into DST and build.
+    # First-time bootstrap: clone straight into DST.
     if not os.path.isdir(os.path.join(DST, '.git')):
         clone(URL, DST)
         build(DST)
@@ -105,8 +99,7 @@ def main():
     if os.path.exists(NEW):
         shutil.rmtree(NEW)
 
-    # cp -a preserves symlinks, perms, timestamps; submodule
-    # checkouts and .git/ all come along intact.
+    # cp -a preserves symlinks/perms; submodules + .git/ come along.
     run('cp', '-a', DST, NEW)
 
     try:

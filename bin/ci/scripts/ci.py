@@ -43,21 +43,12 @@ CACHE_S3_BUCKET = 'cix'
 CACHE_S3_KEY = 'complete'
 MC_ALIAS = 'cix'
 
-# Marker strings that mean "./ix build got far enough to dispatch a
-# target, the target blew up". Seeing any of these in captured stdout
-# + stderr means the build actually ran, so ci-check exits 0 regardless
-# of ./ix's own non-zero exit. Anything else = infra error.
+# Markers: target ran but failed → exit 0; their absence = infra error.
 TARGET_FAIL_PATTERNS = [
-    # ix/core/execute.py ERROR banner before `os.kill(0, SIGKILL)` when
-    # a local assemble cmd fails (IX_EXEC_KIND=local).
     re.compile(rb'^ERROR ', re.MULTILINE),
-    # molot/executor.go:91 red banner on stderr when a node future
-    # resolves to an error.
     re.compile(rb'^node failed: ', re.MULTILINE),
-    # molot/dispatch.go quiet-mode banners around node logs.
     re.compile(rb'^---- stdout of failed node ', re.MULTILINE),
     re.compile(rb'^---- stderr of failed node ', re.MULTILINE),
-    # molot/dispatch.go:159 ThrowFmt message surfaced by main.
     re.compile(rb'failed via gorn ignite', re.MULTILINE),
 ]
 
@@ -160,9 +151,6 @@ def update(local_path):
 
 
 def check(tier):
-    # Workdir = PWD (the endpoint path gorn chdir'd us into). Clone
-    # into `./ix` under it and run from there. rmtree first so a
-    # leftover from a prior task on this endpoint doesn't interfere.
     workdir = 'ix'
 
     if os.path.exists(workdir):
@@ -178,26 +166,19 @@ def check(tier):
     env['IX_EXEC_KIND'] = 'molot'
     env.setdefault('S3_BUCKET', 'molot')
 
-    # Molot-complete cache: pull the shared union from S3, hand it to
-    # molot as its local cache, push any additions back via `ci update`
-    # at the end. Absolute path because molot's cwd is workdir.
+    # Pull shared molot-complete cache; abs path since molot cwd is workdir.
     cache_path = os.path.abspath(os.path.join(workdir, 'cache'))
     env['MOLOT_CACHE'] = cache_path
     mc_env = mc_env_for(env)
 
-    # Seed needs no lock — MinIO GET is atomic, whatever we read is a
-    # consistent snapshot. Racing with a concurrent update means we
-    # miss a few entries; next run picks them up.
+    # No lock for seed; MinIO GET is atomic, missed entries land next run.
     with open(cache_path, 'wb') as f:
         f.write(mc_cat(s3_cache_uri(), mc_env))
 
     log(f'seeded cache_path={cache_path} size={os.path.getsize(cache_path)}'
         f' IX_EXEC_KIND={env.get("IX_EXEC_KIND")} MOLOT_CACHE={env.get("MOLOT_CACHE")}')
 
-    # start_new_session=True: ./ix build's execute.py does
-    # `os.kill(0, SIGKILL)` on target-subprocess failure, which kills
-    # its entire process group. Without a new session, that group
-    # includes us — we'd be dead before we could classify the failure.
+    # New session: ./ix's execute.py SIGKILLs its pgrp; we must not be in it.
     try:
         res = subprocess.run(
             ('./ix', 'build', tier, '--seed=1'),
@@ -209,12 +190,7 @@ def check(tier):
             check=False,
         )
     finally:
-        # Always push our additions back — even a partial build built
-        # some nodes and those wins are worth sharing. RMW is
-        # serialized across concurrent checks via etcdctl lock around
-        # `ci update`, which reads the cache path from argv (stdin is
-        # eaten by etcdctl lock before reaching its child). Don't
-        # swallow failures — we want the traceback in the task stderr.
+        # Always push additions back; RMW serialized via etcdctl lock.
         size = os.path.getsize(cache_path) if os.path.exists(cache_path) else '-'
         log(f'merging cache_path={cache_path} size={size}')
 
@@ -225,8 +201,7 @@ def check(tier):
             check=True,
         )
 
-    # Replay build output to our own stderr so gorn wrap's capture
-    # picks it up and ships it to S3 alongside result.json.
+    # Replay to stderr so gorn wrap captures it alongside result.json.
     os.write(2, res.stdout)
 
     if res.returncode == 0:

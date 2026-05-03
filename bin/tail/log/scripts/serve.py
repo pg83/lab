@@ -52,10 +52,7 @@ buf_lock = threading.Lock()
 
 
 def reader(paths):
-    # -F: follow by name; reopen on rotation/truncation; retry if missing.
-    # -n 0: start at end, don't replay old file contents.
-    # -v: force `==> path <==` headers even for a single file.
-    # No `--`: busybox tail doesn't accept it.
+    # -F follow-by-name; -v forces headers; busybox tail rejects --.
     proc = subprocess.Popen(
         ['tail', '-F', '-v', '-n', '0'] + paths,
         stdout=subprocess.PIPE,

@@ -28,10 +28,7 @@ def main():
     if not endpoints:
         raise SystemExit('ETCDCTL_ENDPOINTS empty')
 
-    # Wipe ETCDCTL_ENDPOINTS out of the child env before each defrag.
-    # Keeping it alongside --endpoints is ambiguous across etcdctl
-    # versions (flag-vs-env precedence) and can fan the defrag out
-    # to the whole cluster at once instead of doing it one-by-one.
+    # Drop env var; keeping it alongside --endpoints is ambiguous.
     env = os.environ.copy()
     env.pop('ETCDCTL_ENDPOINTS', None)
 

@@ -17,8 +17,7 @@ https://dl.grafana.com/oss/release/grafana-{{self.version().strip()}}.linux-amd6
 mkdir -p ${out}/share/grafana
 cd ${out}/share/grafana
 extract 1 ${src}/grafana*
-# Drop bits we don't use at runtime: the prebuilt binary (we build our
-# own via bin/grafana/d), docs, packaging scaffolding, runtime state.
+# Drop unused runtime bits; we build our own binary via bin/grafana/d.
 rm -rf bin docs packaging data Dockerfile LICENSE NOTICE.md README.md VERSION
 {% endblock %}
 

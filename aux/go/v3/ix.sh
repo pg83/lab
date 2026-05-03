@@ -1,11 +1,6 @@
 {% extends '//aux/fetch/ix.sh' %}
 
-{# Lab shadow of upstream aux/go/v3. Difference: each `go mod tidy
-   + go mod vendor` runs first via the cluster SOCKS5 proxy
-   (localhost:8015 — the SshTunnel chain that also feeds stalix
-   fetcher), and only if that fails — falls back to a direct
-   attempt without proxy. So a flapping proxy can't permanently
-   block builds, and a flapping Google modproxy can't either. #}
+{# Lab shadow of aux/go/v3: try via SOCKS5 first, fall back to direct. #}
 
 {% block fname %}
 go_v3_{{parent_id}}.pzd

@@ -1,11 +1,6 @@
 {% extends '//die/gen.sh' %}
 
-{# Single cron entry, fires every 30s. The scanner is incremental
-   (etcd cursor on result.json mtime), so a tick processes only
-   tasks finished since last run — typically 1-3 across all CI
-   tiers. Per the lab convention, real work runs in a gorn worker
-   via ignite; the scanner posts directly to the local Loki push
-   endpoint from inside the worker. #}
+{# 30s incremental scanner; etcd cursor on result.json mtime. #}
 
 {% block install %}
 mkdir -p ${out}/etc/cron

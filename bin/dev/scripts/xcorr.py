@@ -75,8 +75,7 @@ def pearson(xs, ys):
 
 
 def cross_corr(xs, ys, max_lag):
-    # Positive lag k: compare xs[0..n-k] against ys[k..n]
-    # Interpretation: "B looks like A shifted later by k" → A precedes B by k.
+    # Positive lag k: A precedes B by k.
     n = len(xs)
     out = []
 

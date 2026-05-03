@@ -22,7 +22,7 @@ import urllib.request as ur
 
 DISABLE_ALL = [
     #'drop_bear_2',
-    'co2_mon',  # USB HID device not present; service crash-loops with "hid_open: error"
+    'co2_mon',  # USB HID device absent; crash-loops with "hid_open: error"
 ]
 
 DISABLE = {
@@ -31,9 +31,7 @@ DISABLE = {
     'lab3': DISABLE_ALL + [],
 }
 
-# Comma-separated Telegram user IDs allowed to send .torrents to the
-# SamogonBot service. Empty → bot crash-loops on start (intentional;
-# we don't want to accidentally ship a world-writable bot).
+# Allow-list for SamogonBot. Empty → crash-loop (no world-writable bot).
 TG_ALLOW_USERS = '51154499'
 
 CPUS_PER_SLOT = 4
@@ -103,11 +101,7 @@ class IPerf3:
         }
 
     def run(self):
-        # `bin/runsrv/scripts/srv` exports TMPDIR=${PWD} before
-        # dropping to srv_user; that PWD (= /var/run/i_perf_3/std)
-        # is root-owned, and iperf3's per-stream mkstemp fails with
-        # EACCES. /var/run/i_perf_3 *is* chowned to i_perf_3 by the
-        # runit `hi` script — point TMPDIR there.
+        # Override TMPDIR: default ${PWD} is root-owned, iperf3 mkstemp EACCES.
         exec_into('iperf3', '-s', '-p', self.port, TMPDIR='/var/run/i_perf_3')
 
 
@@ -169,10 +163,7 @@ class Collector:
             'global': {
                 'scrape_interval': '15s',
                 'evaluation_interval': '15s',
-                # Stamped on every sample so federation preserves
-                # per-host origin; without this, all three Collectors
-                # would produce {instance="localhost:<port>", ...} and
-                # the federator would dedupe them into one series.
+                # Federation: per-host origin; else federator dedupes series.
                 'external_labels': {'host': self.host},
             },
             'scrape_configs': self.jobs,
@@ -191,13 +182,7 @@ class Collector:
                 'prometheus',
                 f'--config.file={fn}',
                 '--storage.tsdb.path=/home/collector/',
-                # Bind on 0.0.0.0 for now: prometheus 3.7's
-                # documented multi-listen via repeated
-                # --web.listen-address ate the second flag in
-                # production (only the first was kept), so both
-                # the local self-scrape and the Grafana datasource
-                # on 127.0.0.1 went dark. Revisit once we confirm
-                # the right syntax.
+                # 0.0.0.0: prom 3.7 repeated --listen flag drops 2nd arg.
                 f'--web.listen-address=0.0.0.0:{self.port}',
             ]
 
@@ -256,9 +241,7 @@ def get_key(k):
 
 
 def get_key_v2(k):
-    # Opt-in sibling of get_key that hits secrets_v2 instead. Kept
-    # separate so we can migrate one caller at a time — no cascade
-    # fallback to avoid hiding v2 bugs behind the old service.
+    # Opt-in v2 sibling; no fallback to v1 to avoid hiding v2 bugs.
     return ur.urlopen('http://localhost:8034' + k).read()
 
 
@@ -274,12 +257,7 @@ class Nebula:
 
             cfg['static_host_map'] = self.smap
 
-            # read_buffer/write_buffer raise SO_RCVBUF/SO_SNDBUF on the
-            # nebula UDP socket from the kernel default (~208 KB) to 8 MB;
-            # needs net.core.rmem_max/wmem_max ≥ 8 MB on the host or
-            # setsockopt silently clamps. routines=2 uses a second reader
-            # goroutine so recvmmsg bursts drain in parallel; batch=128
-            # doubles the default recvmmsg batch size.
+            # 8MB sock bufs need net.core.{r,w}mem_max≥8M or clamps silently.
             cfg['listen'] = {
                 'host': '0.0.0.0',
                 'port': self.port,
@@ -322,14 +300,7 @@ class NebulaNode(Nebula):
         self.self_vip = self_vip
 
     def run(self):
-        # Strip self-entry so nebula doesn't endlessly try to handshake
-        # with itself. smap was a shared dict ref populated with every
-        # host's VIP → LAN IPs (commit 45656c074), including our own.
-        # Without this filter nebula logs "Refusing to handshake with
-        # myself" ~1/sec per local NIC forever. Filter at run-time (not
-        # at __init__) so the ref has already accumulated lighthouse
-        # entries from the later iterations of the host loop at the
-        # moment pickle ran.
+        # Strip self-entry; run-time filter so smap is fully populated.
         self.smap = {k: v for k, v in self.smap.items() if k != self.self_vip}
         super().run()
 
@@ -417,15 +388,12 @@ class NebulaLh(Nebula):
 
 
 class Gofra:
-    # Multipath UDP encapsulator (pg83/gofra). C++ on top of std/.
-    # Multi-queue TUN paired with N UDP sockets, honest src×dst
-    # stripe per peer. Cluster overlay subnet 192.168.103.0/24, TUN
-    # device gofra20.
+    # Multipath UDP encap. Overlay 192.168.103.0/24, TUN gofra0.
     def __init__(self, host, port, hosts, vip):
         self.host = host
-        self.port = port            # cluster-wide port baked into every peer endpoint
-        self.hosts = hosts          # vip → [underlay ips]
-        self.vip = vip              # full prefix string '192.168.103.16/24'
+        self.port = port
+        self.hosts = hosts
+        self.vip = vip
 
     def name(self):
         return 'gofra'
@@ -441,11 +409,6 @@ class Gofra:
         yield {'pkg': 'bin/sched/hugepages', 'delay': '10'}
 
     def ini(self):
-        # gofra INI: [me].vip identifies us, [peers] holds the full
-        # cluster including ourselves; the binary picks our row via
-        # peers->lookup(my_vip) for binding. Each value is a comma-
-        # list of ip:port endpoints — N gives us N TUN queues paired
-        # with N UDP sockets and an N×M stripe to every other peer.
         lines = []
         lines.append('[me]')
         lines.append('vip     = ' + self.vip)
@@ -474,10 +437,7 @@ class Gofra:
 
 
 class Gofra2:
-    # Staging twin of Gofra: parallel build on a separate overlay
-    # subnet (192.168.104.0/24), TUN gofra1, port 8051, binary
-    # gofra-staging from bin/gofra/staging. Lets us soak new gofra
-    # commits without touching the prod gofra service.
+    # Staging twin: overlay 192.168.104.0/24, TUN gofra1, port 8051.
     def __init__(self, host, port, hosts, vip):
         self.host = host
         self.port = port
@@ -1099,11 +1059,7 @@ class GornWeb:
 
 
 class MolotWeb:
-    # Per-run ledger browser. molot writes a manifest to s3://molot/runs/
-    # at the end of every ./ix build invocation; this service renders
-    # them. One instance per host, no leader election — manifests are
-    # cluster-shared in MinIO, each instance reads independently.
-    # No L7 balancer in front: reach as <host>.nebula:port directly.
+    # Per-run ledger browser. One per host; reach via <host>.nebula:port.
     def __init__(self, listen, gorn_api, s3_endpoint, s3_bucket):
         self.listen = listen
         self.gorn_api = gorn_api
@@ -1215,14 +1171,9 @@ class EtcdPrivate:
         self.peer_addr = peer_addr
         self.client_addr = client_addr
         self.user_name = user_name
-        # `new` on first boot to bootstrap; flip to `existing` once
-        # all members are up.
+        # `new` to bootstrap; flip to `existing` once all members are up.
         self.cluster_state = cluster_state
-        # data_dir override — when set (e.g. /var/run/etcd_3/data),
-        # data lives outside /home and survives only inside the
-        # service's tmpfs. Designed for the etcd_3 ephemeral cluster
-        # used by gorn queue + cron locks/dedup. Cold-start of all 3
-        # hosts together is the only safe restart path with this on.
+        # tmpfs override for etcd_3; only safe restart is cold-start of all 3.
         self._data_dir = data_dir
 
     def name(self):
@@ -1278,35 +1229,16 @@ class EtcdPrivate:
             ','.join(self.it_all()),
             '--initial-cluster-state',
             self.cluster_state,
-            # Drop revisions older than 1h so MVCC history doesn't
-            # balloon past the 2GiB quota during long build runs.
+            # 1h MVCC retention keeps live set under 2GiB during long builds.
             '--auto-compaction-mode', 'periodic',
             '--auto-compaction-retention', '1h',
-            # Give 8GiB of headroom; compaction keeps the live set
-            # small, this is only so a burst won't trip the alarm
-            # before the next compaction tick.
             '--quota-backend-bytes', str(8 * 1024 * 1024 * 1024),
-            # Default is 5s — loki's etcd kvstore client multiplexes
-            # several rings (ingester/distributor/scheduler/compactor/
-            # ruler/query_scheduler) over a single gRPC channel and
-            # their combined keepalive pings trip etcd's rate limit,
-            # which returns ENHANCE_YOUR_CALM GOAWAY and tears down
-            # the conn. 1s is enough headroom for the fanout.
+            # 1s: loki's kvstore rings trip default 5s as ENHANCE_YOUR_CALM.
             '--grpc-keepalive-min-time', '1s',
-            # Raise raft timeouts 10× above defaults (100ms / 1000ms).
-            # wal_fsync on the USB-SATA rootfs spikes to ~2s under
-            # ext4 journal contention during autoupdate deploys; at
-            # default timeouts that tripped leader elections multiple
-            # times per hour. 10× ratio between election and heartbeat
-            # preserved. See lab/NET.md for the full investigation.
+            # 10× defaults: USB-SATA wal_fsync ~2s, would trip elections.
             '--heartbeat-interval', '1000',
             '--election-timeout', '10000',
-            # Default 100ms warn threshold fires on every spike of
-            # the USB-SATA wal_fsync (which goes up to ~2s under
-            # ext4 journal contention). At default this drowns
-            # genuine slow-apply signal in routine noise; 2s lines
-            # up with the worst-case fsync seen on this hardware
-            # so warns now mean real degradation.
+            # 2s lines up with worst-case fsync on this hardware.
             '--warning-apply-duration', '2s',
         ]
 
@@ -1314,24 +1246,8 @@ class EtcdPrivate:
 
 
 class EtcdEphemeral:
-    # Ephemeral etcd member: data_dir on tmpfs, persisted to MinIO via
-    # tar.zstd between restarts. The bin/etcd/wrap shim runs etcd as a
-    # child with a SIGTERM-after-timeout, and on graceful exit (or
-    # SIGTERM from runit) tars/zstds the data_dir and uploads to
-    # s3://<bucket>/<key>. On member boot: if data_dir is empty (tmpfs
-    # lost), `mc cp` the backup down and untar; member-id, raft state
-    # and cluster_id are preserved byte-for-byte, so the member rejoins
-    # the existing cluster without ceremony — leader catches it up via
-    # standard raft replication for whatever entries accumulated since
-    # the last backup.
-    #
-    # Genesis (no backup yet in MinIO): wrapper exits cleanly without
-    # starting etcd. Admin seeds the first backup once; from then on
-    # the wrap loop is self-sufficient.
-    #
-    # NOT a subclass of EtcdPrivate: kept independent so the persistent
-    # etcd_1/etcd_2 path stays untouched and ephemeral logic doesn't
-    # accidentally leak into them.
+    # tmpfs etcd; bin/etcd/wrap tars data_dir to MinIO across restarts.
+    # Genesis: wrapper no-ops until admin seeds the first backup.
     def __init__(self, peers, port_peer, port_client, hostname, etcid,
                  peer_addr, client_addr, user_name, cluster_state, data_dir,
                  backup_uri, timeout_sec, jitter_sec, s3_endpoint,
@@ -1415,9 +1331,7 @@ class EtcdEphemeral:
             '--', 'etcd',
         ]
 
-        # No user= here: runpy is already running as etcd_3 (srv_user
-        # in the runit wrapper). Adding `su-exec etcd_3` would re-call
-        # setgroups from a non-root process and trip CAP_SETGID.
+        # No user=: runpy is already etcd_3; su-exec would trip CAP_SETGID.
         exec_into(*wrap_argv, *etcd_argv,
                   PATH='/bin',
                   HOME=os.getcwd(),
@@ -1474,11 +1388,7 @@ class Perses:
 
 
 class Federator:
-    # Cluster-wide aggregator: scrapes /federate on every host's local
-    # Collector and serves a unified view. Grafana points here instead
-    # of at its local Collector so dashboards see the whole cluster,
-    # and cross-host queries (sum by host, compare latency, etc.) work
-    # directly. One per host — no SPOF.
+    # Per-host aggregator: scrapes /federate from every Collector.
     def __init__(self, port, collector_port, hosts):
         self.port = port
         self.collector_port = collector_port
@@ -1509,15 +1419,7 @@ class Federator:
                 {
                     'job_name': 'federate',
                     'honor_labels': True,
-                    # Each host's Collector federates cluster-shaped
-                    # metrics (e.g. minio_cluster_* — any MinIO peer
-                    # returns the whole cluster view), so the same
-                    # series lands in this Federator from all three
-                    # upstreams with different scrape timestamps —
-                    # Prometheus then drops ~all-but-the-first as
-                    # out-of-order (~48/scrape). Dropping the source
-                    # timestamps makes every sample land at our own
-                    # scrape time and eliminates the collision.
+                    # Drop source ts; else cluster-shaped metrics collide.
                     'honor_timestamps': False,
                     'metrics_path': '/federate',
                     'params': {'match[]': ['{job=~".+"}']},
@@ -1539,19 +1441,14 @@ class Federator:
                 'prometheus',
                 f'--config.file={fn}',
                 f'--storage.tsdb.path=/home/{self.name()}/',
-                # Same caveat as Collector — multi-listen via
-                # repeated --web.listen-address didn't survive
-                # the deploy. 0.0.0.0 until that's nailed down.
+                # 0.0.0.0: prometheus multi-listen broken (see Collector).
                 f'--web.listen-address=0.0.0.0:{self.port}',
             ]
 
             exec_into(*args)
 
 
-# Not a secret — grafana state is wiped on every boot, all dashboards
-# and datasources are provisioning-managed, and the port is exposed
-# only on the nebula mesh. Any non-default value keeps grafana from
-# showing the "change password on first login" form.
+# Not a secret; non-default value skips first-login change form.
 GRAFANA_ADMIN_PASSWORD = 'grafana'
 
 
@@ -1560,14 +1457,7 @@ class Grafana:
         self.port = port
         self.collector_port = collector_port
         self.loki_port = loki_port
-        # Sorted unique list of cluster service names — used to fan
-        # out the deploy-convergence dashboard panels (one per
-        # service).
         self.services = services
-        # Experimental: class-source AST hash so method-body edits
-        # auto-invalidate the service without needing a self.v bump.
-        # Trialed on grafana+samogon where "accidentally kept
-        # running old code" is cheap to diagnose.
 
     def name(self):
         return 'grafana'
@@ -1576,9 +1466,7 @@ class Grafana:
         return f'/var/run/{self.name()}'
 
     def prom_port(self):
-        # Grafana serves /metrics on its main HTTP port. Default ini
-        # has `[metrics] enabled = true` and no basic_auth_username,
-        # so the Collector scrape is anonymous.
+        # /metrics on main HTTP port; default ini has [metrics], no auth.
         return self.port
 
     def pkgs(self):
@@ -1590,9 +1478,7 @@ class Grafana:
             'pkg': 'aux/grafana',
             'prom_url': f'http://127.0.0.1:{self.collector_port}',
             'loki_url': f'http://127.0.0.1:{self.loki_port}',
-            # Base64-encoded newline-joined list — comma-separated
-            # values would collide with ix's k=v,k2=v2 package
-            # parameter syntax (extra_deps uses the same trick).
+            # b64+newlines: commas would collide with ix's k=v,k2=v2 syntax.
             'services_b64': base64.b64encode('\n'.join(self.services).encode()).decode(),
         }
 
@@ -1612,11 +1498,7 @@ class Grafana:
 
         return (
             '[server]\n'
-            # Same as Federator: nebula-only bind was breaking the
-            # local Prometheus scrape (Collector → Grafana metrics).
-            # 0.0.0.0 until we have a clean per-binary multi-listen
-            # story. Grafana's HTTP UI still only matters from the
-            # nebula side via the wirez forward.
+            # 0.0.0.0: nebula-only bind broke local scrape (see Federator).
             'http_addr = 0.0.0.0\n'
             f'http_port = {self.port}\n'
             '[paths]\n'
@@ -1629,19 +1511,8 @@ class Grafana:
             'check_for_updates = false\n'
             '[security]\n'
             'disable_gravatar = true\n'
-            # Any non-default password skips the "change password on
-            # first login" form. Keep in sync with the reload sched
-            # script's curl URL (both pull GRAFANA_ADMIN_PASSWORD).
             f'admin_password = {GRAFANA_ADMIN_PASSWORD}\n'
-            # Grafana 13's new unified-storage datasource path has a
-            # provisioning bug: the datasources module starts before
-            # the datasource API server is ready, so every
-            # provisioning run fails with "Datasource provisioning
-            # error: data source not found" and the service enters a
-            # crash loop. Disable the kubernetes-backed datasource
-            # APIs and fall back to the classic in-DB path.
-            # ini grammar is per-flag `key = true|false`, not
-            # `disable = <list>` (silently ignored).
+            # Disable grafana 13 k8s datasource; provisioning crash-loops.
             '[feature_toggles]\n'
             'kubernetesDatasources = false\n'
             'kubernetesDashboards = false\n'
@@ -1649,26 +1520,12 @@ class Grafana:
         )
 
     def run(self):
-        # Wipe state on every boot — the whole grafana config is
-        # provisioning-managed (datasources yaml + dashboards json),
-        # so there's nothing in sqlite worth keeping. Throwing the
-        # DB away on restart immunises us against half-populated
-        # provisioning state from earlier buggy ini attempts.
-        # admin_password is set non-default so grafana skips the
-        # "change password on first login" prompt.
+        # Wipe state every boot; config is fully provisioning-managed.
         s = self.state_dir()
         shutil.rmtree(f'{s}/data', ignore_errors=True)
         os.makedirs(f'{s}/data', exist_ok=True)
 
-        # Grafana's plugin loader does a symlink-escape containment check
-        # (filepath.Rel against realpath) and rejects anything whose
-        # canonical path escapes the homepath. In the realm, only files
-        # are symlinked (directories are real) — so realpath() on any
-        # dir stops at the rlm-system store, while every leaf inside
-        # still links back to bin-grafana-ui and escapes containment.
-        # Resolve a known leaf (conf/sample.ini) and strip the two
-        # trailing components to land on the concrete bin-grafana-ui
-        # share/grafana dir.
+        # Resolve a leaf to bypass grafana's plugin-loader symlink-escape check.
         sample = os.path.realpath('/ix/realm/system/share/grafana/conf/sample.ini')
         homepath = os.path.dirname(os.path.dirname(sample))
 
@@ -1678,21 +1535,13 @@ class Grafana:
 
             exec_into(
                 'grafana', 'server', '--config', fn, '--homepath', homepath,
-                # Belt-and-suspenders: ini `[security] admin_password = ...`
-                # should already set the initial admin password on fresh
-                # DB, but observed behavior was admin being created with
-                # the default "admin" despite the ini override. The env
-                # var takes the same override path from a different
-                # direction and is the documented "always wins" knob.
+                # Env var override; ini admin_password didn't stick on fresh DB.
                 GF_SECURITY_ADMIN_PASSWORD=GRAFANA_ADMIN_PASSWORD,
             )
 
 
 class Samogon:
-    # SFTP daemon over a MinIO-backed content-addressable store.
-    # /torrents/torrents/<infohash> holds the .torrent blob, pieces
-    # land at /torrents/pieces/<piece-hash>. Read-only — fetches are
-    # kicked from elsewhere via `gorn ignite -- samogon fetch <b64>`.
+    # SFTP over MinIO CAS. Read-only; fetches via `gorn ignite samogon`.
     def __init__(self, port, s3_endpoint):
         self.port = port
         self.s3_endpoint = s3_endpoint
@@ -1701,9 +1550,7 @@ class Samogon:
         return 'samogon'
 
     def users(self):
-        # First element is the uid runit starts the service as; keeping
-        # root there lets run() read /etc/keys before dropping to the
-        # service user via su-exec. Same dance as SftpD.
+        # users[0]=root so run() reads /etc/keys before su-exec drops privs.
         return ['root', 'samogon']
 
     def home_dir(self):
@@ -1724,17 +1571,12 @@ class Samogon:
         make_dirs(self.home_dir(), owner='samogon')
 
     def run(self):
-        # Copy host key into a memfd while still root; the memfd fd
-        # is inherited across su-exec, so the samogon user reads key
-        # material it couldn't touch on disk.
+        # memfd inherits across su-exec so non-root reads host key.
         with memfd('host_key') as hk:
             with open(hk, 'w') as f:
                 f.write(open('/etc/keys/ssh_ed25519').read())
 
-            # cwd becomes samogon's writable scratch — storage.go
-            # does `mkdtemp(".", "mc-samogon-")` for the mc config
-            # dir, and /var/run/<name>/std (the default runsrv cwd)
-            # is root-owned tinylog space.
+            # storage.go mkdtemp's in cwd; default runsrv cwd is root-owned.
             os.chdir(self.home_dir())
 
             args = [
@@ -1759,20 +1601,7 @@ class Samogon:
 
 
 class SamogonBot:
-    # Telegram bot front-end for `samogon fetch`. Accepts .torrent
-    # files from an allow-listed set of users and pipes each into
-    # `gorn ignite -- samogon fetch`.
-    #
-    # Cluster-wide singleton via `etcdctl lock /lock/samogon_bot`:
-    # the service runs on every host, but only the lock holder
-    # actually polls Telegram. Peers block inside etcdctl until
-    # the holder dies (host down, process crash) — etcd releases,
-    # another host picks up. No manual failover.
-    #
-    # TG_BOT_TOKEN comes from the old secrets store (get_key);
-    # TG_ALLOW_USERS is configuration data that lives in cg.py.
-    # S3 creds + endpoints land as env into the bot so `gorn ignite`
-    # below can forward them via --env to the worker-side fetch.
+    # Telegram bot for `samogon fetch`; cluster singleton via etcdctl lock.
     def __init__(self, s3_endpoint, gorn_api, tg_allow_users, etcd_endpoints):
         self.s3_endpoint = s3_endpoint
         self.gorn_api = gorn_api
@@ -1787,10 +1616,7 @@ class SamogonBot:
 
     def pkgs(self):
         yield {'pkg': 'bin/samogon'}
-        # Params go as separate dict keys, not baked into 'pkg' — to_srv()
-        # appends its own (k=v,...) tail with py_extra_modules and friends,
-        # so embedding parens here ends up as 'pkg(a=1)(b=2)' which the
-        # downstream parser mangles.
+        # Params as dict keys, not in 'pkg'; to_srv() appends its own (...).
         yield {'pkg': 'bin/mc/gc/cron', 'root': '/gorn/samogon', 'hours': 1}
 
     def run(self):
@@ -1807,41 +1633,22 @@ class SamogonBot:
             'S3_ENDPOINT': self.s3_endpoint,
             'S3_BUCKET': 'samogon',
             'SAMOGON_S3_ROOT': 'torrents',
-            # Lab hosts have no direct outbound to api.telegram.org;
-            # route the bot's Bot-API calls + file downloads through
-            # the per-host haproxy-wrapped SOCKS5 exit tunnel (port
-            # 8015, via the SocksProxy service a few lines below).
+            # No direct outbound to telegram; route via local SOCKS5 exit.
             'SAMOGON_SOCKS5': '127.0.0.1:8015',
         }
 
-        # Stagger lock-acquisition attempts so all three hosts don't
-        # dogpile etcd on deploy (same dance as JobScheduler).
+        # Stagger lock attempts so all 3 hosts don't dogpile etcd.
         time.sleep(random.random() * 10)
 
         exec_into('etcdctl', 'lock', '/lock/samogon_bot', 'samogon', 'bot', **env)
 
 
 class JobScheduler:
-    # Cluster cron. Runs on every host, singleton via
-    # `etcdctl lock /lock/job/scheduler`. The lock holder reads
-    # /etc/cron/<delay>-<name>.json every 10s and fires each job
-    # (wrapped in `timeout 10s`) once per delay window. Clients
-    # package their job configs anywhere in the tree — the merged
-    # realm view collects them into /etc/cron/.
-    #
-    # Env carries every secret a scheduled cmd might want expanded
-    # via $VAR in its argv: S3 creds, gorn API, ETCDCTL_ENDPOINTS.
-    # Cron files pick what they use; scheduler itself doesn't know
-    # what any of them mean.
+    # Cluster cron; singleton via etcdctl lock /lock/job/scheduler.
     def __init__(self, gorn_api, s3_endpoint, etcd_endpoints, etcd_persist_endpoints):
         self.gorn_api = gorn_api
         self.s3_endpoint = s3_endpoint
-        # `etcd_endpoints` — for `etcdctl lock` and `dedup` (ephemeral state,
-        # OK to live on etcd_3 in tmpfs). `etcd_persist_endpoints` — for cron
-        # jobs that write/read state which must survive cluster cold-restart
-        # (IAM creds in /s3/iam/*, etcd snapshot/defrag of the persistent
-        # cluster). Cron files pick which one to forward via $ETCDCTL_ENDPOINTS
-        # / $ETCDCTL_ENDPOINTS_PERSIST in their --env.
+        # etcd_endpoints: tmpfs etcd_3; etcd_persist_endpoints: cold-safe.
         self.etcd_endpoints = list(etcd_endpoints)
         self.etcd_persist_endpoints = list(etcd_persist_endpoints)
 
@@ -1852,10 +1659,7 @@ class JobScheduler:
         return 'job_scheduler'
 
     def py_modules(self):
-        # Cluster-wide Python deps that used to come via HFSync; other
-        # python tools under the scheduler (cron scripts, helpers) end
-        # up sharing the same interpreter set, so keep them parked
-        # here after HFSync was migrated to a cron.
+        # Cluster-wide pip deps shared by scheduler cron scripts.
         return [
             'pip/tqdm',
             'pip/PyYAML',
@@ -1869,9 +1673,7 @@ class JobScheduler:
     def run(self):
         aws_key = get_key('/s3/user').decode().strip()
         aws_secret = get_key('/s3/password').decode().strip()
-        # Pre-baked MC_HOST_minio so cron files can `--env` it through
-        # to gorn workers without each one re-deriving the alias from
-        # S3_ENDPOINT + creds.
+        # Pre-baked MC_HOST_minio so cron files forward without re-deriving.
         mc_host = self.s3_endpoint.replace('://', f'://{aws_key}:{aws_secret}@', 1)
 
         env = {
@@ -1885,33 +1687,19 @@ class JobScheduler:
             'AWS_ACCESS_KEY_ID': aws_key,
             'AWS_SECRET_ACCESS_KEY': aws_secret,
             'MC_HOST_minio': mc_host,
-            # Tokens for the HF / GHCR sync crons. Scheduler holds
-            # them so cron files can $-expand into gorn ignite
-            # --env pairs without every job needing its own secrets
-            # plumbing on the worker side.
+            # HF/GHCR sync tokens; cron files $-expand.
             'HF_TOKEN': get_key('/hf/token').decode().strip(),
             'GHCR_TOKEN': get_key('/ghcr/token').decode().strip(),
         }
 
-        # Same stagger dance as SamogonBot / other lock-leader services.
+        # Stagger lock attempts across hosts.
         time.sleep(random.random() * 10)
 
         exec_into('etcdctl', 'lock', '/lock/job/scheduler', 'job_scheduler', **env)
 
 
 class Loki:
-    # HA log aggregator, one per host. Ring kvstore lives in the
-    # secondary etcd_2 cluster (separate from gorn's etcd_private to
-    # isolate ring heartbeats from gorn's traffic). Chunks + index
-    # land in MinIO (bucket "loki" has to be pre-created). Grafana
-    # picks Loki up as a datasource; the on-host Promtail ships
-    # /var/run/*/std/current lines here.
-    #
-    # Previously ran on memberlist gossip — it kept collapsing after
-    # ~15min (grafana/loki#14019: no rejoin_interval, dead peers never
-    # reclaimed). Etcd kvstore sidesteps the whole gossip convergence
-    # dance: ring forms on first contact, stale entries don't survive
-    # past the lease.
+    # HA per-host. Ring on etcd_2 (gossip per grafana/loki#14019).
     def __init__(self, port, s3_endpoint, peers, me, etcd_endpoints):
         self.v = 1
         self.port = port
@@ -1941,13 +1729,7 @@ class Loki:
         }
 
     def prepare(self):
-        # Wipe state on every boot — same idea as Grafana. Compactor
-        # WAL and local ring cache get reset; the authoritative ring
-        # is in etcd so recovery is instant on first connect.
-        # Unflushed in-memory chunks (<~5m old) are lost, which we
-        # accept for the observability tier. Class-source changes
-        # already invalidate the pickle via self._hash; the wipe is
-        # the counterpart on the state side.
+        # Wipe state every boot; ring is authoritative in etcd.
         shutil.rmtree(self.home_dir(), ignore_errors=True)
         make_dirs(self.home_dir(), owner='loki')
 
@@ -2004,15 +1786,7 @@ class Loki:
             },
             'distributor': {
                 'rate_store': {
-                    # Default is 500ms, which is tighter than the
-                    # peer-to-peer nebula jitter between lab1 and
-                    # lab3 (4-5 packets/sec lost on the underlay),
-                    # so every 1s poll timed out and flooded the log
-                    # with "unable to get stream rates from ingester
-                    # … DeadlineExceeded". Bump to 2s — still short
-                    # enough that a genuinely dead ingester drops out
-                    # of the rate store within one update cycle, long
-                    # enough to absorb the nebula jitter.
+                    # 2s absorbs nebula jitter; default 500ms times out.
                     'ingester_request_timeout': '2s',
                 },
             },
@@ -2021,7 +1795,6 @@ class Loki:
     def run(self):
         with memfd('loki.yaml') as fn:
             with open(fn, 'w') as f:
-                # Loki YAML parser accepts JSON as valid YAML.
                 f.write(json.dumps(self.config(), indent=2, sort_keys=True))
 
             exec_into(
@@ -2033,15 +1806,7 @@ class Loki:
 
 
 class Promtail:
-    # One per host; runs under root so it can read any service's log
-    # dir regardless of uid. Ships to localhost Loki only — keeps
-    # log-ship off the nebula dependency chain.
-    #
-    # self.sources is filled after construction by do()'s second pass:
-    # each Service.iter_log_sources() contribution lands as a scrape
-    # config entry. An implicit tinylog source is emitted by every
-    # Service; custom sources (app-managed log files) come from the
-    # service class's own log_sources() if it defines one.
+    # Per-host log shipper to local Loki. sources set in do()'s 2nd pass.
     def __init__(self, port, loki_port, me):
         self.port = port
         self.loki_port = loki_port
@@ -2106,19 +1871,7 @@ class Promtail:
 
 
 class TailLog:
-    # Loki-independent log-tail fallback. One per host, runs as root so
-    # it can read any service's log dir. Tails every tinylog current
-    # file plus each service's custom log_sources(); keeps the last 50k
-    # lines in-process; serves them over HTTP on the host's nebula IP.
-    # For use when loki is down or its ring is split.
-    #
-    # self.paths is filled after construction by do()'s second pass,
-    # mirroring Promtail's sources mechanism. TailLog's own
-    # log_sources() contributes the base-IX runit services that
-    # aren't registered in cg.py (syslogd, chrony, autoupdate_ix, …);
-    # including them here means both promtail and tail_log pick them
-    # up automatically via the same iter_log_sources() plumbing.
-    # (runsvdir is the runit root and has no std/current; skipped.)
+    # Loki-free fallback; per-host HTTP, last 50k lines in-process.
     IX_TINYLOGS = (
         'autologin_1',
         'autoupdate_ix',
@@ -2169,15 +1922,7 @@ class TailLog:
 
 
 class OgorodServe:
-    # Transparent HTTP git server. Vanilla `git clone http://lab:8035/<repo>.git`
-    # and `git push` against the cluster — refs in etcd_2 (CAS), packs
-    # in MinIO. Per-host instance; pushes serialize on an etcd lease
-    # mutex, fetches don't. See ogorod/CLAUDE.md.
-    #
-    # Wire-protocol delegated to native git-http-backend (CGI subprocess),
-    # so `bin/git/unwrap` is a runtime dep alongside `bin/ogorod`. The
-    # pre-receive hook re-execs ogorod itself in `hook` mode to ship
-    # incoming packs to S3 + run CAS on refs.
+    # HTTP git: refs in etcd_2 (CAS), packs in MinIO. See ogorod/CLAUDE.md.
     def __init__(self, port, s3_endpoint, etcd_endpoints, bind_addr, suffix=None):
         self.port = port
         self.s3_endpoint = s3_endpoint
@@ -2192,8 +1937,7 @@ class OgorodServe:
         return 'ogorod_serve'
 
     def users(self):
-        # Start as root so prepare() can chown the cache dir, then
-        # drop to ogorod_serve via su-exec inside run().
+        # users[0]=root: prepare() chowns cache dir before su-exec drop.
         return ['root', self.name()]
 
     def home_dir(self):
@@ -2237,16 +1981,7 @@ class OgorodServe:
 
 
 class OgorodThin:
-    # Sibling of OgorodServe with the cluster-sync logic moved out of
-    # the HTTP path and into per-binary wrappers. The Go HTTP handler
-    # only ensures the bare repo skeleton + holds the etcd lock on
-    # push, then exec's git-http-backend with PATH prepended by
-    # cache_dir/bin/. Those wrappers re-exec us as `ogorod wrap` to
-    # do SyncRepo + syscall.Exec the real git binary.
-    #
-    # Goal: A/B comparison against OgorodServe. Same data plane
-    # (etcd refs + S3 packs + ogorod hook) — only the wire-protocol
-    # serving stack differs.
+    # Sibling of OgorodServe; cluster-sync moved into per-binary wrappers. A/B.
     def __init__(self, port, s3_endpoint, etcd_endpoints, bind_addr, suffix=None):
         self.port = port
         self.s3_endpoint = s3_endpoint
@@ -2335,11 +2070,7 @@ class Secrets:
 
 
 class SecretsV2:
-    # Git-shipped encrypted store, decrypted once on startup with the
-    # passphrase stored under key=/master.key in the host's EFI vars.
-    # No TTL-recycle, no backend fan-out, no bootstrap deadlock —
-    # everything stays in-process until next ix mut replaces the
-    # store and pid1 respawns us via _hash rotation.
+    # Git-shipped encrypted store; passphrase from /master.key in EFI vars.
     def __init__(self, port):
         self.port = port
 
@@ -2347,19 +2078,14 @@ class SecretsV2:
         return 'secrets_v2'
 
     def users(self):
-        # Start as root so persdb can read /master.key out of EFI vars
-        # (needs CAP_SYS_ADMIN); drop to secrets_v2 for the actual
-        # HTTP-server phase, which is pure Python and non-privileged.
+        # users[0]=root: persdb needs CAP_SYS_ADMIN to read EFI vars.
         return ['root', 'secrets_v2']
 
     def pkgs(self):
         yield {'pkg': 'bin/secrets/v2'}
 
     def run(self):
-        # efi_get / efi_put need CAP_SYS_ADMIN so we fetch the
-        # passphrase here (service runs as root) and pass it through
-        # to the Python server via env; the server itself then does
-        # nothing privileged and runs as secrets_v2.
+        # Fetch passphrase as root, pass via env; server then runs unprivileged.
         pp = subprocess.check_output(['persdb', 'get', '/master.key']).decode('utf-8').strip()
 
         exec_into(
@@ -2403,10 +2129,7 @@ class ClusterMap:
         all_etc_2 = []
         all_etc_3 = []
 
-        # gofra peer table: peer VIP → list of underlay IPs. Static,
-        # driven entirely by gen_host(n) topology. 192.168.103.0/24 is
-        # the gofra overlay subnet; 192.168.104.0/24 is the staging
-        # twin (Gofra2 service, bin/gofra/staging).
+        # gofra peer table: VIP → underlay IPs. 103/24 prod, 104/24 staging.
         gofra_hosts = {}
         gofra2_hosts = {}
 
@@ -2435,9 +2158,7 @@ class ClusterMap:
                 'ip': h['gofra']['ip'],
             })
 
-            # Primary etcd cluster — secrets, ogorod refs, version keys,
-            # gorn election. Peer raft on gofra overlay, client API on
-            # 127.0.0.1.
+            # Primary etcd: secrets, ogorod refs, version keys, gorn election.
             yield {
                 'host': hn,
                 'serv': EtcdPrivate(
@@ -2453,11 +2174,7 @@ class ClusterMap:
                 ),
             }
 
-            # Secondary etcd — holds loki's ring kvstore today; reusable
-            # for any future tenant that wants a coordination store
-            # outside etcd_private (gorn's queue_v2 is heavy enough that
-            # we keep rings/leases off it). Cluster-internal only:
-            # peer raft on gofra overlay, client API on 127.0.0.1.
+            # Secondary etcd: loki's ring kvstore + future coordination tenants.
             yield {
                 'host': hn,
                 'serv': EtcdPrivate(
@@ -2473,22 +2190,7 @@ class ClusterMap:
                 ),
             }
 
-            # Tertiary etcd — ephemeral, data on tmpfs (/var/run).
-            # Hosts gorn queue + election and cron locks + dedup state
-            # so etcd_1's slow-disk + MVCC history doesn't drag the
-            # dispatch loop down. Whole DB evaporates on host reboot;
-            # contents are entirely transient (in-flight tasks, lock
-            # leases, dedup last-fired guids).
-            #
-            # Member-identity is preserved across reboots via tar.zstd
-            # backup to MinIO (bucket=etcd, key=etcd/3/<host>.tar.zstd).
-            # On boot: bin/etcd/wrap pulls the backup down, untar's, and
-            # exec's etcd — leader replicates whatever raft entries
-            # accumulated since the backup. No member-remove/add needed.
-            #
-            # Genesis (first deploy, no backup in MinIO yet): wrapper
-            # exits cleanly without starting etcd. Admin seeds the
-            # initial backup once.
+            # Tertiary etcd: tmpfs, gorn queue+cron locks; id via S3 tar.zstd.
             yield {
                 'host': hn,
                 'serv': EtcdEphemeral(
@@ -2733,20 +2435,7 @@ class ClusterMap:
 
             nn_port = p['nebula_node']
             nn_adv = [x['ip'] + f':{nn_port}' for x in h['net']]
-            # static_host_map = how cluster peers find each other. Pin
-            # to the gofra overlay only: the route to 192.168.103.0/24
-            # exits via the gofra TUN, gofra fans out across all four
-            # underlay NICs through SO_BINDTODEVICE-bound sockets, so
-            # peer-to-peer nebula traffic gets striped on eth0..eth3
-            # instead of pinning to eth0 (which is what kernel pick
-            # with the LAN /24 list did).
-            #
-            # advertise_addrs (advr below) keeps the LAN list — that is
-            # what we tell the lighthouse, so external clients (laptop
-            # on the LAN, anything beyond the cluster) still discover
-            # us at 10.0.0.x and reach in over the underlay directly.
-            # listen.host stays 0.0.0.0 so we accept inbound on any
-            # NIC.
+            # smap pinned to gofra overlay so peer traffic stripes via TUN.
             neb_map[nb['ip']] = [h['gofra']['ip'] + f':{nn_port}']
 
             yield {
@@ -2795,22 +2484,13 @@ class ClusterMap:
                     'host': gofra_ip,
                     'port': port,
                     'user': user,
-                    # `work/` is the per-task scratch root. gorn wrap
-                    # chdirs here, then unshares + mounts a fresh tmpfs
-                    # on top so each task runs in its own ephemeral
-                    # filesystem — orphans die with the mount ns.
+                    # work/ is per-task scratch; gorn wrap mounts tmpfs on top.
                     'path': f'/var/run/{user}/work',
                     'log_path': f'/var/run/{user}/home/gorn-wrap.log',
                     'nebula_host': nb['hostname'],
                 })
 
-        # Local etcd_3 — gorn services use it for leader election +
-        # queue state. etcd_3 is the in-memory cluster, fast disk
-        # bypasses the etcd_1 slow-fsync hell that was tipping
-        # gorn-session keepalive into Done() every 5–15s. Pinning the
-        # endpoint into the service constructor (instead of leaving it
-        # to /etc/profile.d) means a topology change rebakes the
-        # pickle and triggers a clean restart through autoupdate.
+        # gorn → etcd_3 (tmpfs); avoids etcd_1 slow-fsync killing keepalive.
         gorn_etcd = [f"127.0.0.1:{p['etcd_3_client']}"]
 
         for hn in GORN_N:
@@ -2879,7 +2559,7 @@ _CLASS_SRC_TEXT = {}
 
 
 def class_src_hash(cls):
-    # ast.dump gives a canonical form that ignores whitespace/comments, so cosmetic edits don't churn every service's derivation; real code changes do.
+    # ast.dump ignores whitespace/comments; cosmetic edits don't churn.
     parts = []
 
     for c in cls.__mro__:
@@ -2967,15 +2647,7 @@ class Service:
             }
 
     def iter_log_sources(self):
-        # Every service gets a default tinylog source for free. Services
-        # can yield additional dicts from srv.log_sources() to declare
-        # custom files (e.g. app-managed logs outside /var/run/<name>/std).
-        # Each source dict carries:
-        #   job_name         — unique within promtail
-        #   path             — file path on the host (or glob)
-        #   labels           — dict merged into the target's labels
-        #                      (service+stream defaulted if absent)
-        #   pipeline_stages  — optional list of promtail stages
+        # Default tinylog source + any srv.log_sources() extras.
         name = self.name()
 
         yield {
@@ -3056,9 +2728,7 @@ class Service:
                 'user': user,
             }
 
-        # Disabled: xiaomi_passwd is empty (get_key call commented out),
-        # so bash collapses argv and xapi.py crashes on sys.argv[7] every
-        # sched100 tick. Re-enable after restoring the password fetch.
+        # Disabled: empty xiaomi_passwd collapses argv, xapi.py crashes.
         if False:
             for rec in self.iter_upnp():
                 yield {
@@ -3074,13 +2744,7 @@ class Service:
                     'delay': 100,
                 }
 
-        # extra_deps carries the service's runtime pkgs forward into
-        # bin/run/sh/runit's install step, where intro(d).uid is
-        # baked into run_sh as a comment. A bump of e.g. bin/gorn
-        # changes that uid → run_sh diff → store-path diff → pid1
-        # restarts. intro() doesn't add the pkg as our own dep, so no
-        # realm collision when a pkg is requested with different flags
-        # by other services.
+        # extra_deps bakes runtime pkg uids; bumps trigger pid1 restart.
         yield {
             'pkg': 'bin/run/sh',
             'srv_dir': self.name(),
@@ -3151,7 +2815,7 @@ def do(code):
         if isinstance(node, ast.ClassDef):
             _CLASS_SRC_TEXT[node.name] = ast.get_source_segment(code, node)
 
-    # Anchor service classes to a synthetic 'cg' module so pickle's whichmodule() resolves them. ix's Env.eval execs us with no __name__, leaving classes at __module__='builtins' which doesn't accept new attrs.
+    # Anchor classes to synthetic 'cg' so pickle whichmodule() resolves.
     cg_mod = sys.modules.setdefault('cg', types.ModuleType('cg'))
 
     for name, obj in list(globals().items()):
@@ -3284,11 +2948,7 @@ def do(code):
     for h in hosts:
         by_name[h['hostname']] = h
 
-    # Shared mutable list. Grafana's ctor stores the reference;
-    # the list is populated below once we've walked all services
-    # via it_cluster. By the time Grafana.pkgs() runs (in it_srvs
-    # after the loop), the reference points at the full sorted
-    # list — no second iteration of it_cluster needed.
+    # Shared list ref; Grafana's ctor stores it, populated below after walk.
     cluster_services = []
 
     cconf = {
@@ -3317,12 +2977,10 @@ def do(code):
         by_addr[addr] = hndl
         hndl_by_host.append((host, hndl))
 
-    # Now that all services are known, populate the shared list
-    # Grafana's ctor stashed a reference to.
+    # Populate Grafana's shared services list.
     cluster_services.extend(sorted({h.name() for _, h in hndl_by_host}))
 
-    # Second pass — routing/registration lookups need by_addr fully populated
-    # (e.g. EtcdPrivate is yielded before Collector, but has prom_jobs now).
+    # Second pass: routing/registration needs by_addr fully populated.
     for host, hndl in hndl_by_host:
         for job in hndl.prom_jobs():
             by_addr[f'{host}:collector'].srv.jobs.append(job)
@@ -3370,7 +3028,7 @@ def do(code):
 
 
 class _Unpickler(pickle.Unpickler):
-    # Back-compat for old pickles still on disk with module='builtins' (pre-cg-anchoring renders): super() falls through to globals.
+    # Back-compat for old pickles with module='builtins' (pre-cg-anchoring).
     def find_class(self, module, name):
         try:
             return super().find_class(module, name)

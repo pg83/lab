@@ -1,25 +1,5 @@
 #!/usr/bin/env python3
-# Runs at realm-prepare time (via fix/50-grafana-gen.sh). Walks
-# share/metrics/*.json — manifests contributed by service packages
-# — and emits Grafana dashboard JSON for each into
-# share/grafana-provisioning/dashboards-json/<service>.json.
-#
-# Each manifest looks like:
-#   {
-#     "service": "samogon",
-#     "uid": "samogon",           # optional, defaults to service
-#     "title": "Samogon",          # optional
-#     "tags": ["samogon"],         # optional
-#     "panels": [
-#       {"type": "counter",  "title": "Reqs",    "metric": "foo_total", "by": ["op"]},
-#       {"type": "histogram","title": "Latency", "metric": "foo_seconds", "quantiles": [0.5, 0.95]},
-#       {"type": "gauge",    "title": "Inflight","metric": "foo_inflight"}
-#     ]
-#   }
-#
-# Panel types supported: counter (rate of _total), histogram
-# (quantiles of _bucket), gauge (current value). Layout is 2 columns,
-# panels placed left-to-right, top-to-bottom.
+# Walks share/metrics/*.json and emits grafana-provisioning dashboards.
 
 import glob
 import json

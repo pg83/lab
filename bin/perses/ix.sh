@@ -26,20 +26,13 @@ bld/gzip
 {% endblock %}
 
 {% block go_refine %}
-# Perses ships test fixtures with their own go.mod files. aux/go/v3
-# recurses into every go.mod and runs `go mod tidy`; keep the recursion
-# on real modules by dropping the testdata trees.
+# Drop testdata go.mod trees so aux/go/v3's mod-tidy stays on real modules.
 find . -type d -name testdata -prune -exec rm -rf {} +
 {% endblock %}
 
 {% block unpack %}
 {{super()}}
-# Upstream's scripts/compress_assets.sh writes ui/embed.go from ui/app/dist;
-# without it `go build ./cmd/perses` fails because ui/endpoint.go references
-# an embedFS that only exists after this step. We stub a one-file app/dist
-# so the UI path compiles; panel plugins are a separate lift, the admin
-# HTTP + /metrics come up either way. Done at unpack rather than go_refine
-# because the fetch env lacks gzip.
+# Stub one-file ui/app/dist so cmd/perses compiles without compress_assets.sh.
 (
     cd ui
     cp embed.go.tmpl embed.go

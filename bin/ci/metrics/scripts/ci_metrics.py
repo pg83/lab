@@ -40,8 +40,7 @@ LOKI_URL = 'http://127.0.0.1:8032/loki/api/v1/push'
 S3_PREFIX = 'minio/gorn/ci/'
 
 
-# Order matters: ci.py emits "succeeded" only on the happy path; the
-# two "exited" variants are mutually exclusive past that.
+# Order matters: "succeeded" wins; the "exited" variants are exclusive after.
 CLASS_MARKERS = [
     (re.compile(rb'^\+ ix build succeeded$', re.MULTILINE), 'success'),
     (re.compile(rb'^\+ ix build exited \d+ with target-failure marker', re.MULTILINE), 'target_fail'),
@@ -131,8 +130,7 @@ def classify(stderr_bytes):
     matches = NODE_FAIL_RE.findall(stderr_bytes)
 
     if matches:
-        # The ci.py classifier looks at the LAST node failure to set
-        # the marker, so report the same one for consistency.
+        # ci.py uses the LAST node failure; match that for consistency.
         failed = matches[-1].decode()
 
     tier = ''
@@ -145,14 +143,11 @@ def classify(stderr_bytes):
 
 
 def iso_to_ns(iso):
-    # finished_at is e.g. "2026-04-26T01:00:00.123456789Z"; nanos may
-    # be present. datetime.fromisoformat handles up to microseconds,
-    # so trim sub-microsecond digits before parsing.
+    # fromisoformat caps at micros; trim sub-microsecond digits.
     s = iso.replace('Z', '+00:00')
 
     if '.' in s:
         head, tail = s.rsplit('.', 1)
-        # tail is "<frac>+00:00"; cap the fractional part at 6 digits
         frac, tz = tail.split('+', 1) if '+' in tail else (tail, None)
         frac = frac[:6]
         s = f'{head}.{frac}' + (f'+{tz}' if tz else '')
@@ -187,8 +182,7 @@ def main():
     cursor = etcd_get(CURSOR_KEY)
 
     if not cursor:
-        # First run — don't backfill the entire S3 history. Pin cursor
-        # to "now" and start tracking from the next tick.
+        # First run: pin to "now"; don't backfill the entire S3 history.
         cursor = now_iso()
         etcd_put(CURSOR_KEY, cursor)
         log(f'bootstrapped cursor to {cursor!r}')

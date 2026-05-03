@@ -1,8 +1,6 @@
 {% extends '//die/gen.sh' %}
 
-{# Every 10m: take the cluster lock, dedup on /ghcr/sync, fire
-   ghcr_sync on a gorn worker. ghcr_sync lists minio/cas, diffs
-   against ghcr.io/stal-ix/pkgsrc, pushes anything missing via oras. #}
+{# Every 10m: ghcr_sync via gorn worker; pushes minio/cas → ghcr.io. #}
 
 {% block install %}
 mkdir -p ${out}/etc/cron

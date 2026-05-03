@@ -93,10 +93,7 @@ def cmd_restore(args):
         val = base64.b64decode(rec['v'])
         skey = key.decode('utf-8')
 
-        # Lock keys (etcd Mutex) are stored with empty value and an
-        # attached lease. Restoring them as plain non-leased keys would
-        # block future Mutex acquisitions until manually deleted —
-        # they're ephemeral, drop on the floor.
+        # Skip Mutex lock keys (empty value); leased, ephemeral.
         if not val:
             log(f'skip lock key {skey!r}')
             skipped_locks += 1

@@ -62,8 +62,7 @@ else:
     fail('deterministic', f'{h1!r} vs {h2!r}')
 
 
-# 2. cross-class uniqueness — no accidental collisions between all
-# classes that rely on this hash today
+# 2. cross-class uniqueness across cg's hash-using classes.
 seen = {}
 for c in (cg.Loki, cg.Grafana, cg.Samogon, cg.Promtail):
     h = cg._class_src_hash(c)
@@ -129,8 +128,7 @@ else:
          f'body change left ast hash stable: {_ast_hash(e)}')
 
 
-# 6. MRO change matters. _class_src_hash walks __mro__ and hashes
-# each class. Inherit from a non-trivial base → different result.
+# 6. MRO change moves the hash; _class_src_hash walks __mro__.
 g = '''
 class Base:
     def h(self):
@@ -153,9 +151,7 @@ class X(Base):
 ns_g, ns_h = {}, {}
 exec(g, ns_g)
 exec(h_source, ns_h)
-# reproduce what _class_src_hash does, but against the exec'd classes.
-# (inspect.getsource won't find them since they have no backing file,
-# so we manually feed the source strings per MRO entry.)
+# Mirror _class_src_hash; feed sources manually for exec'd classes.
 def _hash_with_src(src_per_mro):
     parts = [ast.dump(ast.parse(s)) for s in src_per_mro]
     return hashlib.sha256('\n'.join(parts).encode()).hexdigest()[:16]
@@ -176,8 +172,7 @@ else:
          'different base-class bodies gave equal hash')
 
 
-# 7. pickle bytes move when self.hash changes. This is the hinge
-# that connects _class_src_hash → runsh_script in canon.
+# 7. pickle bytes move when self.hash changes (drives runsh_script).
 class _FakeSrv:
     def __init__(self, hash):
         self.hash = hash
@@ -191,9 +186,7 @@ else:
     fail('pickle-propagates-hash', 'pickle bytes identical despite hash diff')
 
 
-# 8. cg classes produce non-empty 16-hex strings (catches the "getsource
-# returned '' so hash is of empty input" regression — that yields
-# e3b0c44298fc1c14 always, which the test below rejects).
+# 8. cg classes hash non-empty (catches getsource-returned-'' regression).
 EMPTY_SHA_PREFIX = hashlib.sha256(b'').hexdigest()[:16]
 bad = []
 for c in (cg.Loki, cg.Grafana, cg.Samogon, cg.Promtail):

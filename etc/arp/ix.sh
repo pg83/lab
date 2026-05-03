@@ -1,11 +1,6 @@
 {% extends '//die/gen.sh' %}
 
-{# Deterministic ARP for multi-NIC same-subnet hosts. Each NIC only
-   replies to ARP for IPs it actually owns, and outgoing ARPs use the
-   MAC of the NIC whose IP is in the src field. Without this the
-   kernel answers any ARP on any NIC and the L2 switch forwards
-   traffic to whichever port happens to be cached in peers — physical
-   multi-path bandwidth collapses. See lab/NET.md. #}
+{# Deterministic ARP per-NIC; else L2 collapses multi-path. lab/NET.md. #}
 
 {% block install %}
 mkdir -p ${out}/etc/sysctl.d

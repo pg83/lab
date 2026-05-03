@@ -79,11 +79,7 @@ def main():
     except subprocess.CalledProcessError:
         log(f'clone-from-self failed for {name}; sleeping 100s before init+fetch to throttle upstream')
         time.sleep(100)
-        # Failed clone leaves partial refs in both refs/ and packed-refs;
-        # init alone is idempotent and won't clear them, so the upcoming
-        # fetch creates loose refs that shadow the packed ones and push
-        # --mirror fails with "dst refspec ... matches more than one".
-        # Wipe cwd (gorn-wrap tmpfs, fully ours) before init.
+        # Wipe cwd before init; partial refs would clash with push --mirror.
         run('find', '.', '-mindepth', '1', '-delete')
         run('git', 'init', '--bare', '.')
 
