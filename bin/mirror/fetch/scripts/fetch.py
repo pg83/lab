@@ -47,11 +47,10 @@ def log(*args):
 
 
 def mc_env():
-    scheme, host = os.environ['S3_ENDPOINT'].split('://', 1)
-    env = dict(os.environ)
-    env['MC_HOST_mirror'] = f"{scheme}://{os.environ['AWS_ACCESS_KEY_ID']}:{os.environ['AWS_SECRET_ACCESS_KEY']}@{host}"
-
-    return env
+    # MC_HOST_mirror (manifest writes) and MC_HOST_minio (cas binary,
+    # writes to cas bucket via `minio/cas/...` alias) are pre-baked by
+    # the cron file from per-bucket creds; pass env through unchanged.
+    return dict(os.environ)
 
 
 def mc(*args, env, capture=False):
