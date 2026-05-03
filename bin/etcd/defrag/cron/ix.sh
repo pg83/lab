@@ -18,7 +18,6 @@ cat << 'EOF' > ${out}/etc/cron/3600-etcd-defrag.json
         "dedup", "/etcd/defrag", "--",
         "gorn", "ignite",
         "--root", "etcd_defrag",
-        "--retry-error",
         "--env", "GORN_API=$GORN_API",
         "--env", "ETCDCTL_ENDPOINTS=$ETCDCTL_ENDPOINTS",
         "--",

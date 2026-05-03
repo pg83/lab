@@ -42,7 +42,6 @@ cat << 'EOF' > ${out}/etc/cron/{{period}}-mc-gc-{{safe_root}}.json
         "dedup", "/mc/gc{{root}}", "--",
         "gorn", "ignite",
         "--root", "mc_gc",
-        "--retry-error",
         "--env", "MC_HOST_minio=$MC_HOST_minio",
         "--",
         "/bin/env", "PATH=/bin",

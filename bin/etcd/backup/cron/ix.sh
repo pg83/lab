@@ -15,7 +15,6 @@ cat << 'EOF' > ${out}/etc/cron/3600-etcd-backup.json
         "dedup", "/backup/etcd", "--",
         "gorn", "ignite",
         "--root", "backup",
-        "--retry-error",
         "--env", "GORN_API=$GORN_API",
         "--env", "S3_ENDPOINT=$S3_ENDPOINT",
         "--env", "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID",

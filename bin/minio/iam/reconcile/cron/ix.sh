@@ -10,7 +10,6 @@ cat << 'EOF' > ${out}/etc/cron/300-minio-iam-reconcile.json
         "dedup", "/minio/iam", "--",
         "gorn", "ignite",
         "--root", "minio_iam_reconcile",
-        "--retry-error",
         "--env", "GORN_API=$GORN_API",
         "--env", "S3_ENDPOINT=$S3_ENDPOINT",
         "--env", "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID",

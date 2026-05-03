@@ -16,7 +16,6 @@ cat << 'EOF' > ${out}/etc/cron/100-mirror-fetch.json
         "dedup", "/mirror/fetch", "--",
         "gorn", "ignite",
         "--root", "mirror_fetch",
-        "--retry-error",
         "--env", "GORN_API=$GORN_API",
         "--env", "S3_ENDPOINT=$S3_ENDPOINT",
         "--env", "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID",

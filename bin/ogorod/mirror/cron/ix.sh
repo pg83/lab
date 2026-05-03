@@ -21,7 +21,6 @@ cat << 'EOF' > ${out}/etc/cron/10-ogorod-mirror-{{r}}.json
         "dedup", "/ogorod/mirror/v2/{{r}}", "--",
         "gorn", "ignite",
         "--root", "ogorod_mirror",
-        "--retry-error",
         "--",
         "/bin/env", "PATH=/bin",
         "ogorod_mirror", "{{r}}"

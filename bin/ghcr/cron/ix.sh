@@ -14,7 +14,6 @@ cat << 'EOF' > ${out}/etc/cron/600-ghcr-sync.json
         "dedup", "/ghcr/sync", "--",
         "gorn", "ignite",
         "--root", "ghcr_sync",
-        "--retry-error",
         "--env", "GORN_API=$GORN_API",
         "--env", "S3_ENDPOINT=$S3_ENDPOINT",
         "--env", "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID",

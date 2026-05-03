@@ -15,8 +15,9 @@ Subcommands:
       failures, detected by marker strings in captured output
       (molot "node failed", ix "ERROR <descr>", etc.). Any other
       non-zero exit (clone died, binary missing, molot crashed) is
-      an infra failure: paired with gorn's --retry-error in the
-      cron dispatch so the leader puts the task back on the queue.
+      an infra failure: gorn drops it as non-retriable, the
+      job_scheduler's 10s cron tick + dedup re-fires it on the next
+      pass — no --retry-error needed.
 
   ci update <local_cache_path>
       Reads a local molot-cache from <local_cache_path>, unions

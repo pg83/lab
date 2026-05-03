@@ -17,7 +17,6 @@ cat << 'EOF' > ${out}/etc/cron/30-ci-metrics.json
         "dedup", "/ci/metrics", "--",
         "gorn", "ignite",
         "--root", "ci_metrics",
-        "--retry-error",
         "--env", "S3_ENDPOINT=$S3_ENDPOINT",
         "--env", "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID",
         "--env", "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY",

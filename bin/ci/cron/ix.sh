@@ -20,7 +20,6 @@ cat << 'EOF' > ${out}/etc/cron/10-ci-{{slug}}.json
         "dedup", "/ci/{{slug}}", "--",
         "gorn", "ignite",
         "--root", "ci",
-        "--retry-error",
         "--env", "GORN_API=$GORN_API",
         "--env", "S3_ENDPOINT=$S3_ENDPOINT",
         "--env", "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID",
