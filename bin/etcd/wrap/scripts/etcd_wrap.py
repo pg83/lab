@@ -10,16 +10,20 @@ cluster_id are byte-preserved, leader catches us up with whatever raft
 entries accumulated since the last backup via standard replication.
 
 Flow:
-  1. Random sleep [0, jitter] to stagger restarts across the cluster.
-  2. If data_dir is empty:
+  1. If data_dir is empty:
        - mc cp <backup-uri> ./restore.tar.zstd. Failed (no backup yet,
          or transient minio error) -> log and exit 0; runit will retry.
          Genesis is an admin operation: seed the first backup once.
        - tar+zstd extract into data_dir. Failed -> rename archive to
          .broken and exit 0; we won't try empty-start with cluster_state
          that doesn't exist in our config anyway.
-  3. exec etcd as child with signal.alarm(timeout) -> SIGTERM. Forward
-     SIGTERM/SIGINT/SIGHUP from runit so graceful shutdown propagates.
+  2. Pick a randomized timeout in [timeout, timeout + jitter] — each
+     host gets a different shutdown deadline so the 3 nodes don't all
+     SIGTERM simultaneously and drop quorum. With jitter = timeout/2,
+     restarts spread across a 50%-of-base window.
+  3. exec etcd as child with signal.alarm(actual_timeout) -> SIGTERM.
+     Forward SIGTERM/SIGINT/SIGHUP from runit so graceful shutdown
+     propagates.
   4. After etcd exits, if data_dir is non-empty: tar+zstd, mc cp back
      to the same uri. Atomic at S3 level (multipart-upload completes
      atomically).
@@ -32,7 +36,6 @@ import random
 import signal
 import subprocess
 import sys
-import time
 
 
 def log(*args):
@@ -154,13 +157,15 @@ def backup(data_dir, backup_uri):
             os.unlink(tmp_archive)
 
 
-def run_etcd(argv, timeout):
+def run_etcd(argv, timeout, jitter):
+    actual = timeout + random.randint(0, jitter)
+    log(f'effective timeout {actual}s (base {timeout}s + {actual - timeout}s jitter)')
     log('exec', *argv)
 
     proc = subprocess.Popen(argv)
 
     def alarm_handler(_signo, _frame):
-        log(f'timeout {timeout}s reached; SIGTERM etcd pid={proc.pid}')
+        log(f'timeout {actual}s reached; SIGTERM etcd pid={proc.pid}')
 
         try:
             proc.terminate()
@@ -180,7 +185,7 @@ def run_etcd(argv, timeout):
     signal.signal(signal.SIGINT, fwd_handler)
     signal.signal(signal.SIGHUP, fwd_handler)
 
-    signal.alarm(timeout)
+    signal.alarm(actual)
 
     rc = proc.wait()
     signal.alarm(0)
@@ -192,17 +197,13 @@ def run_etcd(argv, timeout):
 def main():
     args = parse()
 
-    sleep_for = random.randint(0, args.jitter)
-    log(f'stagger sleep {sleep_for}s of jitter {args.jitter}s')
-    time.sleep(sleep_for)
-
     if not have_data(args.data_dir):
         log(f'data_dir {args.data_dir} empty; restoring from {args.backup_uri}')
 
         if not restore(args.data_dir, args.backup_uri):
             sys.exit(0)
 
-    rc = run_etcd(args.etcd_argv, args.timeout)
+    rc = run_etcd(args.etcd_argv, args.timeout, args.jitter)
 
     backup(args.data_dir, args.backup_uri)
 
