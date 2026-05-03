@@ -105,15 +105,38 @@ def main():
 
     print(f'secrets_v2: loaded {len(store)} keys from {store_path}', file=sys.stderr)
 
+    etcd_cache = {}
+
+    def get_etcd(path):
+        if path in etcd_cache:
+            return etcd_cache[path]
+
+        out = subprocess.check_output(['etcdctl', 'get', '--print-value-only', path])
+        etcd_cache[path] = out
+
+        return out
+
     class Handler(hs.BaseHTTPRequestHandler):
         def do_GET(self):
             v = store.get(self.path)
 
-            if v is None:
-                self.send_error(404, 'no such secret')
+            if v is not None:
+                body = v.encode() if isinstance(v, str) else v
+                self.send_response(200)
+                self.send_header('Content-type', 'text/plain')
+                self.send_header('Content-length', str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
                 return
 
-            body = v.encode() if isinstance(v, str) else v
+            try:
+                body = get_etcd(self.path)
+            except Exception as e:
+                self.send_error(404, message=str(e))
+
+                return
+
             self.send_response(200)
             self.send_header('Content-type', 'text/plain')
             self.send_header('Content-length', str(len(body)))

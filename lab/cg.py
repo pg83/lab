@@ -241,11 +241,6 @@ def get_key(k):
     return ur.urlopen('http://localhost:8022' + k).read()
 
 
-def get_key_v2(k):
-    # Opt-in v2 sibling; no fallback to v1 to avoid hiding v2 bugs.
-    return ur.urlopen('http://localhost:8034' + k).read()
-
-
 class Nebula:
     def pkgs(self):
         yield {
@@ -280,13 +275,13 @@ class Nebula:
                 f.write(json.dumps(cfg, indent=4, sort_keys=True))
 
             with open(ca, 'wb') as f:
-                f.write(get_key_v2('/nebula/ca.crt'))
+                f.write(get_key('/nebula/ca.crt'))
 
             with open(cert, 'wb') as f:
-                f.write(get_key_v2(f'/nebula/{self.host}.crt'))
+                f.write(get_key(f'/nebula/{self.host}.crt'))
 
             with open(key, 'wb') as f:
-                f.write(get_key_v2(f'/nebula/{self.host}.key'))
+                f.write(get_key(f'/nebula/{self.host}.key'))
 
             exec_into('nebula', '--config', conf)
 
@@ -2002,36 +1997,15 @@ class OgorodThin:
         )
 
 
-class Secrets:
+class SecretsV2:
+    # Git-shipped encrypted store + etcd fallback. Static keys (nebula
+    # certs, master tokens) come from the encrypted file; everything
+    # else (per-bucket S3 IAM creds reconciled by minio_iam_reconcile,
+    # /tunnel/*, etc.) falls through to etcdctl get against etcd_1.
+    # Passphrase from /master.key in EFI vars.
     def __init__(self, port, etcd_endpoints):
         self.port = port
         self.etcd_endpoints = list(etcd_endpoints)
-
-    def name(self):
-        return 'secrets'
-
-    def pkgs(self):
-        yield {
-            'pkg': 'bin/secrets',
-        }
-
-    def run(self):
-        tout = int(random.random() * 1000 + 500)
-
-        args = [
-            'timeout',
-            str(tout) + 's',
-            'ix_serve_secrets',
-            self.port,
-        ]
-
-        exec_into(*args, ETCDCTL_ENDPOINTS=','.join(self.etcd_endpoints))
-
-
-class SecretsV2:
-    # Git-shipped encrypted store; passphrase from /master.key in EFI vars.
-    def __init__(self, port):
-        self.port = port
 
     def name(self):
         return 'secrets_v2'
@@ -2053,6 +2027,7 @@ class SecretsV2:
             '/ix/realm/system/share/secrets-v2/store',
             user='secrets_v2',
             SECRETS_V2_MASTER_KEY=pp,
+            ETCDCTL_ENDPOINTS=','.join(self.etcd_endpoints),
         )
 
 
@@ -2290,11 +2265,6 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': Secrets(p['secrets'], etcd_endpoints=[f"127.0.0.1:{p['etcd_1_client']}"]),
-            }
-
-            yield {
-                'host': hn,
                 'serv': Samogon(
                     p['samogon'],
                     s3_endpoint=f"http://127.0.0.1:{p['minio']}",
@@ -2323,7 +2293,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': SecretsV2(p['secrets_v2']),
+                'serv': SecretsV2(p['secrets'], etcd_endpoints=[f"127.0.0.1:{p['etcd_1_client']}"]),
             }
 
             yield {
@@ -2820,7 +2790,6 @@ def do(code):
         'etcd_3_peer': 8043,
         'secrets': 8022,
         'sshd_rec': 8023,
-        'secrets_v2': 8034,
         'grafana': 8029,
         'federator': 8030,
         'samogon': 8031,
@@ -2860,7 +2829,6 @@ def do(code):
         'etcd_3': 2011,
         'samogon_bot': 2004,
         'job_scheduler': 2005,
-        'secrets': 1027,
         'secrets_v2': 1028,
         'grafana': 1094,
         'federator': 2000,
