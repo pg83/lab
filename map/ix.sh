@@ -31,7 +31,6 @@ bin/ogorod/mirror
 bin/smart/mon/tools
 bin/fixits(delay=10)
 bin/auto/update(user=ix)
-bin/mc/gc
 bin/kernel/gengrub(kernel_boot_flags=rootdelay=20)
 
 set/fs

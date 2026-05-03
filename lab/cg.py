@@ -984,10 +984,6 @@ class Gorn(GornBase):
     def config(self):
         return self.base_config()
 
-    def pkgs(self):
-        yield from super().pkgs()
-        yield {'pkg': 'bin/mc/gc/cron', 'root': '/gorn/cli', 'hours': 24}
-
 
 class GornCtl(GornBase):
     def __init__(self, endpoints, s3, listen, etcd_endpoints):
@@ -1573,8 +1569,6 @@ class SamogonBot:
 
     def pkgs(self):
         yield {'pkg': 'bin/samogon'}
-        # Params as dict keys, not in 'pkg'; to_srv() appends its own (...).
-        yield {'pkg': 'bin/mc/gc/cron', 'root': '/gorn/samogon', 'hours': 1}
 
     def run(self):
         env = {
