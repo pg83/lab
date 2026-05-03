@@ -59,7 +59,7 @@ base64 -d << EOF > ${out}/share/grafana-provisioning/dashboards-json/prometheus.
 {% include 'prometheus.json/base64' %}
 EOF
 
-{% for cluster in ['etcd_1', 'etcd_2'] %}
+{% for cluster in ['etcd_1', 'etcd_2', 'etcd_3'] %}
 cat > ${out}/share/grafana-provisioning/dashboards-json/{{cluster}}.json <<'JSON'
 {% include 'etcd.json' %}
 JSON
