@@ -3,7 +3,8 @@
         "lab1": {
             "disabled": [
                 "dhcpcd",
-                "co2_mon"
+                "co2_mon",
+                "gofra2"
             ],
             "extra": [
                 "bin/etcd/server(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
@@ -32,20 +33,16 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=sftp_d,runsh_script=sha256:8aecbd0badad6c46,srv_user=root,extra_deps=YmluL3NmdHAvZ28vcGF0Y2hlZA==)",
                 "bin/prometheus(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=collector)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=collector,runsh_script=sha256:767713a2650eccbf,srv_user=collector,extra_deps=YmluL3Byb21ldGhldXM=)",
-                "bin/perses(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
-                "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=perses,user_home=/var/run/perses/std/home)",
-                "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=perses)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=perses,runsh_script=sha256:d363f4bb67ae480f,srv_user=perses,extra_deps=sha256:b7cd7e046e8afdad)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=collector,runsh_script=sha256:17cde258d1021307,srv_user=collector,extra_deps=YmluL3Byb21ldGhldXM=)",
                 "bin/prometheus(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=federator)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=federator,runsh_script=sha256:08be04b1e26d29e2,srv_user=federator,extra_deps=YmluL3Byb21ldGhldXM=)",
                 "bin/grafana(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
-                "aux/grafana(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,prom_url=http://127.0.0.1:8030,loki_url=http://127.0.0.1:8032,services_b64=sha256:7e6e5d26681d8cc6)",
+                "aux/grafana(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,prom_url=http://127.0.0.1:8030,loki_url=http://127.0.0.1:8032,services_b64=sha256:afe02a03930f1810)",
                 "aux/grafana/gen(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "bin/sched/grafana/reload(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,delay=10,port=8029,password=grafana)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=grafana)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=grafana,runsh_script=sha256:081651ce9bb01294,srv_user=grafana,extra_deps=sha256:6fabe2e331d188de)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=grafana,runsh_script=sha256:399708c38430fae8,srv_user=grafana,extra_deps=sha256:ca1664fe1904e9c5)",
                 "bin/loki(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=loki,user_home=/var/run/loki/std/home)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=loki)",
@@ -53,10 +50,10 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=loki,runsh_script=sha256:e5590177653d3c24,srv_user=root,extra_deps=sha256:853f30385e3f9f8b)",
                 "bin/promtail(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=promtail,runsh_script=sha256:0213876510e3e9b7,srv_user=root,extra_deps=YmluL3Byb210YWls)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=promtail,runsh_script=sha256:c15b0272c98f4009,srv_user=root,extra_deps=YmluL3Byb210YWls)",
                 "bin/tail/log(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=tail_log,runsh_script=sha256:b3de6a5792a88c44,srv_user=root,extra_deps=YmluL3RhaWwvbG9n)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=tail_log,runsh_script=sha256:bae880ce4a3ba019,srv_user=root,extra_deps=YmluL3RhaWwvbG9n)",
                 "bin/ogorod(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "bin/git/unwrap(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=ogorod_serve,user_home=/var/run/ogorod_serve/home)",
@@ -282,7 +279,7 @@
                 "bin/molot(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=molot_web)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=molot_web,runsh_script=sha256:512daaf3eafef4e9,srv_user=molot_web,extra_deps=YmluL21vbG90)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:dcd9e67a8817be1f)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:af118c95fcf2bb36)"
             ],
             "gofra": {
                 "hostname": "lab1.gofra",
@@ -330,7 +327,8 @@
         "lab2": {
             "disabled": [
                 "dhcpcd",
-                "co2_mon"
+                "co2_mon",
+                "gofra2"
             ],
             "extra": [
                 "bin/etcd/server(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
@@ -359,20 +357,16 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=sftp_d,runsh_script=sha256:8aecbd0badad6c46,srv_user=root,extra_deps=YmluL3NmdHAvZ28vcGF0Y2hlZA==)",
                 "bin/prometheus(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=collector)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=collector,runsh_script=sha256:5e3e4807c872151b,srv_user=collector,extra_deps=YmluL3Byb21ldGhldXM=)",
-                "bin/perses(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
-                "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=perses,user_home=/var/run/perses/std/home)",
-                "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=perses)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=perses,runsh_script=sha256:d363f4bb67ae480f,srv_user=perses,extra_deps=sha256:b7cd7e046e8afdad)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=collector,runsh_script=sha256:ef3c33a8c59c9de7,srv_user=collector,extra_deps=YmluL3Byb21ldGhldXM=)",
                 "bin/prometheus(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=federator)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=federator,runsh_script=sha256:08be04b1e26d29e2,srv_user=federator,extra_deps=YmluL3Byb21ldGhldXM=)",
                 "bin/grafana(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
-                "aux/grafana(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,prom_url=http://127.0.0.1:8030,loki_url=http://127.0.0.1:8032,services_b64=sha256:7e6e5d26681d8cc6)",
+                "aux/grafana(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,prom_url=http://127.0.0.1:8030,loki_url=http://127.0.0.1:8032,services_b64=sha256:afe02a03930f1810)",
                 "aux/grafana/gen(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "bin/sched/grafana/reload(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,delay=10,port=8029,password=grafana)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=grafana)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=grafana,runsh_script=sha256:081651ce9bb01294,srv_user=grafana,extra_deps=sha256:6fabe2e331d188de)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=grafana,runsh_script=sha256:399708c38430fae8,srv_user=grafana,extra_deps=sha256:ca1664fe1904e9c5)",
                 "bin/loki(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=loki,user_home=/var/run/loki/std/home)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=loki)",
@@ -380,10 +374,10 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=loki,runsh_script=sha256:8bf789a4fb171ad4,srv_user=root,extra_deps=sha256:853f30385e3f9f8b)",
                 "bin/promtail(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=promtail,runsh_script=sha256:168662887eed5dee,srv_user=root,extra_deps=YmluL3Byb210YWls)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=promtail,runsh_script=sha256:f33372ec34d63e8b,srv_user=root,extra_deps=YmluL3Byb210YWls)",
                 "bin/tail/log(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=tail_log,runsh_script=sha256:79f9ec94d8f6f942,srv_user=root,extra_deps=YmluL3RhaWwvbG9n)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=tail_log,runsh_script=sha256:922cd0fdabf54e41,srv_user=root,extra_deps=YmluL3RhaWwvbG9n)",
                 "bin/ogorod(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "bin/git/unwrap(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=ogorod_serve,user_home=/var/run/ogorod_serve/home)",
@@ -599,7 +593,7 @@
                 "bin/molot(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=molot_web)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=molot_web,runsh_script=sha256:51b69098f7c8aad9,srv_user=molot_web,extra_deps=YmluL21vbG90)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:dcd9e67a8817be1f)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:af118c95fcf2bb36)"
             ],
             "gofra": {
                 "hostname": "lab2.gofra",
@@ -647,7 +641,8 @@
         "lab3": {
             "disabled": [
                 "dhcpcd",
-                "co2_mon"
+                "co2_mon",
+                "gofra2"
             ],
             "extra": [
                 "bin/etcd/server(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
@@ -676,20 +671,16 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=sftp_d,runsh_script=sha256:8aecbd0badad6c46,srv_user=root,extra_deps=YmluL3NmdHAvZ28vcGF0Y2hlZA==)",
                 "bin/prometheus(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=collector)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=collector,runsh_script=sha256:62854a00684ef8ae,srv_user=collector,extra_deps=YmluL3Byb21ldGhldXM=)",
-                "bin/perses(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
-                "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=perses,user_home=/var/run/perses/std/home)",
-                "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=perses)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=perses,runsh_script=sha256:d363f4bb67ae480f,srv_user=perses,extra_deps=sha256:b7cd7e046e8afdad)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=collector,runsh_script=sha256:967067e434c08b1a,srv_user=collector,extra_deps=YmluL3Byb21ldGhldXM=)",
                 "bin/prometheus(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=federator)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=federator,runsh_script=sha256:08be04b1e26d29e2,srv_user=federator,extra_deps=YmluL3Byb21ldGhldXM=)",
                 "bin/grafana(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
-                "aux/grafana(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,prom_url=http://127.0.0.1:8030,loki_url=http://127.0.0.1:8032,services_b64=sha256:7e6e5d26681d8cc6)",
+                "aux/grafana(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,prom_url=http://127.0.0.1:8030,loki_url=http://127.0.0.1:8032,services_b64=sha256:afe02a03930f1810)",
                 "aux/grafana/gen(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "bin/sched/grafana/reload(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,delay=10,port=8029,password=grafana)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=grafana)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=grafana,runsh_script=sha256:081651ce9bb01294,srv_user=grafana,extra_deps=sha256:6fabe2e331d188de)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=grafana,runsh_script=sha256:399708c38430fae8,srv_user=grafana,extra_deps=sha256:ca1664fe1904e9c5)",
                 "bin/loki(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=loki,user_home=/var/run/loki/std/home)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=loki)",
@@ -697,10 +688,10 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=loki,runsh_script=sha256:e80d939cf5c19c98,srv_user=root,extra_deps=sha256:853f30385e3f9f8b)",
                 "bin/promtail(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=promtail,runsh_script=sha256:3f4e3d365f286f1d,srv_user=root,extra_deps=YmluL3Byb210YWls)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=promtail,runsh_script=sha256:904e905eb461b7a2,srv_user=root,extra_deps=YmluL3Byb210YWls)",
                 "bin/tail/log(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=tail_log,runsh_script=sha256:363dcb229151cb2f,srv_user=root,extra_deps=YmluL3RhaWwvbG9n)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=tail_log,runsh_script=sha256:9699695e6e65560d,srv_user=root,extra_deps=YmluL3RhaWwvbG9n)",
                 "bin/ogorod(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "bin/git/unwrap(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=ogorod_serve,user_home=/var/run/ogorod_serve/home)",
@@ -886,7 +877,7 @@
                 "bin/molot(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=molot_web)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=molot_web,runsh_script=sha256:516a8607e960c37a,srv_user=molot_web,extra_deps=YmluL21vbG90)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:dcd9e67a8817be1f)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:af118c95fcf2bb36)"
             ],
             "gofra": {
                 "hostname": "lab3.gofra",
@@ -936,7 +927,8 @@
         {
             "disabled": [
                 "dhcpcd",
-                "co2_mon"
+                "co2_mon",
+                "gofra2"
             ],
             "extra": [
                 "bin/etcd/server(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
@@ -965,20 +957,16 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=sftp_d,runsh_script=sha256:8aecbd0badad6c46,srv_user=root,extra_deps=YmluL3NmdHAvZ28vcGF0Y2hlZA==)",
                 "bin/prometheus(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=collector)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=collector,runsh_script=sha256:767713a2650eccbf,srv_user=collector,extra_deps=YmluL3Byb21ldGhldXM=)",
-                "bin/perses(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
-                "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=perses,user_home=/var/run/perses/std/home)",
-                "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=perses)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=perses,runsh_script=sha256:d363f4bb67ae480f,srv_user=perses,extra_deps=sha256:b7cd7e046e8afdad)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=collector,runsh_script=sha256:17cde258d1021307,srv_user=collector,extra_deps=YmluL3Byb21ldGhldXM=)",
                 "bin/prometheus(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=federator)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=federator,runsh_script=sha256:08be04b1e26d29e2,srv_user=federator,extra_deps=YmluL3Byb21ldGhldXM=)",
                 "bin/grafana(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
-                "aux/grafana(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,prom_url=http://127.0.0.1:8030,loki_url=http://127.0.0.1:8032,services_b64=sha256:7e6e5d26681d8cc6)",
+                "aux/grafana(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,prom_url=http://127.0.0.1:8030,loki_url=http://127.0.0.1:8032,services_b64=sha256:afe02a03930f1810)",
                 "aux/grafana/gen(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "bin/sched/grafana/reload(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,delay=10,port=8029,password=grafana)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=grafana)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=grafana,runsh_script=sha256:081651ce9bb01294,srv_user=grafana,extra_deps=sha256:6fabe2e331d188de)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=grafana,runsh_script=sha256:399708c38430fae8,srv_user=grafana,extra_deps=sha256:ca1664fe1904e9c5)",
                 "bin/loki(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=loki,user_home=/var/run/loki/std/home)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=loki)",
@@ -986,10 +974,10 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=loki,runsh_script=sha256:e5590177653d3c24,srv_user=root,extra_deps=sha256:853f30385e3f9f8b)",
                 "bin/promtail(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=promtail,runsh_script=sha256:0213876510e3e9b7,srv_user=root,extra_deps=YmluL3Byb210YWls)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=promtail,runsh_script=sha256:c15b0272c98f4009,srv_user=root,extra_deps=YmluL3Byb210YWls)",
                 "bin/tail/log(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=tail_log,runsh_script=sha256:b3de6a5792a88c44,srv_user=root,extra_deps=YmluL3RhaWwvbG9n)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=tail_log,runsh_script=sha256:bae880ce4a3ba019,srv_user=root,extra_deps=YmluL3RhaWwvbG9n)",
                 "bin/ogorod(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "bin/git/unwrap(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=ogorod_serve,user_home=/var/run/ogorod_serve/home)",
@@ -1215,7 +1203,7 @@
                 "bin/molot(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=molot_web)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=molot_web,runsh_script=sha256:512daaf3eafef4e9,srv_user=molot_web,extra_deps=YmluL21vbG90)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:dcd9e67a8817be1f)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:af118c95fcf2bb36)"
             ],
             "gofra": {
                 "hostname": "lab1.gofra",
@@ -1263,7 +1251,8 @@
         {
             "disabled": [
                 "dhcpcd",
-                "co2_mon"
+                "co2_mon",
+                "gofra2"
             ],
             "extra": [
                 "bin/etcd/server(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
@@ -1292,20 +1281,16 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=sftp_d,runsh_script=sha256:8aecbd0badad6c46,srv_user=root,extra_deps=YmluL3NmdHAvZ28vcGF0Y2hlZA==)",
                 "bin/prometheus(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=collector)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=collector,runsh_script=sha256:5e3e4807c872151b,srv_user=collector,extra_deps=YmluL3Byb21ldGhldXM=)",
-                "bin/perses(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
-                "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=perses,user_home=/var/run/perses/std/home)",
-                "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=perses)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=perses,runsh_script=sha256:d363f4bb67ae480f,srv_user=perses,extra_deps=sha256:b7cd7e046e8afdad)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=collector,runsh_script=sha256:ef3c33a8c59c9de7,srv_user=collector,extra_deps=YmluL3Byb21ldGhldXM=)",
                 "bin/prometheus(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=federator)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=federator,runsh_script=sha256:08be04b1e26d29e2,srv_user=federator,extra_deps=YmluL3Byb21ldGhldXM=)",
                 "bin/grafana(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
-                "aux/grafana(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,prom_url=http://127.0.0.1:8030,loki_url=http://127.0.0.1:8032,services_b64=sha256:7e6e5d26681d8cc6)",
+                "aux/grafana(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,prom_url=http://127.0.0.1:8030,loki_url=http://127.0.0.1:8032,services_b64=sha256:afe02a03930f1810)",
                 "aux/grafana/gen(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "bin/sched/grafana/reload(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,delay=10,port=8029,password=grafana)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=grafana)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=grafana,runsh_script=sha256:081651ce9bb01294,srv_user=grafana,extra_deps=sha256:6fabe2e331d188de)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=grafana,runsh_script=sha256:399708c38430fae8,srv_user=grafana,extra_deps=sha256:ca1664fe1904e9c5)",
                 "bin/loki(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=loki,user_home=/var/run/loki/std/home)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=loki)",
@@ -1313,10 +1298,10 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=loki,runsh_script=sha256:8bf789a4fb171ad4,srv_user=root,extra_deps=sha256:853f30385e3f9f8b)",
                 "bin/promtail(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=promtail,runsh_script=sha256:168662887eed5dee,srv_user=root,extra_deps=YmluL3Byb210YWls)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=promtail,runsh_script=sha256:f33372ec34d63e8b,srv_user=root,extra_deps=YmluL3Byb210YWls)",
                 "bin/tail/log(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=tail_log,runsh_script=sha256:79f9ec94d8f6f942,srv_user=root,extra_deps=YmluL3RhaWwvbG9n)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=tail_log,runsh_script=sha256:922cd0fdabf54e41,srv_user=root,extra_deps=YmluL3RhaWwvbG9n)",
                 "bin/ogorod(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "bin/git/unwrap(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=ogorod_serve,user_home=/var/run/ogorod_serve/home)",
@@ -1532,7 +1517,7 @@
                 "bin/molot(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=molot_web)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=molot_web,runsh_script=sha256:51b69098f7c8aad9,srv_user=molot_web,extra_deps=YmluL21vbG90)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:dcd9e67a8817be1f)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:af118c95fcf2bb36)"
             ],
             "gofra": {
                 "hostname": "lab2.gofra",
@@ -1580,7 +1565,8 @@
         {
             "disabled": [
                 "dhcpcd",
-                "co2_mon"
+                "co2_mon",
+                "gofra2"
             ],
             "extra": [
                 "bin/etcd/server(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
@@ -1609,20 +1595,16 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=sftp_d,runsh_script=sha256:8aecbd0badad6c46,srv_user=root,extra_deps=YmluL3NmdHAvZ28vcGF0Y2hlZA==)",
                 "bin/prometheus(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=collector)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=collector,runsh_script=sha256:62854a00684ef8ae,srv_user=collector,extra_deps=YmluL3Byb21ldGhldXM=)",
-                "bin/perses(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
-                "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=perses,user_home=/var/run/perses/std/home)",
-                "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=perses)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=perses,runsh_script=sha256:d363f4bb67ae480f,srv_user=perses,extra_deps=sha256:b7cd7e046e8afdad)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=collector,runsh_script=sha256:967067e434c08b1a,srv_user=collector,extra_deps=YmluL3Byb21ldGhldXM=)",
                 "bin/prometheus(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=federator)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=federator,runsh_script=sha256:08be04b1e26d29e2,srv_user=federator,extra_deps=YmluL3Byb21ldGhldXM=)",
                 "bin/grafana(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
-                "aux/grafana(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,prom_url=http://127.0.0.1:8030,loki_url=http://127.0.0.1:8032,services_b64=sha256:7e6e5d26681d8cc6)",
+                "aux/grafana(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,prom_url=http://127.0.0.1:8030,loki_url=http://127.0.0.1:8032,services_b64=sha256:afe02a03930f1810)",
                 "aux/grafana/gen(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "bin/sched/grafana/reload(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,delay=10,port=8029,password=grafana)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=grafana)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=grafana,runsh_script=sha256:081651ce9bb01294,srv_user=grafana,extra_deps=sha256:6fabe2e331d188de)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=grafana,runsh_script=sha256:399708c38430fae8,srv_user=grafana,extra_deps=sha256:ca1664fe1904e9c5)",
                 "bin/loki(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=loki,user_home=/var/run/loki/std/home)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=loki)",
@@ -1630,10 +1612,10 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=loki,runsh_script=sha256:e80d939cf5c19c98,srv_user=root,extra_deps=sha256:853f30385e3f9f8b)",
                 "bin/promtail(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=promtail,runsh_script=sha256:3f4e3d365f286f1d,srv_user=root,extra_deps=YmluL3Byb210YWls)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=promtail,runsh_script=sha256:904e905eb461b7a2,srv_user=root,extra_deps=YmluL3Byb210YWls)",
                 "bin/tail/log(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=tail_log,runsh_script=sha256:363dcb229151cb2f,srv_user=root,extra_deps=YmluL3RhaWwvbG9n)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=tail_log,runsh_script=sha256:9699695e6e65560d,srv_user=root,extra_deps=YmluL3RhaWwvbG9n)",
                 "bin/ogorod(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "bin/git/unwrap(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=ogorod_serve,user_home=/var/run/ogorod_serve/home)",
@@ -1819,7 +1801,7 @@
                 "bin/molot(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=molot_web)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=molot_web,runsh_script=sha256:516a8607e960c37a,srv_user=molot_web,extra_deps=YmluL21vbG90)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:dcd9e67a8817be1f)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:af118c95fcf2bb36)"
             ],
             "gofra": {
                 "hostname": "lab3.gofra",
@@ -1920,7 +1902,6 @@
         "node_exporter": 8007,
         "ogorod_serve": 8035,
         "ogorod_thin": 8038,
-        "perses": 8014,
         "promtail": 8033,
         "proxy_http": 8080,
         "proxy_http_mgmt": 8081,
@@ -1994,7 +1975,6 @@
         "ogorod_serve_local",
         "ogorod_thin",
         "ogorod_thin_local",
-        "perses",
         "promtail",
         "samogon",
         "samogon_bot",
@@ -2127,7 +2107,6 @@
         "ogorod_serve_local": 2008,
         "ogorod_thin": 2007,
         "ogorod_thin_local": 2009,
-        "perses": 1017,
         "pf": 1019,
         "samogon": 2001,
         "samogon_bot": 2004,

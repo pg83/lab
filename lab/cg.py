@@ -23,6 +23,7 @@ import urllib.request as ur
 DISABLE_ALL = [
     #'drop_bear_2',
     'co2_mon',  # USB HID device absent; crash-loops with "hid_open: error"
+    'gofra2',
 ]
 
 DISABLE = {
@@ -1339,54 +1340,6 @@ class EtcdEphemeral:
                   MC_HOST_minio=mc_host)
 
 
-class Perses:
-    def __init__(self, port):
-        self.port = port
-
-    def name(self):
-        return 'perses'
-
-    def home_dir(self):
-        return f'/var/run/{self.name()}/std/home'
-
-    def pkgs(self):
-        yield {
-            'pkg': 'bin/perses',
-        }
-
-        yield {
-            'pkg': 'etc/lab/user/home',
-            'user': self.name(),
-            'user_home': self.home_dir(),
-        }
-
-    def prepare(self):
-        make_dirs(f'{self.home_dir()}/data', owner=self.name())
-
-    def prom_port(self):
-        return self.port
-
-    def config(self):
-        return {
-            'database': {
-                'file': {
-                    'folder': f'{self.home_dir()}/data',
-                    'extension': 'json',
-                },
-            },
-            'security': {
-                'enable_auth': False,
-            },
-        }
-
-    def run(self):
-        with memfd('config.yaml') as fn:
-            with open(fn, 'w') as f:
-                f.write(json.dumps(self.config()))
-
-            exec_into('perses', '-config', fn, f'-web.listen-address=:{self.port}')
-
-
 class Federator:
     # Per-host aggregator: scrapes /federate from every Collector.
     def __init__(self, port, collector_port, hosts):
@@ -2261,11 +2214,6 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': Perses(p['perses']),
-            }
-
-            yield {
-                'host': hn,
                 'serv': Federator(p['federator'], p['collector'], [x['hostname'] for x in self.conf['hosts']]),
             }
 
@@ -2855,7 +2803,6 @@ def do(code):
         'ssh_cz_tunnel': 8017,
         'ssh_jopa_tunnel': 8018,
         'co2_mon': 8019,
-        'perses': 8014,
         'proxy_http': 8080,
         'proxy_http_mgmt': 8081,
         'proxy_https': 8090,
@@ -2909,7 +2856,6 @@ def do(code):
         'job_scheduler': 2005,
         'secrets': 1027,
         'secrets_v2': 1028,
-        'perses': 1017,
         'grafana': 1094,
         'federator': 2000,
         'samogon': 2001,
