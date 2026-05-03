@@ -32,7 +32,6 @@ bin/smart/mon/tools
 bin/fixits(delay=10)
 bin/auto/update(user=ix)
 bin/mc/gc
-bin/mc/gc/cron(root=/gorn/cli,hours=24)
 bin/kernel/gengrub(kernel_boot_flags=rootdelay=20)
 
 set/fs

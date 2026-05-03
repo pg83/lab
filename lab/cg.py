@@ -984,6 +984,10 @@ class Gorn(GornBase):
     def config(self):
         return self.base_config()
 
+    def pkgs(self):
+        yield from super().pkgs()
+        yield {'pkg': 'bin/mc/gc/cron', 'root': '/gorn/cli', 'hours': 24}
+
 
 class GornCtl(GornBase):
     def __init__(self, endpoints, s3, listen, etcd_endpoints):
