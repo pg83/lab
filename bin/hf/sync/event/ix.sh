@@ -1,7 +1,7 @@
 {% extends '//die/hub.sh' %}
 
 {% block run_deps %}
-bin/oras
-bin/ghcr/scripts
-bin/minio/patched/client
+bin/python
+bin/gorn
+bin/hf/sync/event/scripts
 {% endblock %}

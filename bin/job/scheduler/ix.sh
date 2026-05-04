@@ -9,12 +9,9 @@ bin/ix/timeout
 bin/minio/patched/client
 bin/job/scheduler/scripts
 
-bin/ghcr/cron
-bin/hf/sync/cron
 bin/ci/metrics/cron
 bin/etcd/backup/cron
 bin/etcd/defrag/cron
-bin/mirror/fetch/cron
 bin/ogorod/mirror/cron
 bin/minio/iam/reconcile/cron
 
