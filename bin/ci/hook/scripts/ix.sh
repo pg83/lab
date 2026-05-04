@@ -9,7 +9,18 @@ base64 -d << EOF > ${out}/bin/ci_hook
 EOF
 
 cat << 'EOF' > ${out}/etc/event/git/ci.json
-{"cmd": ["ci_hook"]}
+{
+    "cmd": [
+        "/bin/env",
+        "PATH=$PATH",
+        "GORN_API=$GORN_API",
+        "S3_ENDPOINT=$S3_ENDPOINT",
+        "AWS_ACCESS_KEY_ID_CIX=$AWS_ACCESS_KEY_ID_CIX",
+        "AWS_SECRET_ACCESS_KEY_CIX=$AWS_SECRET_ACCESS_KEY_CIX",
+        "ETCDCTL_ENDPOINTS=$ETCDCTL_ENDPOINTS",
+        "ci_hook"
+    ]
+}
 EOF
 
 chmod +x ${out}/bin/ci_hook

@@ -17,10 +17,13 @@ Subcommands:
       /lock/event/dispatch — singleton via the lock, runit
       restarts on lock loss. For each entry, walks
       /etc/event/<kind>/**/*.json recursively, parses
-      {"cmd": [...]}, exec's it with json.dumps({kind, guid,
-      payload}) on stdin. Failed subscribers go to /event/dlq/
-      via fresh dlq guid; the queue entry is deleted only after
-      every subscriber has either succeeded or been DLQ'd.
+      {"cmd": [...]}, expands $VAR/${VAR} in each arg from the
+      dispatcher's env, exec's the result with json.dumps({kind,
+      guid, payload}) on stdin. Subscribers that need creds
+      pin them explicitly: /bin/env A=$A B=$B prog. Failed
+      subscribers go to /event/dlq/<dlq-guid>; the queue entry
+      is deleted only after every subscriber has either
+      succeeded or been DLQ'd.
 
   event retry
       Drains /event/dlq/* under /lock/event/retry. Re-runs each
@@ -124,9 +127,13 @@ def load_subscriber(js):
     return cmd
 
 
+def expand(cmd):
+    return [os.path.expandvars(a) for a in cmd]
+
+
 def run_subscriber(cmd, req):
     return subprocess.run(
-        cmd,
+        expand(cmd),
         input=json.dumps(req),
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
