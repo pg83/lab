@@ -1671,9 +1671,10 @@ class EventHttp:
 
 class EventRunner:
     # Subscribers can call anything; carry full creds for S3, gorn, etcd.
-    def __init__(self, port, etcd_endpoints, gorn_api, s3_endpoint):
+    def __init__(self, port, etcd_endpoints, etcd_tmpfs_endpoints, gorn_api, s3_endpoint):
         self.port = port
         self.etcd_endpoints = list(etcd_endpoints)
+        self.etcd_tmpfs_endpoints = list(etcd_tmpfs_endpoints)
         self.gorn_api = gorn_api
         self.s3_endpoint = s3_endpoint
 
@@ -1691,6 +1692,7 @@ class EventRunner:
             'TMPDIR': os.getcwd(),
             'EVENT_HTTP_PORT': str(self.port),
             'ETCDCTL_ENDPOINTS': ','.join(self.etcd_endpoints),
+            'ETCDCTL_ENDPOINTS_TMPFS': ','.join(self.etcd_tmpfs_endpoints),
             'GORN_API': self.gorn_api,
             'S3_ENDPOINT': self.s3_endpoint,
             'ROOT_S3_USER': root_key,
@@ -1727,7 +1729,8 @@ class EventRetry(EventRunner):
 
 
 class Loki:
-    # HA per-host. Ring on etcd_2 (gossip per grafana/loki#14019).
+    # HA per-host. Ring on tmpfs etcd_3 — ephemeral by nature, members
+    # re-register on restart (gossip per grafana/loki#14019).
     def __init__(self, port, s3_endpoint, peers, me, etcd_endpoints):
         self.v = 1
         self.port = port
@@ -1950,7 +1953,7 @@ class TailLog:
 
 
 class OgorodServe:
-    # HTTP git: refs in etcd_2 (CAS), packs in MinIO. See ogorod/CLAUDE.md.
+    # HTTP git: refs in etcd_1 (CAS), packs in MinIO. See ogorod/CLAUDE.md.
     def __init__(self, port, s3_endpoint, etcd_endpoints, bind_addr, suffix=None):
         self.port = port
         self.s3_endpoint = s3_endpoint
@@ -2003,69 +2006,6 @@ class OgorodServe:
             'ogorod', 'serve',
             '--listen', f'{self.bind_addr}:{self.port}',
             '--cache-dir', self.cache_dir(),
-            user=self.name(),
-            **env,
-        )
-
-
-class OgorodThin:
-    # Sibling of OgorodServe; cluster-sync moved into per-binary wrappers. A/B.
-    def __init__(self, port, s3_endpoint, etcd_endpoints, bind_addr, suffix=None):
-        self.port = port
-        self.s3_endpoint = s3_endpoint
-        self.etcd_endpoints = list(etcd_endpoints)
-        self.bind_addr = bind_addr
-        self.suffix = suffix
-
-    def name(self):
-        if self.suffix:
-            return f'ogorod_thin_{self.suffix}'
-
-        return 'ogorod_thin'
-
-    def users(self):
-        return ['root', self.name()]
-
-    def home_dir(self):
-        return f'/var/run/{self.name()}/home'
-
-    def cache_dir(self):
-        return f'{self.home_dir()}/cache'
-
-    def bin_dir(self):
-        return f'{self.home_dir()}/bin'
-
-    def pkgs(self):
-        yield {'pkg': 'bin/ogorod'}
-        yield {'pkg': 'bin/git/unwrap'}
-
-        yield {
-            'pkg': 'etc/lab/user/home',
-            'user': self.name(),
-            'user_home': self.home_dir(),
-        }
-
-    def prepare(self):
-        make_dirs(self.home_dir(), owner=self.name())
-        make_dirs(self.cache_dir(), owner=self.name())
-        make_dirs(self.bin_dir(), owner=self.name())
-
-    def run(self):
-        env = {
-            'PATH': '/bin',
-            'HOME': self.home_dir(),
-            'OGOROD_ETCD_ENDPOINTS': ','.join(self.etcd_endpoints),
-            'OGOROD_S3_ENDPOINT': self.s3_endpoint,
-            'OGOROD_S3_ACCESS_KEY': get_key('/s3/iam/ogorod/key').decode().strip(),
-            'OGOROD_S3_SECRET_KEY': get_key('/s3/iam/ogorod/secret').decode().strip(),
-            'OGOROD_S3_BUCKET': 'ogorod',
-        }
-
-        exec_into(
-            'ogorod', 'serve-thin',
-            '--listen', f'{self.bind_addr}:{self.port}',
-            '--cache-dir', self.cache_dir(),
-            '--bin-dir', self.bin_dir(),
             user=self.name(),
             **env,
         )
@@ -2134,7 +2074,6 @@ class ClusterMap:
         neb_map = {}
         bal_map = []
         all_etc_1 = []
-        all_etc_2 = []
         all_etc_3 = []
 
         # gofra peer table: VIP → underlay IPs. 103/24 prod, 104/24 staging.
@@ -2156,17 +2095,12 @@ class ClusterMap:
                 'ip': h['gofra']['ip'],
             })
 
-            all_etc_2.append({
-                'hostname': hn,
-                'ip': h['gofra']['ip'],
-            })
-
             all_etc_3.append({
                 'hostname': hn,
                 'ip': h['gofra']['ip'],
             })
 
-            # Primary etcd: secrets, ogorod refs, version keys, gorn election.
+            # Primary etcd: events, secrets fallback, IAM creds, ogorod refs.
             yield {
                 'host': hn,
                 'serv': EtcdPrivate(
@@ -2182,23 +2116,7 @@ class ClusterMap:
                 ),
             }
 
-            # Secondary etcd: loki's ring kvstore + future coordination tenants.
-            yield {
-                'host': hn,
-                'serv': EtcdPrivate(
-                    all_etc_2,
-                    p['etcd_2_peer'],
-                    p['etcd_2_client'],
-                    hn,
-                    'etcd_2',
-                    h['gofra']['ip'],
-                    '127.0.0.1',
-                    'etcd_2',
-                    'new',
-                ),
-            }
-
-            # Tertiary etcd: tmpfs, gorn queue+cron locks; id via S3 tar.zstd.
+            # Tmpfs etcd: gorn queue, Loki ring, all session locks, dedup keys.
             yield {
                 'host': hn,
                 'serv': EtcdEphemeral(
@@ -2284,7 +2202,7 @@ class ClusterMap:
                     s3_endpoint=f"http://127.0.0.1:{p['minio']}",
                     peers=[x['hostname'] for x in self.conf['hosts']],
                     me=hn,
-                    etcd_endpoints=[f"127.0.0.1:{p['etcd_2_client']}"],
+                    etcd_endpoints=[f"127.0.0.1:{p['etcd_3_client']}"],
                 ),
             }
 
@@ -2306,7 +2224,7 @@ class ClusterMap:
                 ),
             }
 
-            ogorod_etcd = [f"127.0.0.1:{p['etcd_2_client']}"]
+            ogorod_etcd = [f"127.0.0.1:{p['etcd_1_client']}"]
             ogorod_s3 = f"http://127.0.0.1:{p['minio']}"
 
             for bind, suffix in [(h['gofra']['ip'], None), ('127.0.0.1', 'local')]:
@@ -2314,17 +2232,6 @@ class ClusterMap:
                     'host': hn,
                     'serv': OgorodServe(
                         port=p['ogorod_serve'],
-                        s3_endpoint=ogorod_s3,
-                        etcd_endpoints=ogorod_etcd,
-                        bind_addr=bind,
-                        suffix=suffix,
-                    ),
-                }
-
-                yield {
-                    'host': hn,
-                    'serv': OgorodThin(
-                        port=p['ogorod_thin'],
                         s3_endpoint=ogorod_s3,
                         etcd_endpoints=ogorod_etcd,
                         bind_addr=bind,
@@ -2351,7 +2258,7 @@ class ClusterMap:
                     s3_endpoint=f"http://127.0.0.1:{p['minio']}",
                     gorn_api=f"http://127.0.0.1:{p['gorn_ctl']}",
                     tg_allow_users=TG_ALLOW_USERS,
-                    etcd_endpoints=[f"127.0.0.1:{p['etcd_1_client']}"],
+                    etcd_endpoints=[f"127.0.0.1:{p['etcd_3_client']}"],
                 ),
             }
 
@@ -2379,6 +2286,7 @@ class ClusterMap:
                     'serv': cls(
                         port=p['event_http'],
                         etcd_endpoints=[f"127.0.0.1:{p['etcd_1_client']}"],
+                        etcd_tmpfs_endpoints=[f"127.0.0.1:{p['etcd_3_client']}"],
                         gorn_api=f"http://127.0.0.1:{p['gorn_ctl']}",
                         s3_endpoint=f"http://127.0.0.1:{p['minio']}",
                     ),
@@ -2396,12 +2304,12 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': SecondIP('10.0.0.32/24', etcd_endpoints=[f"127.0.0.1:{p['etcd_1_client']}"]),
+                'serv': SecondIP('10.0.0.32/24', etcd_endpoints=[f"127.0.0.1:{p['etcd_3_client']}"]),
             }
 
             yield {
                 'host': hn,
-                'serv': SecondIP('10.0.0.33/24', etcd_endpoints=[f"127.0.0.1:{p['etcd_1_client']}"]),
+                'serv': SecondIP('10.0.0.33/24', etcd_endpoints=[f"127.0.0.1:{p['etcd_3_client']}"]),
             }
 
             nb = h['nebula']
@@ -2877,8 +2785,6 @@ def do(code):
         'proxy_https': 8090,
         'etcd_1_client': 8020,
         'etcd_1_peer': 8021,
-        'etcd_2_client': 8036,
-        'etcd_2_peer': 8037,
         'etcd_3_client': 8042,
         'etcd_3_peer': 8043,
         'secrets': 8022,
@@ -2890,7 +2796,6 @@ def do(code):
         'promtail': 8033,
         'tail_log': 8040,
         'ogorod_serve': 8035,
-        'ogorod_thin': 8038,
         'gofra': 8050,
         'gofra2': 8051,
         'event_http': 8053,
@@ -2922,7 +2827,6 @@ def do(code):
         'ssh_cz_tunnel': 1023,
         'ssh_jopa_tunnel': 1024,
         'etcd_1': 2010,
-        'etcd_2': 2003,
         'etcd_3': 2011,
         'samogon_bot': 2004,
         'job_scheduler': 2005,
@@ -2932,9 +2836,7 @@ def do(code):
         'samogon': 2001,
         'loki': 2002,
         'ogorod_serve': 2006,
-        'ogorod_thin': 2007,
         'ogorod_serve_local': 2008,
-        'ogorod_thin_local': 2009,
     }
 
     for i in range(0, 64):

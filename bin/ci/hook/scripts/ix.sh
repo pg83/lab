@@ -17,7 +17,7 @@ cat << 'EOF' > ${out}/etc/event/git/ci.json
         "S3_ENDPOINT=$S3_ENDPOINT",
         "AWS_ACCESS_KEY_ID_CIX=$AWS_ACCESS_KEY_ID_CIX",
         "AWS_SECRET_ACCESS_KEY_CIX=$AWS_SECRET_ACCESS_KEY_CIX",
-        "ETCDCTL_ENDPOINTS=$ETCDCTL_ENDPOINTS",
+        "ETCDCTL_ENDPOINTS_TMPFS=$ETCDCTL_ENDPOINTS_TMPFS",
         "ci_hook"
     ]
 }

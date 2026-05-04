@@ -37,7 +37,8 @@ def main():
     s3 = os.environ['S3_ENDPOINT']
     cix_key = os.environ['AWS_ACCESS_KEY_ID_CIX']
     cix_sec = os.environ['AWS_SECRET_ACCESS_KEY_CIX']
-    etcd = os.environ['ETCDCTL_ENDPOINTS']
+    # ci uses /lock/ci/cache — session lock, lives on tmpfs etcd_3.
+    etcd = os.environ['ETCDCTL_ENDPOINTS_TMPFS']
 
     for tier in (0, 1, 2):
         log(f'ci_hook: scheduling ci tier={tier} sha={sha}')
