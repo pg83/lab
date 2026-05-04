@@ -2,6 +2,8 @@
 
 {% block run_deps %}
 bin/python
-bin/gorn
-bin/ci/hook/scripts
+bin/etcd/ctl
+bin/event/scripts
+
+bin/ci/hook
 {% endblock %}

@@ -1652,6 +1652,80 @@ class JobScheduler:
         exec_into('etcdctl', 'lock', '/lock/job/scheduler', 'job_scheduler', **env)
 
 
+class EventHttp:
+    def __init__(self, port, etcd_endpoints):
+        self.port = port
+        self.etcd_endpoints = list(etcd_endpoints)
+
+    def pkgs(self):
+        yield {'pkg': 'bin/event'}
+
+    def run(self):
+        exec_into(
+            'event', 'http',
+            PATH='/bin',
+            EVENT_HTTP_PORT=str(self.port),
+            ETCDCTL_ENDPOINTS=','.join(self.etcd_endpoints),
+        )
+
+
+class EventRunner:
+    # Subscribers can call anything; carry full creds for S3, gorn, etcd.
+    def __init__(self, port, etcd_endpoints, gorn_api, s3_endpoint):
+        self.port = port
+        self.etcd_endpoints = list(etcd_endpoints)
+        self.gorn_api = gorn_api
+        self.s3_endpoint = s3_endpoint
+
+    def pkgs(self):
+        yield {'pkg': 'bin/event'}
+
+    def env(self):
+        scheme, host = self.s3_endpoint.split('://', 1)
+        root_key = get_key('/s3/user').decode().strip()
+        root_secret = get_key('/s3/password').decode().strip()
+
+        env = {
+            'PATH': '/bin',
+            'HOME': os.getcwd(),
+            'TMPDIR': os.getcwd(),
+            'EVENT_HTTP_PORT': str(self.port),
+            'ETCDCTL_ENDPOINTS': ','.join(self.etcd_endpoints),
+            'GORN_API': self.gorn_api,
+            'S3_ENDPOINT': self.s3_endpoint,
+            'ROOT_S3_USER': root_key,
+            'ROOT_S3_PASSWORD': root_secret,
+            'MC_HOST_minio_root': f'{scheme}://{root_key}:{root_secret}@{host}',
+        }
+
+        for bucket in ('cas', 'cix', 'gorn', 'mirror'):
+            bk = get_key(f'/s3/iam/{bucket}/key').decode().strip()
+            bs = get_key(f'/s3/iam/{bucket}/secret').decode().strip()
+            env[f'AWS_ACCESS_KEY_ID_{bucket.upper()}'] = bk
+            env[f'AWS_SECRET_ACCESS_KEY_{bucket.upper()}'] = bs
+            env[f'MC_HOST_minio_{bucket}'] = f'{scheme}://{bk}:{bs}@{host}'
+
+        return env
+
+
+class EventDispatch(EventRunner):
+    def run(self):
+        exec_into(
+            'etcdctl', 'lock', '/lock/event/dispatch',
+            'event', 'dispatch',
+            **self.env(),
+        )
+
+
+class EventRetry(EventRunner):
+    def run(self):
+        exec_into(
+            'etcdctl', 'lock', '/lock/event/retry',
+            'event', 'retry',
+            **self.env(),
+        )
+
+
 class Loki:
     # HA per-host. Ring on etcd_2 (gossip per grafana/loki#14019).
     def __init__(self, port, s3_endpoint, peers, me, etcd_endpoints):
@@ -2293,6 +2367,25 @@ class ClusterMap:
 
             yield {
                 'host': hn,
+                'serv': EventHttp(
+                    port=p['event_http'],
+                    etcd_endpoints=[f"127.0.0.1:{p['etcd_1_client']}"],
+                ),
+            }
+
+            for cls in (EventDispatch, EventRetry):
+                yield {
+                    'host': hn,
+                    'serv': cls(
+                        port=p['event_http'],
+                        etcd_endpoints=[f"127.0.0.1:{p['etcd_1_client']}"],
+                        gorn_api=f"http://127.0.0.1:{p['gorn_ctl']}",
+                        s3_endpoint=f"http://127.0.0.1:{p['minio']}",
+                    ),
+                }
+
+            yield {
+                'host': hn,
                 'serv': SecretsV2(p['secrets'], etcd_endpoints=[f"127.0.0.1:{p['etcd_1_client']}"]),
             }
 
@@ -2800,6 +2893,7 @@ def do(code):
         'ogorod_thin': 8038,
         'gofra': 8050,
         'gofra2': 8051,
+        'event_http': 8053,
     }
 
     users = {
@@ -2821,6 +2915,9 @@ def do(code):
         'minio': 1017,
         'minio_console': 1018,
         'pf': 1019,
+        'event_http': 1020,
+        'event_dispatch': 1022,
+        'event_retry': 1025,
         'socks_proxy': 1021,
         'ssh_cz_tunnel': 1023,
         'ssh_jopa_tunnel': 1024,

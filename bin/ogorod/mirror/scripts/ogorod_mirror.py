@@ -33,17 +33,19 @@ fall into the init path and do a full github fetch — that's a
 self-inflicted DDoS on upstream. The sleep stretches the cron
 period from ~10s to ~110s while clone-from-self is broken, cutting
 the load on github by ~10x during incidents.
+
+After a successful push, emit a kind=git event to event_scheduler
+on the local host (which retries infra failures forever); any
+subscriber under /etc/event/git/ runs with {repo, sha} payload.
 """
 
-import glob
-import os
+import json
 import subprocess
 import sys
 import time
 
 
 TARGET = 'http://127.0.0.1:8035'
-HOOKS_DIR = '/etc/ogorod'
 
 
 def log(*args):
@@ -69,17 +71,16 @@ def run(*args):
     subprocess.run(list(args), check=True)
 
 
-def fire_hooks(repo, sha):
-    pattern = f'{HOOKS_DIR}/{repo}/*'
+def emit_git_event(repo, sha):
+    payload = json.dumps({'repo': repo, 'sha': sha})
+    log(f'event schedule git {payload}')
 
-    for hook in sorted(glob.glob(pattern)):
-        if not os.access(hook, os.X_OK):
-            continue
-
-        log(f'hook {hook} {repo} {sha}')
-
-        # Hooks are independent — failure of one must not block siblings.
-        subprocess.run([hook, sha], check=False)
+    subprocess.run(
+        ['event', 'schedule', 'git'],
+        input=payload,
+        text=True,
+        check=True,
+    )
 
 
 def main():
@@ -110,7 +111,7 @@ def main():
 
     run('git', 'push', '--mirror', dst)
 
-    fire_hooks(name, head_sha(dst))
+    emit_git_event(name, head_sha(dst))
 
 
 if __name__ == '__main__':

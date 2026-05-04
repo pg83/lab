@@ -6,5 +6,5 @@ bin/python
 bin/etcd/ctl
 bin/git/unwrap
 bin/ogorod/mirror/scripts
-bin/ci/hook
+bin/event
 {% endblock %}
