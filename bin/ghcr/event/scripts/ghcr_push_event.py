@@ -20,12 +20,8 @@ def log(*args):
 
 def main():
     req = json.load(sys.stdin)
-    payload = req.get('payload') or {}
-    sha = payload.get('sha')
-
-    if not sha:
-        print(f'ghcr_push_event: missing sha in payload {payload}', file=sys.stderr)
-        sys.exit(2)
+    payload = req['payload']
+    sha = payload['sha']
 
     log(f'ghcr_push_event: gorn ignite ghcr_sync sha={sha}')
 
