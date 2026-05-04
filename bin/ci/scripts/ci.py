@@ -57,17 +57,6 @@ def log(*args):
     print('+', *args, file=sys.stderr, flush=True)
 
 
-def git_ls_remote_head(url):
-    res = subprocess.run(
-        ('git', 'ls-remote', '--quiet', url, 'HEAD'),
-        check=True,
-        stdout=subprocess.PIPE,
-        text=True,
-    )
-
-    return res.stdout.split()[0]
-
-
 def has_target_fail(blob):
     return any(p.search(blob) for p in TARGET_FAIL_PATTERNS)
 
@@ -150,13 +139,12 @@ def update(local_path):
     log(f'ci update: local={len(ours.splitlines())} + remote={len(remote.splitlines())} → {len(merged)}')
 
 
-def check(tier):
+def check(tier, sha):
     workdir = 'ix'
 
     if os.path.exists(workdir):
         shutil.rmtree(workdir)
 
-    sha = git_ls_remote_head(GIT_URL)
     log(f'check {tier}: HEAD={sha}')
 
     subprocess.run(('git', 'clone', GIT_URL, workdir), check=True)
@@ -224,11 +212,11 @@ def main():
     cmd = sys.argv[1]
 
     if cmd == 'check':
-        if len(sys.argv) != 3:
-            print('usage: ci check <tier>', file=sys.stderr)
+        if len(sys.argv) != 4:
+            print('usage: ci check <tier> <sha>', file=sys.stderr)
             sys.exit(2)
 
-        check(sys.argv[2])
+        check(sys.argv[2], sys.argv[3])
         return
 
     if cmd == 'update':

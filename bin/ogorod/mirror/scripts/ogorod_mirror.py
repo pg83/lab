@@ -35,6 +35,7 @@ period from ~10s to ~110s while clone-from-self is broken, cutting
 the load on github by ~10x during incidents.
 """
 
+import glob
 import os
 import subprocess
 import sys
@@ -42,6 +43,7 @@ import time
 
 
 TARGET = 'http://127.0.0.1:8035'
+HOOKS_DIR = '/etc/ogorod'
 
 
 def log(*args):
@@ -56,8 +58,28 @@ def ls_remote(url):
     return sorted(out.strip().splitlines())
 
 
+def head_sha(url):
+    # `<sha>\tHEAD\n` — symref-resolved tip of the default branch.
+    out = subprocess.check_output(['git', 'ls-remote', url, 'HEAD']).decode().strip()
+
+    return out.split('\t', 1)[0]
+
+
 def run(*args):
     subprocess.run(list(args), check=True)
+
+
+def fire_hooks(repo, sha):
+    pattern = f'{HOOKS_DIR}/{repo}/*'
+
+    for hook in sorted(glob.glob(pattern)):
+        if not os.access(hook, os.X_OK):
+            continue
+
+        log(f'hook {hook} {repo} {sha}')
+
+        # Hooks are independent — failure of one must not block siblings.
+        subprocess.run([hook, sha], check=False)
 
 
 def main():
@@ -87,6 +109,8 @@ def main():
         '+refs/heads/*:refs/heads/*', '+refs/tags/*:refs/tags/*')
 
     run('git', 'push', '--mirror', dst)
+
+    fire_hooks(name, head_sha(dst))
 
 
 if __name__ == '__main__':

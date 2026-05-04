@@ -9,7 +9,6 @@ bin/ix/timeout
 bin/minio/patched/client
 bin/job/scheduler/scripts
 
-bin/ci/cron
 bin/ghcr/cron
 bin/hf/sync/cron
 bin/ci/metrics/cron

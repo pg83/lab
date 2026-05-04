@@ -15,6 +15,11 @@ cat << 'EOF' > ${out}/etc/cron/10-ogorod-mirror-{{r}}.json
         "dedup", "/ogorod/mirror/v2/{{r}}", "--",
         "gorn", "ignite",
         "--root", "ogorod_mirror",
+        "--env", "GORN_API=$GORN_API",
+        "--env", "S3_ENDPOINT=$S3_ENDPOINT",
+        "--env", "AWS_ACCESS_KEY_ID_CIX=$AWS_ACCESS_KEY_ID_CIX",
+        "--env", "AWS_SECRET_ACCESS_KEY_CIX=$AWS_SECRET_ACCESS_KEY_CIX",
+        "--env", "ETCDCTL_ENDPOINTS_PERSIST=$ETCDCTL_ENDPOINTS_PERSIST",
         "--",
         "/bin/env", "PATH=/bin",
         "ogorod_mirror", "{{r}}"
