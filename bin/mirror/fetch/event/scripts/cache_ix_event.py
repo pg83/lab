@@ -44,7 +44,6 @@ def main():
             '--guid', f'cache_ix_sources_{sha}',
             '--env', f'GORN_API={os.environ["GORN_API"]}',
             '--env', f'S3_ENDPOINT={os.environ["S3_ENDPOINT"]}',
-            '--env', f'MC_HOST_mirror={os.environ["MC_HOST_minio_mirror"]}',
             '--env', f'MC_HOST_minio={os.environ["MC_HOST_minio_cas"]}',
             '--env', f'EVENT_HTTP_PORT={os.environ["EVENT_HTTP_PORT"]}',
             '--',

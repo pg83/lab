@@ -15,7 +15,6 @@ cat << 'EOF' > ${out}/etc/event/git/cache_ix.json
         "PATH=$PATH",
         "GORN_API=$GORN_API",
         "S3_ENDPOINT=$S3_ENDPOINT",
-        "MC_HOST_minio_mirror=$MC_HOST_minio_mirror",
         "MC_HOST_minio_cas=$MC_HOST_minio_cas",
         "EVENT_HTTP_PORT=$EVENT_HTTP_PORT",
         "cache_ix_event"

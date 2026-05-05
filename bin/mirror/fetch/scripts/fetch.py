@@ -9,90 +9,101 @@ time of the event.
 Per run:
 
   1. Bare-clone (--filter=blob:none) the local mirror_ix.git;
-     `git show <sha>:pkgs/die/scripts/urls.txt` extracts the
-     urls list as it was at <sha>. Reading from the mirror at
-     the exact event sha keeps the URL set consistent with the
-     event regardless of how stale upstream is.
+     `git diff <sha>~DEPTH..<sha> -- pkgs/die/scripts/urls.txt`
+     yields the added URL lines (the '+' rows). DEPTH=3 keeps
+     a 2-event buffer for missed/failed prior events; CAS-dedup
+     absorbs whatever is re-fetched.
 
-  2. Pull manifest of already-fetched URL-shas from MinIO
-     (mirror/mirror/fetched.txt). Diff with urls.txt → todo.
+  2. Sequentially wget each URL, sha256sum it, upload to CAS
+     via /bin/cas. Per-URL failures log and move on so a flaky
+     upstream for one URL doesn't poison the rest.
 
-  3. make -j10 -k on the full delta (no per-tick batch — one
-     ix push, one fetch). Each rule downloads via /bin/fetcher,
-     uploads to CAS, captures the content sha into a .csha
-     sidecar.
+  3. For each successful URL: emit `kind=new_sha {sha:<content-sha>}`
+     so hf/ghcr subscribers can incrementally update their remotes.
 
-  4. For each completed URL: read sidecar to get content sha,
-     emit `kind=new_sha {sha:<content-sha>}` so hf/ghcr
-     subscribers can incrementally update their remotes.
-
-  5. Union manifest with locally-completed URL-shas, push back.
-
-The manifest file MUST exist in MinIO before the first run:
-
-    echo -n | minio-client pipe minio/mirror/mirror/fetched.txt
-
-Empty body = valid first-run state. Missing file makes mc cat
-fail loud — that's a deployment bug, not "first run". Manual
-`mc rm` forces a full re-fetch once the empty file is back.
+No persistent state — each event handles its own diff window.
 """
 
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 
 
 URLS_PATH = 'pkgs/die/scripts/urls.txt'
 MIRROR_GIT = 'http://127.0.0.1:8035/mirror_ix.git'
-MANIFEST = 'mirror/mirror/fetched.txt'
+DEPTH = 3
+EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
 
 
 def log(*args):
     print('+', *args, file=sys.stderr, flush=True)
 
 
-def mc(*args, capture=False):
-    log('minio-client', *args)
-
-    return subprocess.run(
-        ('minio-client',) + args,
-        check=True,
-        stdout=subprocess.PIPE if capture else None,
-        text=True if capture else None,
-    )
-
-
-def load_manifest():
-    body = mc('cat', MANIFEST, capture=True).stdout
-
-    return {ln.strip() for ln in body.splitlines() if ln.strip()}
-
-
-def save_manifest(shas):
-    tmp = 'fetched.txt.tmp'
-
-    with open(tmp, 'w') as f:
-        for s in sorted(shas):
-            f.write(s + '\n')
-
-    mc('cp', tmp, MANIFEST)
-
-
-def fetch_urls(sha):
-    log(f'cloning {MIRROR_GIT} (--filter=blob:none) for urls.txt at {sha}')
+def added_urls(sha):
+    log(f'cloning {MIRROR_GIT} (--filter=blob:none) for diff at {sha}')
 
     subprocess.run(
         ['git', 'clone', '--bare', '--filter=blob:none', MIRROR_GIT, 'ix.git'],
         check=True,
     )
 
-    body = subprocess.check_output(
-        ['git', '-C', 'ix.git', 'show', f'{sha}:{URLS_PATH}'],
+    res = subprocess.run(
+        ['git', '-C', 'ix.git', 'rev-parse', f'{sha}~{DEPTH}'],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=False,
+    )
+
+    if res.returncode == 0:
+        base = res.stdout.strip()
+    else:
+        log(f'history shorter than {DEPTH}, falling back to empty tree')
+        base = EMPTY_TREE
+
+    diff = subprocess.check_output(
+        ['git', '-C', 'ix.git', 'diff', '--unified=0', base, sha, '--', URLS_PATH],
     ).decode()
 
-    return [u.strip() for u in body.split('\n') if u.strip()]
+    out = []
+
+    for ln in diff.splitlines():
+        if ln.startswith('+') and not ln.startswith('+++'):
+            u = ln[1:].strip()
+
+            if u:
+                out.append(u)
+
+    return out
+
+
+def fetch_one(url):
+    url_sha = hashlib.sha256(url.encode()).hexdigest()
+    work = url_sha
+
+    if os.path.exists(work):
+        shutil.rmtree(work)
+
+    os.makedirs(work)
+    data = os.path.join(work, 'data')
+
+    subprocess.run(['wget', '-O', data, url], check=True)
+
+    res = subprocess.run(
+        ['sha256sum', data],
+        check=True,
+        stdout=subprocess.PIPE,
+        text=True,
+    )
+    content_sha = res.stdout.split()[0]
+
+    subprocess.run(['cas', data], check=True)
+    shutil.rmtree(work)
+
+    return content_sha
 
 
 def emit_new_sha(content_sha):
@@ -106,80 +117,27 @@ def emit_new_sha(content_sha):
     )
 
 
-PART = '''
-{url_sha}.touch:
-\trm -rf {url_sha}
-\t/bin/fetcher {url} {url_sha}/data __skip__
-\tcas {url_sha}/data
-\tsha256sum {url_sha}/data | awk '{{print $$1}}' > {url_sha}.csha
-\trm -rf {url_sha}
-\ttouch {url_sha}.touch
-
-all: {url_sha}.touch
-
-'''
-
-
 def main():
     if len(sys.argv) != 2:
         raise SystemExit('usage: cache_ix_sources <ix-sha>')
 
     sha = sys.argv[1]
+    urls = added_urls(sha)
+    log(f'diff window {sha}~{DEPTH}..{sha}: {len(urls)} added URLs')
 
-    done = load_manifest()
-    log(f'manifest: {len(done)} URLs already fetched')
-
-    todo = [(u, hashlib.sha256(u.encode()).hexdigest()) for u in fetch_urls(sha)]
-    todo = [(u, s) for u, s in todo if s not in done]
-    log(f'delta: {len(todo)} new URLs')
-
-    if not todo:
-        return
-
-    mk = '.ONESHELL:\n' + ''.join(
-        PART.replace('{url_sha}', s).replace('{url}', u) for u, s in todo
-    )
-
-    # make -k: keep going past per-target failures, capture whatever
-    # did complete. The manifest merge below only records successes,
-    # so a flaky upstream for one URL doesn't poison the rest.
-    subprocess.run(
-        ['timeout', '1h', 'make', '-k', '-j', '10', '-f', '/proc/self/fd/0', 'all'],
-        input=mk.encode(),
-        check=False,
-    )
-
-    new_url_shas = set()
     new_content_shas = set()
 
-    for fn in sorted(os.listdir('.')):
-        if not fn.endswith('.touch'):
+    for url in urls:
+        try:
+            cs = fetch_one(url)
+        except subprocess.CalledProcessError as e:
+            log(f'WARN: fetch failed for {url}: {e}')
             continue
 
-        url_sha = fn[:-len('.touch')]
-        new_url_shas.add(url_sha)
+        new_content_shas.add(cs)
 
-        csha_path = f'{url_sha}.csha'
+    log(f'fetched this run: {len(new_content_shas)} unique content shas')
 
-        if not os.path.exists(csha_path):
-            log(f'WARN: {csha_path} missing for completed url_sha={url_sha}')
-            continue
-
-        content_sha = open(csha_path).read().strip()
-
-        if content_sha:
-            new_content_shas.add(content_sha)
-
-    log(f'fetched this run: {len(new_url_shas)} URLs, {len(new_content_shas)} unique content shas')
-
-    if not new_url_shas:
-        return
-
-    save_manifest(done | new_url_shas)
-    log(f'manifest pushed: {len(done | new_url_shas)} URLs total')
-
-    # Emit new_sha events after the manifest write so a crash mid-emit
-    # doesn't lose progress — these are idempotent on subscribers anyway.
     for content_sha in sorted(new_content_shas):
         emit_new_sha(content_sha)
 
