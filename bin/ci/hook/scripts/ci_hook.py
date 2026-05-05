@@ -37,6 +37,10 @@ def main():
     s3 = os.environ['S3_ENDPOINT']
     cix_key = os.environ['AWS_ACCESS_KEY_ID_CIX']
     cix_sec = os.environ['AWS_SECRET_ACCESS_KEY_CIX']
+    # ci.py needs molot creds for the per-node S3 PUT to s3://molot/<uid>;
+    # cix creds run cache I/O against s3://cix/complete.
+    molot_key = os.environ['AWS_ACCESS_KEY_ID_MOLOT']
+    molot_sec = os.environ['AWS_SECRET_ACCESS_KEY_MOLOT']
     # ci uses /lock/ci/cache — session lock, lives on tmpfs etcd_3.
     etcd = os.environ['ETCD_TMPFS_ENDPOINTS']
 
@@ -53,6 +57,8 @@ def main():
                 '--env', f'S3_ENDPOINT={s3}',
                 '--env', f'AWS_ACCESS_KEY_ID={cix_key}',
                 '--env', f'AWS_SECRET_ACCESS_KEY={cix_sec}',
+                '--env', f'AWS_ACCESS_KEY_ID_MOLOT={molot_key}',
+                '--env', f'AWS_SECRET_ACCESS_KEY_MOLOT={molot_sec}',
                 '--env', f'ETCDCTL_ENDPOINTS={etcd}',
                 '--env', 'MOLOT_QUIET=1',
                 '--env', 'MOLOT_FULL_SLOTS=10',
