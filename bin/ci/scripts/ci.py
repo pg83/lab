@@ -98,6 +98,17 @@ def mc_cat(uri, env):
     res.check_returncode()
 
 
+def etcd_get(key):
+    res = subprocess.run(
+        ('etcdctl', 'get', key, '--print-value-only'),
+        check=True,
+        stdout=subprocess.PIPE,
+        text=True,
+    )
+
+    return res.stdout.rstrip()
+
+
 def update(local_path):
     """Merge <local_path> (caller's local cache file) with the shared
     <bucket>/complete in S3 and push the union back. Expected to be
@@ -150,18 +161,30 @@ def check(tier, sha):
     subprocess.run(('git', 'clone', GIT_URL, workdir), check=True)
     subprocess.run(('git', '-C', workdir, 'checkout', sha), check=True)
 
+    # The ci task is fired by ci_hook with the cix-bucket access key, so
+    # the seed/merge of the shared molot-complete cache lands in the cix
+    # bucket. molot's per-node `PutObject s3://molot/...` needs the
+    # molot-bucket access key (policy `molot-rw`); we read it out of etcd
+    # where minio_iam_reconcile stashes it and override only the build
+    # subprocess env. Cache I/O continues to run under the inherited cix
+    # creds via cix_mc_env.
+    cix_mc_env = mc_env_for(os.environ)
+
+    molot_key = etcd_get('/s3/iam/molot/key')
+    molot_sec = etcd_get('/s3/iam/molot/secret')
+
     env = os.environ.copy()
     env['IX_EXEC_KIND'] = 'molot'
+    env['AWS_ACCESS_KEY_ID'] = molot_key
+    env['AWS_SECRET_ACCESS_KEY'] = molot_sec
     env.setdefault('S3_BUCKET', 'molot')
 
-    # Pull shared molot-complete cache; abs path since molot cwd is workdir.
     cache_path = os.path.abspath(os.path.join(workdir, 'cache'))
     env['MOLOT_CACHE'] = cache_path
-    mc_env = mc_env_for(env)
 
     # No lock for seed; MinIO GET is atomic, missed entries land next run.
     with open(cache_path, 'wb') as f:
-        f.write(mc_cat(s3_cache_uri(), mc_env))
+        f.write(mc_cat(s3_cache_uri(), cix_mc_env))
 
     log(f'seeded cache_path={cache_path} size={os.path.getsize(cache_path)}'
         f' IX_EXEC_KIND={env.get("IX_EXEC_KIND")} MOLOT_CACHE={env.get("MOLOT_CACHE")}')
@@ -185,7 +208,7 @@ def check(tier, sha):
         subprocess.run(
             ('etcdctl', 'lock', CACHE_LOCK_KEY, '--',
              'ci', 'update', cache_path),
-            env=mc_env,
+            env=cix_mc_env,
             check=True,
         )
 
