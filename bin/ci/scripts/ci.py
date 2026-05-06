@@ -139,6 +139,68 @@ def update(local_path):
     log(f'ci update: local={len(ours.splitlines())} + remote={len(remote.splitlines())} → {len(merged)}')
 
 
+def graph_signature(g):
+    return (
+        sorted(n['uid'] for n in g['nodes']),
+        sorted(g['targets']),
+    )
+
+
+def dump_graph(workdir, tier, env):
+    res = subprocess.run(
+        ('./ix', 'build', tier, '--seed=1'),
+        cwd=workdir,
+        env={**env, 'IX_DUMP_GRAPH': '1'},
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+
+    if res.returncode != 0:
+        sys.stderr.buffer.write(res.stderr)
+        log(f'IX_DUMP_GRAPH failed (rc={res.returncode})')
+        return None
+
+    return json.loads(res.stdout)
+
+
+def graph_unchanged_from_parent(workdir, tier, env, sha):
+    parent_res = subprocess.run(
+        ('git', '-C', workdir, 'rev-parse', f'{sha}^'),
+        capture_output=True, text=True, check=False,
+    )
+
+    if parent_res.returncode != 0:
+        log(f'no parent revision for {sha}; cannot diff graphs')
+        return False
+
+    parent_sha = parent_res.stdout.strip()
+    log(f'graph diff: {parent_sha} -> {sha}')
+
+    g_curr = dump_graph(workdir, tier, env)
+
+    if g_curr is None:
+        return False
+
+    subprocess.run(('git', '-C', workdir, 'checkout', parent_sha), check=True)
+
+    try:
+        g_prev = dump_graph(workdir, tier, env)
+    finally:
+        subprocess.run(('git', '-C', workdir, 'checkout', sha), check=True)
+
+    if g_prev is None:
+        return False
+
+    sig_curr = graph_signature(g_curr)
+    sig_prev = graph_signature(g_prev)
+
+    log(f'sha={sha}: nodes={len(sig_curr[0])} targets={len(sig_curr[1])}')
+    log(f'parent={parent_sha}: nodes={len(sig_prev[0])} targets={len(sig_prev[1])}')
+
+    return sig_curr == sig_prev
+
+
 def check(tier, sha):
     workdir = 'ix'
 
@@ -162,6 +224,10 @@ def check(tier, sha):
     env['AWS_ACCESS_KEY_ID'] = os.environ['AWS_ACCESS_KEY_ID_MOLOT']
     env['AWS_SECRET_ACCESS_KEY'] = os.environ['AWS_SECRET_ACCESS_KEY_MOLOT']
     env.setdefault('S3_BUCKET', 'molot')
+
+    if graph_unchanged_from_parent(workdir, tier, env, sha):
+        log(f'graph unchanged from parent for tier={tier}; skipping molot run')
+        sys.exit(0)
 
     cache_path = os.path.abspath(os.path.join(workdir, 'cache'))
     env['MOLOT_CACHE'] = cache_path
