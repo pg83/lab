@@ -23,6 +23,7 @@ import urllib.request as ur
 DISABLE_ALL = [
     #'drop_bear_2',
     'co2_mon',  # USB HID device absent; crash-loops with "hid_open: error"
+    'gofra2',
 ]
 
 DISABLE = {
@@ -454,11 +455,10 @@ class Gofra2:
     def ini(self):
         lines = []
         lines.append('[me]')
-        lines.append('vip        = ' + self.vip)
-        lines.append('tun_dev    = gofra1')
-        lines.append('tun_mtu    = 1400')
-        lines.append('user       = gofra2')
-        lines.append('redundancy = 2')
+        lines.append('vip     = ' + self.vip)
+        lines.append('tun_dev = gofra1')
+        lines.append('tun_mtu = 1400')
+        lines.append('user    = gofra2')
         lines.append('')
         lines.append('[peers]')
         for vip, underlays in sorted(self.hosts.items()):
