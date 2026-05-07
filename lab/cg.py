@@ -23,7 +23,6 @@ import urllib.request as ur
 DISABLE_ALL = [
     #'drop_bear_2',
     'co2_mon',  # USB HID device absent; crash-loops with "hid_open: error"
-    'gofra2',
 ]
 
 DISABLE = {
@@ -430,54 +429,6 @@ class Gofra:
             with open(conf, 'w') as f:
                 f.write(self.ini())
             exec_into('nice', '-n', '-20', 'gofra', '--config', conf)
-
-
-class Gofra2:
-    # Staging twin: overlay 192.168.104.0/24, TUN gofra1, port 8051.
-    def __init__(self, host, port, hosts, vip):
-        self.host = host
-        self.port = port
-        self.hosts = hosts
-        self.vip = vip
-
-    def name(self):
-        return 'gofra2'
-
-    def user(self):
-        return 'root'
-
-    def users(self):
-        return ['root', 'gofra2']
-
-    def pkgs(self):
-        yield {'pkg': 'bin/gofra/staging'}
-
-    def ini(self):
-        lines = []
-        lines.append('[me]')
-        lines.append('vip     = ' + self.vip)
-        lines.append('tun_dev = gofra1')
-        lines.append('tun_mtu = 1400')
-        lines.append('user    = gofra2')
-        lines.append('')
-        lines.append('[peers]')
-        for vip, underlays in sorted(self.hosts.items()):
-            eps = ', '.join(f'{u}:{self.port}' for u in underlays)
-            lines.append(f'{vip} = {eps}')
-        lines.append('')
-        lines.append('[udp]')
-        lines.append('recv_buf = 16777216')
-        lines.append('send_buf = 16777216')
-        lines.append('')
-        lines.append('[probe]')
-        lines.append('timeout_ms = 2000')
-        return '\n'.join(lines) + '\n'
-
-    def run(self):
-        with memfd('config.ini') as conf:
-            with open(conf, 'w') as f:
-                f.write(self.ini())
-            exec_into('nice', '-n', '-20', 'gofra-staging', '--config', conf)
 
 
 class Ssh3:
@@ -2076,16 +2027,14 @@ class ClusterMap:
         all_etc_1 = []
         all_etc_3 = []
 
-        # gofra peer table: VIP → underlay IPs. 103/24 prod, 104/24 staging.
+        # gofra peer table: VIP → underlay IPs. 103/24 prod overlay.
         gofra_hosts = {}
-        gofra2_hosts = {}
 
         for hn in ['lab1', 'lab2', 'lab3']:
             h = self.conf['by_host'][hn]
             n = int(hn[-1])
             underlay = [net['ip'] for net in h['net']]
             gofra_hosts[f'192.168.103.{15 + n}'] = underlay
-            gofra2_hosts[f'192.168.104.{15 + n}'] = underlay
 
         for hn in ['lab1', 'lab2', 'lab3']:
             h = self.conf['by_host'][hn]
@@ -2371,11 +2320,6 @@ class ClusterMap:
             yield {
                 'host': hn,
                 'serv': Gofra(hn, p['gofra'], gofra_hosts, h['gofra']['ip'] + '/24'),
-            }
-
-            yield {
-                'host': hn,
-                'serv': Gofra2(hn, p['gofra2'], gofra2_hosts, f'192.168.104.{15 + int(hn[-1])}/24'),
             }
 
             if lh := h.get('nebula', {}).get('lh', None):
@@ -2797,7 +2741,6 @@ def do(code):
         'tail_log': 8040,
         'ogorod_serve': 8035,
         'gofra': 8050,
-        'gofra2': 8051,
         'event_http': 8053,
     }
 
@@ -2849,7 +2792,6 @@ def do(code):
     users['gorn_prom'] = 1095
     users['molot_web'] = 1026
     users['gofra'] = 1094
-    users['gofra2'] = 1010
     ports['gorn_ctl'] = 8025
     ports['gorn_web'] = 8026
     ports['gorn_ctl_nb'] = 8027
