@@ -3,5 +3,8 @@
 D=$(dirname ${0})
 
 export IX_PATH="${D}:${D}/ext/ix/pkgs"
+# The system executor may need runtime helpers (notably busybox's unshare)
+# from the current system realm while bootstrapping a staged IX checkout.
+export PATH="${PATH}:/ix/realm/system/bin:/bin/bin_ix"
 
 exec python3 ${D}/ext/ix/ix "${@}"
