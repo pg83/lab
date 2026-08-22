@@ -85,10 +85,19 @@ def main():
 
     log(f'autoupdate_ix: runpy-sha256={runpy_sha()}')
 
-    # First-time bootstrap: clone straight into DST.
+    # First-time bootstrap: remove a checkout whose build failed.  Keeping it
+    # would make the next cycle see local HEAD == remote HEAD and skip the
+    # build forever.
     if not os.path.isdir(os.path.join(DST, '.git')):
         clone(URL, DST)
-        build(DST)
+
+        try:
+            build(DST)
+        except subprocess.CalledProcessError:
+            log('initial build failed; removing incomplete checkout, retry next cycle')
+            shutil.rmtree(DST)
+
+            raise
 
         return
 
