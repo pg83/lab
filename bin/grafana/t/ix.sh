@@ -13,11 +13,16 @@ https://github.com/grafana/grafana/archive/refs/tags/v{{self.version().strip()}}
 {% endblock %}
 
 {% block go_sha %}
-cc8f04f24b8c30768988e13de75c40e96022830495ceb1092b5d44f3cc431c82
+cf8e1f22704605a25b79629691cbeaa3124cd474167eca4c9665b1301b5a1a84
 {% endblock %}
 
 {% block go_tool %}
-bin/go/lang/25
+bin/go/lang/26
+{% endblock %}
+
+{% block go_args %}
+{{super()}}
+refine_tools={{'bld/git' | b64e}}
 {% endblock %}
 
 {% block go_refine %}
