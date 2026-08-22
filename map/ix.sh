@@ -11,11 +11,16 @@ bin/dev
 bin/mtr
 bin/ghcr
 bin/htop
+bin/ncdu
+bin/iotop
+bin/strace
 bin/persdb
+bin/tcpdump
 bin/hf/sync
-etc/host/keys
+bin/ethtool
 bin/sched/10
 bin/sched/100
+etc/host/keys
 bin/ix/timeout
 bin/sched/1000
 bin/lm/sensors
@@ -25,10 +30,10 @@ bin/etcd/defrag
 bin/kernel/6/14
 bin/kernel/6/16
 bin/mirror/fetch
-bin/minio/iam/reconcile
 bin/ogorod/mirror
 bin/smart/mon/tools
 bin/fixits(delay=10)
+bin/minio/iam/reconcile
 bin/auto/update(user=ix)
 bin/kernel/gengrub(kernel_boot_flags=rootdelay=20)
 
