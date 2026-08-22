@@ -13,7 +13,6 @@ bin/ghcr
 bin/htop
 bin/persdb
 bin/hf/sync
-bin/ix/tmpfs
 etc/host/keys
 bin/sched/10
 bin/sched/100
