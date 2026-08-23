@@ -311,6 +311,13 @@ Perform one repair cycle:
    cause; ignore nodes reported only as `BROKEN BY DEP`.
 2. Fix that package or shared build logic with the smallest correct change.
    Do not perform mechanical version upgrades and do not edit the build log.
+   If an updated dependency caused the failure, use this preference order:
+   a. Fix the updated dependency itself so every consumer benefits.
+   b. If the dependency is correct and only one consumer is incompatible, fix
+      that broken consumer.
+   c. Revert the dependency update only as a last resort.  When reverting it,
+      add the `noauto` marker to its recipe so the updater cannot immediately
+      apply the same broken update again.
 3. Validate the affected package with `./ix build <package> --seed=1`.
 4. If the failure is transient infrastructure trouble and needs no repository
    change, leave the tree clean and stop.
