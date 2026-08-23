@@ -44,6 +44,12 @@ HOST_CPUS = {
 
 GORN_N = {h: c // CPUS_PER_SLOT for h, c in HOST_CPUS.items()}
 
+# One-time runner nonce for the worker which retained a pre-Wirez-6 fixer.
+# Keep the nonce stable after deployment; removing it would restart it again.
+GORN_RESTART_NONCE = {
+    ('lab1', 7): 1,
+}
+
 SSH_TUNNELS = [
     {
         'key': 'ssh_jopa_tunnel',
@@ -2355,10 +2361,14 @@ class ClusterMap:
             for i in range(n):
                 port = p[f'gorn_{i}']
                 user = f'gorn_{i}'
+                serv = GornSsh(i, gofra_ip, port, nb['hostname'])
+
+                if nonce := GORN_RESTART_NONCE.get((hn, i)):
+                    serv.restart_nonce = nonce
 
                 yield {
                     'host': hn,
-                    'serv': GornSsh(i, gofra_ip, port, nb['hostname']),
+                    'serv': serv,
                 }
 
                 gorn_endpoints.append({
