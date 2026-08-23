@@ -113,6 +113,10 @@ def main():
 
     try:
         run('git', 'pull', cwd=NEW)
+        # A copied checkout retains submodule URLs in .git/config.  Keep them
+        # aligned with the freshly pulled .gitmodules before fetching the
+        # pinned commits (notably the pg83 IX fork).
+        run('git', 'submodule', 'sync', '--recursive', cwd=NEW)
         run('git', 'submodule', 'update', '--init', '--recursive', cwd=NEW)
         build(NEW)
     except subprocess.CalledProcessError:
