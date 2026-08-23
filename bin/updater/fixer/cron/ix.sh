@@ -24,7 +24,6 @@ cat << 'EOF' > ${out}/etc/cron/300-updater-fixer.json
         "--env", "AWS_SECRET_ACCESS_KEY_MOLOT=$AWS_SECRET_ACCESS_KEY_MOLOT",
         "--env", "ETCDCTL_ENDPOINTS=$ETCDCTL_ENDPOINTS",
         "--env", "GIT_USER=pg83",
-        "--env", "GIT_PASS=$GITHUB_TOKEN",
         "--env", "CODEX_AUTH_B64=$CODEX_AUTH_B64",
         "--env", "IX_FIXER_CODEX_GORN_API=$CODEX_GORN_API",
         "--env", "IX_FIXER_CODEX_S3_ENDPOINT=$CODEX_S3_ENDPOINT",

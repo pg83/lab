@@ -29,7 +29,6 @@ class FixerTests(unittest.TestCase):
                 'AWS_SECRET_ACCESS_KEY_MOLOT',
                 'ETCDCTL_ENDPOINTS',
                 'GIT_USER',
-                'GIT_PASS',
                 'IX_FIXER_CODEX_GORN_API',
                 'IX_FIXER_CODEX_S3_ENDPOINT',
             )
@@ -82,13 +81,14 @@ class FixerTests(unittest.TestCase):
         self.assertTrue(got['MOLOT_CACHE'].endswith('/cache'))
         self.assertNotIn('CODEX_AUTH_B64', got)
 
-    def test_prompt_requires_molot_validation_commit_and_safe_push(self):
-        prompt = fixer.codex_prompt('set/ci', 'abc123', 'main', 'node failed: root')
+    def test_prompt_only_asks_for_a_validated_worktree_fix(self):
+        prompt = fixer.codex_prompt('set/ci', 'abc123', 'node failed: root')
+        self.assertIn('./ix build set/ci --seed=1', prompt)
         self.assertIn('./ix build <package> --seed=1', prompt)
-        self.assertIn('environment is already configured for Molot', prompt)
-        self.assertIn('commit the tested fix', prompt)
-        self.assertIn('origin main', prompt)
-        self.assertIn('never force-push', prompt)
+        self.assertIn('leave the tested fix in the working tree', prompt)
+        self.assertIn('Do not commit, fetch, rebase, push', prompt)
+        self.assertNotIn('IX_EXEC_KIND', prompt)
+        self.assertNotIn('Molot', prompt)
         self.assertNotIn('build <package> -k', prompt)
 
     def test_codex_runs_noninteractively_without_external_profile(self):
@@ -125,14 +125,55 @@ class FixerTests(unittest.TestCase):
                 env,
                 Path(td) / 'cache',
                 Path(td) / 'codex-home',
-                'main',
             )
 
         self.assertEqual(got['GORN_API'], 'http://192.168.100.16:8027')
         self.assertEqual(got['S3_ENDPOINT'], 'http://192.168.103.16:8012')
-        self.assertEqual(got['GIT_ASKPASS'], 'passenv')
-        self.assertEqual(got['IX_FIXER_BRANCH'], 'main')
+        self.assertNotIn('GIT_USER', got)
+        self.assertNotIn('GIT_PASS', got)
+        self.assertNotIn('GIT_ASKPASS', got)
+        self.assertEqual(got['GIT_TERMINAL_PROMPT'], '0')
         self.assertNotIn('CODEX_AUTH_B64', got)
+
+    def test_clone_does_not_receive_repository_credentials(self):
+        env = self.run_env()
+
+        with tempfile.TemporaryDirectory() as td, \
+             mock.patch.object(fixer.subprocess, 'run') as run:
+            repo = Path(td) / 'ix'
+            (repo / '.git' / 'info').mkdir(parents=True)
+            fixer.clone_ix(repo, env)
+
+        clone_env = run.call_args_list[0].kwargs['env']
+        self.assertNotIn('GIT_USER', clone_env)
+        self.assertNotIn('GIT_PASS', clone_env)
+        self.assertNotIn('GIT_ASKPASS', clone_env)
+        self.assertEqual(clone_env['GIT_TERMINAL_PROMPT'], '0')
+
+    def test_publish_uses_supervisor_credentials_after_agent(self):
+        env = self.run_env()
+
+        with tempfile.TemporaryDirectory() as td, \
+             mock.patch.object(fixer.subprocess, 'check_output', side_effect=['abc123\n']), \
+             mock.patch.object(fixer, 'load_repo_token', return_value='repo-token'):
+            repo = Path(td)
+            clean = mock.Mock(returncode=1)
+
+            with mock.patch.object(fixer.subprocess, 'run', return_value=clean) as run:
+                self.assertTrue(fixer.publish_fix(repo, 'abc123', 'main', env))
+
+        calls = run.call_args_list
+        push = next(call for call in calls if call.args[0][:2] == ('git', 'push'))
+        fetch = next(call for call in calls if call.args[0][:2] == ('git', 'fetch'))
+        self.assertEqual(push.kwargs['env']['GIT_ASKPASS'], 'passenv')
+        self.assertEqual(push.kwargs['env']['GIT_PASS'], 'repo-token')
+        self.assertNotIn('GIT_PASS', fetch.kwargs['env'])
+
+    def test_publish_refuses_agent_history_changes(self):
+        with tempfile.TemporaryDirectory() as td, \
+             mock.patch.object(fixer.subprocess, 'check_output', return_value='changed\n'):
+            with self.assertRaisesRegex(fixer.InfrastructureFailure, 'changed git history'):
+                fixer.publish_fix(Path(td), 'original', 'main', self.run_env())
 
     def test_required_environment_does_not_require_codex_package_variable(self):
         env = self.run_env()
@@ -173,10 +214,12 @@ class FixerTests(unittest.TestCase):
              mock.patch.object(fixer, 'seed_cache'), \
              mock.patch.object(fixer, 'run_build', side_effect=build), \
              mock.patch.object(fixer, 'merge_cache') as merge, \
-             mock.patch.object(fixer, 'run_codex') as codex:
+             mock.patch.object(fixer, 'run_codex', return_value='abc123') as codex, \
+             mock.patch.object(fixer, 'publish_fix') as publish:
             fixer.run_fixer(self.run_env())
 
         codex.assert_called_once()
+        publish.assert_called_once()
         merge.assert_called_once()
 
 

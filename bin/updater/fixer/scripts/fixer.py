@@ -18,7 +18,9 @@ Infrastructure failures do not spend an agent run.  The next cron cycle will
 retry them.  The lab's bin/codex/wrap package forces Codex and every command it
 spawns through Wirez.  Authentication comes from the encrypted lab secret at
 /codex/auth and is materialized as CODEX_HOME/auth.json only inside this
-worker's temporary directory.
+worker's temporary directory.  Repository credentials are not present while
+the agent runs: the supervisor fetches /github/token from the host-only secret
+service only after Codex exits, then commits and publishes the prepared tree.
 """
 
 import base64
@@ -30,12 +32,14 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import urllib.request
 from pathlib import Path
 
 
 IX_GIT_URL = 'https://github.com/pg83/ix.git'
 IX_BRANCH = 'main'
 IX_TARGET = 'set/ci'
+GIT_TOKEN_URL = 'http://127.0.0.1:8022/github/token'
 
 CACHE_LOCK_KEY = '/lock/ci/cache'
 CACHE_S3_BUCKET = 'cix'
@@ -70,7 +74,6 @@ def require_env(env):
         'AWS_SECRET_ACCESS_KEY_MOLOT',
         'ETCDCTL_ENDPOINTS',
         'GIT_USER',
-        'GIT_PASS',
         'CODEX_AUTH_B64',
         'IX_FIXER_CODEX_GORN_API',
         'IX_FIXER_CODEX_S3_ENDPOINT',
@@ -133,7 +136,7 @@ def clone_ix(dst, env):
 
     subprocess.run(
         ('git', 'clone', '--single-branch', '--branch', branch, git_url, str(dst)),
-        env=env,
+        env=git_read_env(env),
         check=True,
     )
     subprocess.run(('git', 'config', 'user.name', 'ix fixer'), cwd=dst, check=True)
@@ -151,6 +154,49 @@ def clone_ix(dst, env):
         out.write('\n/.fixer-build.log\n/.fixer-molot-cache\n')
 
     return branch
+
+
+def git_read_env(base_env):
+    """Return an environment which cannot authenticate writes to GitHub."""
+    env = dict(base_env)
+
+    for name in (
+        'GIT_USER',
+        'GIT_PASS',
+        'GIT_ASKPASS',
+        'SSH_ASKPASS',
+        'SSH_AUTH_SOCK',
+        'GH_TOKEN',
+        'GITHUB_TOKEN',
+    ):
+        env.pop(name, None)
+
+    env['GIT_TERMINAL_PROMPT'] = '0'
+    return env
+
+
+def git_push_env(base_env, token):
+    env = dict(base_env)
+    env['GIT_PASS'] = token
+    env['GIT_ASKPASS'] = 'passenv'
+    env['GIT_TERMINAL_PROMPT'] = '0'
+    return env
+
+
+def load_repo_token(env):
+    url = env.get('IX_FIXER_GIT_TOKEN_URL', GIT_TOKEN_URL)
+    log(f'load repository token from {url}')
+
+    try:
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            token = resp.read().decode().strip()
+    except Exception as exc:
+        raise InfrastructureFailure('cannot load repository token') from exc
+
+    if not token:
+        raise InfrastructureFailure('repository token is empty')
+
+    return token
 
 
 def molot_env(base_env, cache_path):
@@ -180,18 +226,15 @@ def materialize_codex_home(work, env):
     return home
 
 
-def codex_agent_env(base_env, cache_path, codex_home, branch):
+def codex_agent_env(base_env, cache_path, codex_home):
     env = molot_env(base_env, cache_path)
     # The agent runs in Wirez's network namespace.  Host-loopback endpoints
     # are unreachable there, so use the cluster-facing 192.* listeners which
     # the codex wrapper explicitly bypasses around SOCKS.
     env['GORN_API'] = base_env['IX_FIXER_CODEX_GORN_API']
     env['S3_ENDPOINT'] = base_env['IX_FIXER_CODEX_S3_ENDPOINT']
-    env['GIT_ASKPASS'] = 'passenv'
-    env['GIT_TERMINAL_PROMPT'] = '0'
-    env['IX_FIXER_BRANCH'] = branch
     env['CODEX_HOME'] = str(codex_home)
-    return env
+    return git_read_env(env)
 
 
 def stream_file(path, out):
@@ -248,13 +291,13 @@ def run_build(repo, cache_path, env):
     return res.returncode, build_log
 
 
-def codex_prompt(target, revision, branch, summary):
+def codex_prompt(target, revision, summary):
     return f"""You are the autonomous repair worker for the IX package repository.
 
 Repository HEAD before this attempt: {revision}
-The failing command was exactly:
+Reproduce the failure with:
 
-    IX_EXEC_KIND=molot ./ix build {target} --seed=1
+    ./ix build {target} --seed=1
 
 It was intentionally run without -k.  Its complete combined output is in
 `.fixer-build.log`, which is locally ignored by git.  Initial direct failure
@@ -268,16 +311,15 @@ Perform one repair cycle:
    cause; ignore nodes reported only as `BROKEN BY DEP`.
 2. Fix that package or shared build logic with the smallest correct change.
    Do not perform mechanical version upgrades and do not edit the build log.
-3. Validate the affected package with `./ix build <package> --seed=1`.  The
-   environment is already configured for Molot; do not switch to a local or
-   system executor.
+3. Validate the affected package with `./ix build <package> --seed=1`.
 4. If the failure is transient infrastructure trouble and needs no repository
    change, leave the tree clean and stop.
-5. Otherwise commit the tested fix.  Before pushing, fetch `origin {branch}`
-   and rebase if it moved.  Push normally to `origin {branch}`; never force-push.
+5. Otherwise leave the tested fix in the working tree for the supervisor.
+   Do not commit, fetch, rebase, push, or change git remotes and configuration.
 
-This is an unattended repair job.  Complete the diagnosis, edit, validation,
-commit, rebase if necessary, and push without asking for interactive input.
+This is an unattended repair job.  Complete the diagnosis, edit, and
+validation without asking for interactive input.  The supervisor exclusively
+owns git history and publication.
 """
 
 
@@ -292,17 +334,66 @@ def codex_command(repo, prompt):
     )
 
 
-def run_codex(repo, cache_path, build_log, branch, env):
+def run_codex(repo, cache_path, build_log, env):
     target = env.get('IX_FIXER_TARGET', IX_TARGET)
     revision = subprocess.check_output(
         ('git', 'rev-parse', 'HEAD'), cwd=repo, text=True,
     ).strip()
-    prompt = codex_prompt(target, revision, branch, failure_summary(build_log))
+    prompt = codex_prompt(target, revision, failure_summary(build_log))
     codex_home = materialize_codex_home(repo.parent, env)
-    agent_env = codex_agent_env(env, cache_path, codex_home, branch)
+    agent_env = codex_agent_env(env, cache_path, codex_home)
     cmd = codex_command(repo, prompt)
     log(f'run codex target={target}')
     subprocess.run(cmd, cwd=repo, env=agent_env, check=True)
+    return revision
+
+
+def publish_fix(repo, revision, branch, env):
+    """Commit and push an agent-prepared working tree under supervisor auth."""
+    head = subprocess.check_output(
+        ('git', 'rev-parse', 'HEAD'), cwd=repo, text=True,
+    ).strip()
+
+    if head != revision:
+        raise InfrastructureFailure('Codex changed git history; refusing to publish')
+
+    subprocess.run(('git', 'add', '-A'), cwd=repo, check=True)
+    clean = subprocess.run(
+        ('git', 'diff', '--cached', '--quiet'), cwd=repo, check=False,
+    )
+
+    if clean.returncode == 0:
+        log('Codex left no repository change; nothing to publish')
+        return False
+
+    if clean.returncode != 1:
+        raise InfrastructureFailure(f'git diff --cached failed with {clean.returncode}')
+
+    subprocess.run(('git', 'diff', '--cached', '--check'), cwd=repo, check=True)
+    subprocess.run(
+        ('git', 'commit', '-m', f'fix CI after {revision[:12]}'),
+        cwd=repo,
+        check=True,
+    )
+
+    git_url = env.get('IX_FIXER_GIT_URL', IX_GIT_URL)
+    subprocess.run(('git', 'remote', 'set-url', 'origin', git_url), cwd=repo, check=True)
+    subprocess.run(
+        ('git', 'fetch', 'origin', branch),
+        cwd=repo,
+        env=git_read_env(env),
+        check=True,
+    )
+    subprocess.run(('git', 'rebase', f'origin/{branch}'), cwd=repo, check=True)
+    token = load_repo_token(env)
+    subprocess.run(
+        ('git', 'push', 'origin', f'HEAD:refs/heads/{branch}'),
+        cwd=repo,
+        env=git_push_env(env, token),
+        check=True,
+    )
+    log(f'published Codex fix to {branch}')
+    return True
 
 
 def run_fixer(env):
@@ -328,7 +419,8 @@ def run_fixer(env):
                 )
 
             log(f'IX CI target failed (exit {returncode}); starting one Codex repair')
-            run_codex(repo, cache_path, build_log, branch, env)
+            revision = run_codex(repo, cache_path, build_log, env)
+            publish_fix(repo, revision, branch, env)
         finally:
             # Include cache entries produced by Codex's targeted validation,
             # not just the initial set/ci probe.
