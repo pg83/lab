@@ -2,7 +2,9 @@
 
 import importlib.util
 import base64
+import io
 import os
+import signal
 import sys
 import tempfile
 import unittest
@@ -100,8 +102,12 @@ class FixerTests(unittest.TestCase):
     def test_fixer_target_is_fixed_to_tier_zero(self):
         self.assertEqual(fixer.IX_TARGET, 'set/ci/tier/0')
 
+        proc = mock.Mock()
+        proc.stdout = io.BytesIO(b'green\n')
+        proc.wait.return_value = 0
+
         with tempfile.TemporaryDirectory() as td, \
-             mock.patch.object(fixer.subprocess, 'run', return_value=mock.Mock(returncode=0)) as run, \
+             mock.patch.object(fixer.subprocess, 'Popen', return_value=proc) as popen, \
              mock.patch.object(fixer, 'stream_file'):
             repo = Path(td)
             env = self.run_env()
@@ -109,9 +115,44 @@ class FixerTests(unittest.TestCase):
             fixer.run_build(repo, repo / 'cache', env)
 
         self.assertEqual(
-            run.call_args.args[0],
+            popen.call_args.args[0],
             ('./ix', 'build', 'set/ci/tier/0', '--seed=1'),
         )
+
+    def test_build_stops_at_first_direct_failure(self):
+        proc = mock.Mock()
+        proc.stdout = io.BytesIO(
+            b'ready\n'
+            b'\x1b[91mnode failed: direct root cause\x1b[0m\n'
+            b'must not be consumed\n'
+        )
+
+        with tempfile.TemporaryDirectory() as td, \
+             mock.patch.object(fixer.subprocess, 'Popen', return_value=proc), \
+             mock.patch.object(fixer, 'stop_build_process_group', return_value=-15) as stop, \
+             mock.patch.object(fixer, 'stream_file'):
+            repo = Path(td)
+            returncode, build_log = fixer.run_build(repo, repo / 'cache', self.run_env())
+            build_log_bytes = build_log.read_bytes()
+
+        self.assertEqual(returncode, -15)
+        self.assertEqual(
+            build_log_bytes,
+            b'ready\n\x1b[91mnode failed: direct root cause\x1b[0m\n',
+        )
+        stop.assert_called_once_with(proc)
+
+    def test_stop_build_process_group_terminates_the_session(self):
+        proc = mock.Mock(pid=1234, returncode=None)
+        proc.poll.return_value = None
+        proc.wait.return_value = -signal.SIGTERM
+
+        with mock.patch.object(fixer.os, 'killpg') as killpg:
+            returncode = fixer.stop_build_process_group(proc)
+
+        self.assertEqual(returncode, -signal.SIGTERM)
+        killpg.assert_called_once_with(1234, signal.SIGTERM)
+        proc.wait.assert_called_once_with(timeout=fixer.BUILD_STOP_TIMEOUT_S)
 
     def test_codex_runs_noninteractively_without_external_profile(self):
         cmd = fixer.codex_command(Path('/work/ix'), 'repair it')

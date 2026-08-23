@@ -9,7 +9,8 @@ holds /lock/updater/fixer/work around the complete process.  The worker:
   1. clones pg83/ix at main;
   2. seeds Molot's durable success cache from cix/complete;
   3. runs ``./ix build set/ci/tier/0 --seed=1`` through Molot, deliberately
-     without a keep-going flag;
+     without a keep-going flag, and stops its process group at the first
+     direct ``node failed:`` marker;
   4. exits when the build is green;
   5. on a real target failure, invokes one non-interactive Codex agent and
      gives it the checkout plus the complete log.
@@ -28,6 +29,7 @@ import binascii
 import json
 import os
 import re
+import signal
 import shutil
 import subprocess
 import sys
@@ -48,6 +50,8 @@ CACHE_S3_KEY = 'complete'
 MC_ALIAS = 'fixer_cache'
 
 ANSI_RE = re.compile(rb'\x1b\[[0-9;?]*[ -/]*[@-~]')
+DIRECT_FAIL_MARKER = b'node failed: '
+BUILD_STOP_TIMEOUT_S = 10
 TARGET_FAIL_MARKERS = (
     b'ERROR ',
     b'node failed: ',
@@ -274,26 +278,71 @@ def failure_summary(path, limit=12):
     return '\n'.join(lines)
 
 
+def stop_build_process_group(proc):
+    """Stop the isolated IX/Molot process group and return its status."""
+    if proc.poll() is not None:
+        return proc.returncode
+
+    log(f'stop build process group {proc.pid} after first direct failure')
+
+    try:
+        os.killpg(proc.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        pass
+
+    try:
+        return proc.wait(timeout=BUILD_STOP_TIMEOUT_S)
+    except subprocess.TimeoutExpired:
+        log(f'build process group {proc.pid} ignored SIGTERM; sending SIGKILL')
+
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+
+        return proc.wait()
+
+
 def run_build(repo, cache_path, env):
     target = IX_TARGET
     build_log = repo / '.fixer-build.log'
     cmd = ('./ix', 'build', target, '--seed=1')
     log('run', *cmd, '(molot, no -k)')
 
-    with build_log.open('wb') as out:
-        res = subprocess.run(
-            cmd,
-            cwd=repo,
-            env=molot_env(env, cache_path),
-            stdout=out,
-            stderr=subprocess.STDOUT,
-            start_new_session=True,
-            check=False,
-        )
+    proc = subprocess.Popen(
+        cmd,
+        cwd=repo,
+        env=molot_env(env, cache_path),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        start_new_session=True,
+    )
+
+    returncode = None
+
+    try:
+        with build_log.open('wb') as out:
+            for line in proc.stdout:
+                out.write(line)
+                out.flush()
+
+                clean = ANSI_RE.sub(b'', line)
+
+                if DIRECT_FAIL_MARKER in clean:
+                    returncode = stop_build_process_group(proc)
+                    break
+
+        if returncode is None:
+            returncode = proc.wait()
+    except BaseException:
+        stop_build_process_group(proc)
+        raise
+    finally:
+        proc.stdout.close()
 
     stream_file(build_log, sys.stderr.buffer)
     sys.stderr.flush()
-    return res.returncode, build_log
+    return returncode, build_log
 
 
 def codex_prompt(target, revision, summary):
@@ -304,9 +353,10 @@ Reproduce the failure with:
 
     ./ix build {target} --seed=1
 
-It was intentionally run without -k.  Its complete combined output is in
-`.fixer-build.log`, which is locally ignored by git.  Initial direct failure
-markers are:
+It was intentionally run without -k and the probe was stopped immediately
+after its first direct `node failed:` marker.  Its complete combined output up
+to that marker is in `.fixer-build.log`, which is locally ignored by git.
+Initial direct failure markers are:
 
 {summary or '(inspect .fixer-build.log)'}
 
