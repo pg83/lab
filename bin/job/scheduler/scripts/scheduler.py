@@ -56,6 +56,24 @@ def expand(cmd):
     return [os.path.expandvars(a) for a in cmd]
 
 
+def display_cmd(cmd):
+    """Hide values forwarded through gorn's --env arguments in logs."""
+    out = []
+    redact_next = False
+
+    for arg in cmd:
+        if redact_next:
+            name, sep, _ = arg.partition('=')
+            out.append(f'{name}=<redacted>' if sep else '<redacted>')
+            redact_next = False
+            continue
+
+        out.append(arg)
+        redact_next = arg == '--env'
+
+    return out
+
+
 def tick(state):
     now = time.time()
 
@@ -81,7 +99,7 @@ def tick(state):
             cfg = json.load(f)
 
         cmd = ['timeout', JOB_TIMEOUT] + expand(cfg['cmd'])
-        log(f'run {fn}: {cmd}')
+        log(f'run {fn}: {display_cmd(cmd)}')
 
         res = subprocess.run(cmd, check=False)
 
