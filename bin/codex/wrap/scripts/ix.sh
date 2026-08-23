@@ -9,7 +9,7 @@ cat << 'EOF' > ${out}/bin/codex
 TMPDIR=/dev/shm
 export TMPDIR
 
-exec wirez -q -F 127.0.0.1:8015 -B 192.0.0.0/8 -- codex.exe "$@"
+exec wirez -q -D 127.0.0.1 -F 127.0.0.1:8015 -B 192.0.0.0/8 -- codex.exe "$@"
 EOF
 
 chmod +x ${out}/bin/codex
