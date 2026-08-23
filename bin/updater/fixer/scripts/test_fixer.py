@@ -172,9 +172,15 @@ class FixerTests(unittest.TestCase):
                 {'CODEX_AUTH_B64': base64.b64encode(auth).decode()},
             )
             auth_path = home / 'auth.json'
+            config_path = home / 'config.toml'
             self.assertEqual(auth_path.read_bytes(), auth)
+            self.assertEqual(
+                config_path.read_text(),
+                '[shell_environment_policy]\ninherit = "all"\n',
+            )
             self.assertEqual(home.stat().st_mode & 0o777, 0o700)
             self.assertEqual(auth_path.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(config_path.stat().st_mode & 0o777, 0o600)
 
     def test_codex_agent_uses_cluster_endpoints_inside_wirez(self):
         env = self.run_env()
@@ -192,6 +198,7 @@ class FixerTests(unittest.TestCase):
 
         self.assertEqual(got['GORN_API'], 'http://192.168.100.16:8027')
         self.assertEqual(got['S3_ENDPOINT'], 'http://192.168.103.16:8012')
+        self.assertEqual(got['IX_EXEC_KIND'], 'molot')
         self.assertNotIn('GIT_USER', got)
         self.assertNotIn('GIT_PASS', got)
         self.assertNotIn('GIT_ASKPASS', got)

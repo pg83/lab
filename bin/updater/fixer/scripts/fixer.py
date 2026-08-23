@@ -232,6 +232,14 @@ def materialize_codex_home(work, env):
     auth_path = home / 'auth.json'
     auth_path.write_bytes(auth)
     auth_path.chmod(0o600)
+
+    # Codex defaults to a reduced shell environment.  The supervisor has
+    # already removed repository credentials and the auth payload before the
+    # agent starts, so let its shell commands inherit the remaining curated
+    # environment, including IX_EXEC_KIND and Molot's endpoints/cache.
+    config_path = home / 'config.toml'
+    config_path.write_text('[shell_environment_policy]\ninherit = "all"\n')
+    config_path.chmod(0o600)
     return home
 
 
