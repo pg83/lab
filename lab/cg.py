@@ -1542,12 +1542,15 @@ class SamogonBot:
 
 class JobScheduler:
     # Cluster cron; singleton via etcdctl lock /lock/job/scheduler.
-    def __init__(self, gorn_api, s3_endpoint, etcd_endpoints, etcd_persist_endpoints):
+    def __init__(self, gorn_api, s3_endpoint, etcd_endpoints, etcd_persist_endpoints,
+                 codex_gorn_api, codex_s3_endpoint):
         self.gorn_api = gorn_api
         self.s3_endpoint = s3_endpoint
         # etcd_endpoints: tmpfs etcd_3; etcd_persist_endpoints: cold-safe.
         self.etcd_endpoints = list(etcd_endpoints)
         self.etcd_persist_endpoints = list(etcd_persist_endpoints)
+        self.codex_gorn_api = codex_gorn_api
+        self.codex_s3_endpoint = codex_s3_endpoint
 
     def name(self):
         return 'job_scheduler'
@@ -1590,6 +1593,9 @@ class JobScheduler:
             # Keep the JSON opaque while it crosses scheduler argv and the
             # gorn task API.  updater_fixer decodes it into CODEX_HOME/auth.json.
             'CODEX_AUTH_B64': base64.b64encode(get_key('/codex/auth')).decode(),
+            # Wirez gives 192.* a direct route; loopback is a different netns.
+            'CODEX_GORN_API': self.codex_gorn_api,
+            'CODEX_S3_ENDPOINT': self.codex_s3_endpoint,
         }
 
         # Per-bucket creds — each cron file forwards the one bucket it
@@ -2222,6 +2228,8 @@ class ClusterMap:
                     s3_endpoint=f"http://127.0.0.1:{p['minio']}",
                     etcd_endpoints=[f"127.0.0.1:{p['etcd_3_client']}"],
                     etcd_persist_endpoints=[f"127.0.0.1:{p['etcd_1_client']}"],
+                    codex_gorn_api=f"http://{h['nebula']['ip']}:{p['gorn_ctl_nb']}",
+                    codex_s3_endpoint=f"http://{h['gofra']['ip']}:{p['minio']}",
                 ),
             }
 

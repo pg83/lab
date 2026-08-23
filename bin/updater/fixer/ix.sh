@@ -8,7 +8,7 @@ bin/etcd/ctl
 bin/git/unwrap
 bin/git/passenv
 bin/minio/patched/client
+bin/codex/wrap
 bin/updater/scripts
 bin/updater/fixer/scripts
-{# bin/codex is deliberately provisioned separately for now. #}
 {% endblock %}

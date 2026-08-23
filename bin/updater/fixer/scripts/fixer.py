@@ -15,10 +15,10 @@ holds /lock/updater/work around the complete process.  The worker:
      gives it the checkout plus the complete log.
 
 Infrastructure failures do not spend an agent run.  The next cron cycle will
-retry them.  Codex is intentionally not a package dependency yet; deployment
-of the binary is separate bootstrap work.  Authentication comes from the
-encrypted lab secret at /codex/auth and is materialized as CODEX_HOME/auth.json
-only inside this worker's temporary directory.
+retry them.  The lab's bin/codex/wrap package forces Codex and every command it
+spawns through Wirez.  Authentication comes from the encrypted lab secret at
+/codex/auth and is materialized as CODEX_HOME/auth.json only inside this
+worker's temporary directory.
 """
 
 import base64
@@ -72,6 +72,8 @@ def require_env(env):
         'GIT_USER',
         'GIT_PASS',
         'CODEX_AUTH_B64',
+        'IX_FIXER_CODEX_GORN_API',
+        'IX_FIXER_CODEX_S3_ENDPOINT',
     )
     missing = [name for name in required if not env.get(name)]
 
@@ -178,6 +180,20 @@ def materialize_codex_home(work, env):
     return home
 
 
+def codex_agent_env(base_env, cache_path, codex_home, branch):
+    env = molot_env(base_env, cache_path)
+    # The agent runs in Wirez's network namespace.  Host-loopback endpoints
+    # are unreachable there, so use the cluster-facing 192.* listeners which
+    # the codex wrapper explicitly bypasses around SOCKS.
+    env['GORN_API'] = base_env['IX_FIXER_CODEX_GORN_API']
+    env['S3_ENDPOINT'] = base_env['IX_FIXER_CODEX_S3_ENDPOINT']
+    env['GIT_ASKPASS'] = 'passenv'
+    env['GIT_TERMINAL_PROMPT'] = '0'
+    env['IX_FIXER_BRANCH'] = branch
+    env['CODEX_HOME'] = str(codex_home)
+    return env
+
+
 def stream_file(path, out):
     with path.open('rb') as src:
         shutil.copyfileobj(src, out, length=1024 * 1024)
@@ -282,11 +298,8 @@ def run_codex(repo, cache_path, build_log, branch, env):
         ('git', 'rev-parse', 'HEAD'), cwd=repo, text=True,
     ).strip()
     prompt = codex_prompt(target, revision, branch, failure_summary(build_log))
-    agent_env = molot_env(env, cache_path)
-    agent_env['GIT_ASKPASS'] = 'passenv'
-    agent_env['GIT_TERMINAL_PROMPT'] = '0'
-    agent_env['IX_FIXER_BRANCH'] = branch
-    agent_env['CODEX_HOME'] = str(materialize_codex_home(repo.parent, env))
+    codex_home = materialize_codex_home(repo.parent, env)
+    agent_env = codex_agent_env(env, cache_path, codex_home, branch)
     cmd = codex_command(repo, prompt)
     log(f'run codex target={target}')
     subprocess.run(cmd, cwd=repo, env=agent_env, check=True)

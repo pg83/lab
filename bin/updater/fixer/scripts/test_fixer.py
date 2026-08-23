@@ -30,6 +30,8 @@ class FixerTests(unittest.TestCase):
                 'ETCDCTL_ENDPOINTS',
                 'GIT_USER',
                 'GIT_PASS',
+                'IX_FIXER_CODEX_GORN_API',
+                'IX_FIXER_CODEX_S3_ENDPOINT',
             )
         }
         env['CODEX_AUTH_B64'] = base64.b64encode(b'{"tokens":{}}').decode()
@@ -110,6 +112,27 @@ class FixerTests(unittest.TestCase):
             self.assertEqual(auth_path.read_bytes(), auth)
             self.assertEqual(home.stat().st_mode & 0o777, 0o700)
             self.assertEqual(auth_path.stat().st_mode & 0o777, 0o600)
+
+    def test_codex_agent_uses_cluster_endpoints_inside_wirez(self):
+        env = self.run_env()
+        env['GORN_API'] = 'http://127.0.0.1:8025'
+        env['S3_ENDPOINT'] = 'http://127.0.0.1:8012'
+        env['IX_FIXER_CODEX_GORN_API'] = 'http://192.168.100.16:8027'
+        env['IX_FIXER_CODEX_S3_ENDPOINT'] = 'http://192.168.103.16:8012'
+
+        with tempfile.TemporaryDirectory() as td:
+            got = fixer.codex_agent_env(
+                env,
+                Path(td) / 'cache',
+                Path(td) / 'codex-home',
+                'main',
+            )
+
+        self.assertEqual(got['GORN_API'], 'http://192.168.100.16:8027')
+        self.assertEqual(got['S3_ENDPOINT'], 'http://192.168.103.16:8012')
+        self.assertEqual(got['GIT_ASKPASS'], 'passenv')
+        self.assertEqual(got['IX_FIXER_BRANCH'], 'main')
+        self.assertNotIn('CODEX_AUTH_B64', got)
 
     def test_required_environment_does_not_require_codex_package_variable(self):
         env = self.run_env()
