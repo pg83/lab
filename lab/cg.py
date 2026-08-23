@@ -1586,6 +1586,7 @@ class JobScheduler:
             'MC_HOST_minio_root': f'{scheme}://{root_key}:{root_secret}@{host}',
             'HF_TOKEN': get_key('/hf/token').decode().strip(),
             'GHCR_TOKEN': get_key('/ghcr/token').decode().strip(),
+            'GITHUB_TOKEN': get_key('/github/token').decode().strip(),
         }
 
         # Per-bucket creds — each cron file forwards the one bucket it

@@ -6,6 +6,7 @@
 etc
 
 bin/ci
+bin/updater
 bin/mc
 bin/dev
 bin/mtr
