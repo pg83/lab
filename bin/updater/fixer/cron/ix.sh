@@ -2,8 +2,8 @@
 
 {#
 The scheduler only performs the short enqueue.  dedup keeps one fixer task in
-gorn, while /lock/updater/work is held by the worker for the complete build +
-agent run and also excludes the mechanical updater.
+gorn, while /lock/updater/fixer/work excludes only another fixer.  The
+mechanical updater has its own lock and may run in parallel.
 #}
 
 {% block install %}
@@ -31,7 +31,7 @@ cat << 'EOF' > ${out}/etc/cron/300-updater-fixer.json
         "--env", "MOLOT_FULL_SLOTS=10",
         "--",
         "/bin/env", "PATH=/bin",
-        "etcdctl", "lock", "/lock/updater/work", "--",
+        "etcdctl", "lock", "/lock/updater/fixer/work", "--",
         "updater_fixer", "run"
     ]
 }

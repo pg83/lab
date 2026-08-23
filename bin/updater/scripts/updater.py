@@ -419,7 +419,23 @@ class PackageUpdater:
         push_env = dict(self.env)
         push_env['GIT_ASKPASS'] = 'passenv'
         push_env['GIT_TERMINAL_PROMPT'] = '0'
-        self.git('push', 'origin', f'HEAD:refs/heads/{self.branch}', env=push_env)
+
+        # The autonomous fixer publishes independently.  Rebase immediately
+        # before push, and retry once if it won the small fetch/push race.
+        for attempt in range(2):
+            self.git('fetch', 'origin', self.branch)
+            self.git('rebase', f'origin/{self.branch}')
+            pushed = self.git(
+                'push', 'origin', f'HEAD:refs/heads/{self.branch}',
+                check=False, env=push_env,
+            )
+
+            if pushed.returncode == 0:
+                return
+
+            log(f'git push raced with another publisher; retry {attempt + 1}/2')
+
+        raise InfrastructureFailure('git push failed after rebase retries')
 
     def process(self, candidate):
         if not candidate.packages:

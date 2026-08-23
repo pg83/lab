@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 SPEC = importlib.util.spec_from_file_location('updater', Path(__file__).with_name('updater.py'))
@@ -39,6 +40,22 @@ class FakePackageUpdater(updater.PackageUpdater):
 
 
 class UpdaterTests(unittest.TestCase):
+    def test_publish_rebases_before_push_for_parallel_fixer(self):
+        worker = updater.PackageUpdater(Path('/work/ix'), None, branch='main', env={})
+        candidate = updater.Candidate('1.0', '2.0', ('bin/foo',))
+
+        def git_result(*args, **kwargs):
+            return mock.Mock(returncode=1 if args[:3] == ('diff', '--cached', '--quiet') else 0)
+
+        with mock.patch.object(worker, 'git', side_effect=git_result) as git:
+            worker.commit_and_push(candidate)
+
+        commands = [call.args for call in git.call_args_list]
+        self.assertLess(commands.index(('fetch', 'origin', 'main')),
+                        commands.index(('rebase', 'origin/main')))
+        self.assertLess(commands.index(('rebase', 'origin/main')),
+                        commands.index(('push', 'origin', 'HEAD:refs/heads/main')))
+
     def test_repology_filter_keeps_original_skip_semantics(self):
         data = {
             'zlib': [

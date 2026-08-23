@@ -44,9 +44,10 @@ HOST_CPUS = {
 
 GORN_N = {h: c // CPUS_PER_SLOT for h, c in HOST_CPUS.items()}
 
-# One-time runner nonce for the worker which retained a pre-Wirez-6 fixer.
-# Keep the nonce stable after deployment; removing it would restart it again.
+# One-time runner nonces for workers which retained stale fixer tasks.
+# Keep each nonce stable after deployment; removing it would restart it again.
 GORN_RESTART_NONCE = {
+    ('lab1', 4): 1,
     ('lab1', 7): 1,
 }
 

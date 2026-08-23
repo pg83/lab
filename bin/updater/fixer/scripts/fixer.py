@@ -4,7 +4,7 @@
 One autonomous IX CI repair cycle.
 
 The cluster scheduler starts this command asynchronously through gorn and
-holds /lock/updater/work around the complete process.  The worker:
+holds /lock/updater/fixer/work around the complete process.  The worker:
 
   1. clones pg83/ix at main;
   2. seeds Molot's durable success cache from cix/complete;
