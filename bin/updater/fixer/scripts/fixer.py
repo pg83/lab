@@ -332,7 +332,7 @@ owns git history and publication.
 
 def codex_command(repo, prompt):
     return (
-        'codex', 'exec',
+        'timeout', '3600', 'codex', 'exec',
         '--dangerously-bypass-approvals-and-sandbox',
         '--ephemeral',
         '--color', 'never',

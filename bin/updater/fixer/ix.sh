@@ -8,6 +8,7 @@ bin/etcd/ctl
 bin/git/unwrap
 bin/git/passenv
 bin/minio/patched/client
+bin/ix/timeout
 bin/codex/wrap
 bin/updater/scripts
 bin/updater/fixer/scripts

@@ -97,7 +97,7 @@ class FixerTests(unittest.TestCase):
 
     def test_codex_runs_noninteractively_without_external_profile(self):
         cmd = fixer.codex_command(Path('/work/ix'), 'repair it')
-        self.assertEqual(cmd[:2], ('codex', 'exec'))
+        self.assertEqual(cmd[:4], ('timeout', '3600', 'codex', 'exec'))
         self.assertNotIn('-p', cmd)
         self.assertIn('--dangerously-bypass-approvals-and-sandbox', cmd)
         self.assertIn('--ephemeral', cmd)
