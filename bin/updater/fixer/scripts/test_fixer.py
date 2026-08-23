@@ -31,8 +31,10 @@ class FixerTests(unittest.TestCase):
                 'GIT_USER',
                 'IX_FIXER_CODEX_GORN_API',
                 'IX_FIXER_CODEX_S3_ENDPOINT',
+                'IX_FIXER_GENERATION',
             )
         }
+        env['IX_FIXER_GENERATION'] = fixer.FIXER_GENERATION
         env['CODEX_AUTH_B64'] = base64.b64encode(b'{"tokens":{}}').decode()
         return env
 
@@ -183,6 +185,13 @@ class FixerTests(unittest.TestCase):
         env = self.run_env()
         fixer.require_env(env)
         self.assertNotIn('CODEX_HOME', env)
+
+    def test_obsolete_generation_exits_before_work(self):
+        env = self.run_env()
+        env['IX_FIXER_GENERATION'] = '1'
+
+        with self.assertRaisesRegex(fixer.InfrastructureFailure, 'obsolete fixer generation'):
+            fixer.require_env(env)
 
     def test_green_cycle_skips_agent_and_still_merges_cache(self):
         def clone(repo, env):

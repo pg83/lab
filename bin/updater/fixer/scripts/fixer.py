@@ -39,6 +39,7 @@ from pathlib import Path
 IX_GIT_URL = 'https://github.com/pg83/ix.git'
 IX_BRANCH = 'main'
 IX_TARGET = 'set/ci'
+FIXER_GENERATION = '2'
 GIT_TOKEN_URL = 'http://127.0.0.1:8022/github/token'
 
 CACHE_LOCK_KEY = '/lock/ci/cache'
@@ -77,11 +78,15 @@ def require_env(env):
         'CODEX_AUTH_B64',
         'IX_FIXER_CODEX_GORN_API',
         'IX_FIXER_CODEX_S3_ENDPOINT',
+        'IX_FIXER_GENERATION',
     )
     missing = [name for name in required if not env.get(name)]
 
     if missing:
         raise InfrastructureFailure('missing required environment: ' + ', '.join(missing))
+
+    if env['IX_FIXER_GENERATION'] != FIXER_GENERATION:
+        raise InfrastructureFailure('obsolete fixer generation')
 
 
 def mc_env(base_env):

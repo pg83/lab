@@ -13,7 +13,7 @@ cat << 'EOF' > ${out}/etc/cron/300-updater-fixer.json
 {
     "cmd": [
         "etcdctl", "lock", "/lock/updater/fixer/schedule", "--",
-        "dedup", "/updater/fixer/v1", "--",
+        "dedup", "/updater/fixer/v2", "--",
         "gorn", "ignite",
         "--root", "updater_fixer",
         "--env", "GORN_API=$GORN_API",
@@ -27,6 +27,7 @@ cat << 'EOF' > ${out}/etc/cron/300-updater-fixer.json
         "--env", "CODEX_AUTH_B64=$CODEX_AUTH_B64",
         "--env", "IX_FIXER_CODEX_GORN_API=$CODEX_GORN_API",
         "--env", "IX_FIXER_CODEX_S3_ENDPOINT=$CODEX_S3_ENDPOINT",
+        "--env", "IX_FIXER_GENERATION=2",
         "--env", "MOLOT_QUIET=1",
         "--env", "MOLOT_FULL_SLOTS=10",
         "--",
