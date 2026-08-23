@@ -112,10 +112,13 @@ def main():
     run('cp', '-a', DST, NEW)
 
     try:
-        run('git', 'pull', cwd=NEW)
-        # A copied checkout retains submodule URLs in .git/config.  Keep them
-        # aligned with the freshly pulled .gitmodules before fetching the
-        # pinned commits (notably the pg83 IX fork).
+        # Pull the superproject without Git's implicit submodule fetch.  A
+        # copied checkout retains old submodule URLs in .git/config, so that
+        # implicit fetch can ask the previous remote for a fork-only commit
+        # and fail before we get a chance to synchronize the URL.
+        run('git', 'pull', '--recurse-submodules=no', cwd=NEW)
+        # Align the copied config with the freshly pulled .gitmodules before
+        # explicitly fetching pinned commits (notably the pg83 IX fork).
         run('git', 'submodule', 'sync', '--recursive', cwd=NEW)
         run('git', 'submodule', 'update', '--init', '--recursive', cwd=NEW)
         build(NEW)
