@@ -8,8 +8,8 @@ holds /lock/updater/fixer/work around the complete process.  The worker:
 
   1. clones pg83/ix at main;
   2. seeds Molot's durable success cache from cix/complete;
-  3. runs ``./ix build set/ci --seed=1`` through Molot, deliberately without
-     a keep-going flag;
+  3. runs ``./ix build set/ci/tier/0 --seed=1`` through Molot, deliberately
+     without a keep-going flag;
   4. exits when the build is green;
   5. on a real target failure, invokes one non-interactive Codex agent and
      gives it the checkout plus the complete log.
@@ -38,7 +38,7 @@ from pathlib import Path
 
 IX_GIT_URL = 'https://github.com/pg83/ix.git'
 IX_BRANCH = 'main'
-IX_TARGET = 'set/ci'
+IX_TARGET = 'set/ci/tier/0'
 FIXER_GENERATION = '2'
 GIT_TOKEN_URL = 'http://127.0.0.1:8022/github/token'
 
@@ -275,7 +275,7 @@ def failure_summary(path, limit=12):
 
 
 def run_build(repo, cache_path, env):
-    target = env.get('IX_FIXER_TARGET', IX_TARGET)
+    target = IX_TARGET
     build_log = repo / '.fixer-build.log'
     cmd = ('./ix', 'build', target, '--seed=1')
     log('run', *cmd, '(molot, no -k)')
@@ -347,7 +347,7 @@ def codex_command(repo, prompt):
 
 
 def run_codex(repo, cache_path, build_log, env):
-    target = env.get('IX_FIXER_TARGET', IX_TARGET)
+    target = IX_TARGET
     revision = subprocess.check_output(
         ('git', 'rev-parse', 'HEAD'), cwd=repo, text=True,
     ).strip()
@@ -435,7 +435,7 @@ def run_fixer(env):
             publish_fix(repo, revision, branch, env)
         finally:
             # Include cache entries produced by Codex's targeted validation,
-            # not just the initial set/ci probe.
+            # not just the initial set/ci/tier/0 probe.
             merge_cache(cache_path, env)
 
 

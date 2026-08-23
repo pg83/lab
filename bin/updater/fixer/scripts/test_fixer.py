@@ -84,8 +84,8 @@ class FixerTests(unittest.TestCase):
         self.assertNotIn('CODEX_AUTH_B64', got)
 
     def test_prompt_only_asks_for_a_validated_worktree_fix(self):
-        prompt = fixer.codex_prompt('set/ci', 'abc123', 'node failed: root')
-        self.assertIn('./ix build set/ci --seed=1', prompt)
+        prompt = fixer.codex_prompt(fixer.IX_TARGET, 'abc123', 'node failed: root')
+        self.assertIn('./ix build set/ci/tier/0 --seed=1', prompt)
         self.assertIn('./ix build <package> --seed=1', prompt)
         self.assertIn('leave the tested fix in the working tree', prompt)
         self.assertIn('Do not commit, fetch, rebase, push', prompt)
@@ -96,6 +96,22 @@ class FixerTests(unittest.TestCase):
         self.assertNotIn('IX_EXEC_KIND', prompt)
         self.assertNotIn('Molot', prompt)
         self.assertNotIn('build <package> -k', prompt)
+
+    def test_fixer_target_is_fixed_to_tier_zero(self):
+        self.assertEqual(fixer.IX_TARGET, 'set/ci/tier/0')
+
+        with tempfile.TemporaryDirectory() as td, \
+             mock.patch.object(fixer.subprocess, 'run', return_value=mock.Mock(returncode=0)) as run, \
+             mock.patch.object(fixer, 'stream_file'):
+            repo = Path(td)
+            env = self.run_env()
+            env['IX_FIXER_TARGET'] = 'set/ci'
+            fixer.run_build(repo, repo / 'cache', env)
+
+        self.assertEqual(
+            run.call_args.args[0],
+            ('./ix', 'build', 'set/ci/tier/0', '--seed=1'),
+        )
 
     def test_codex_runs_noninteractively_without_external_profile(self):
         cmd = fixer.codex_command(Path('/work/ix'), 'repair it')
