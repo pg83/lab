@@ -15,6 +15,7 @@ bin/etcd/defrag/cron
 bin/ogorod/mirror/cron
 bin/minio/iam/reconcile/cron
 bin/updater/cron
+bin/updater/fixer/cron
 
 bin/mc/gc/cron(root=/gorn/ci,hours=1)
 bin/mc/gc/cron(root=/gorn/cli,hours=24)
@@ -29,4 +30,5 @@ bin/mc/gc/cron(root=/gorn/mirror_fetch,hours=1)
 bin/mc/gc/cron(root=/gorn/ogorod_mirror,hours=1)
 bin/mc/gc/cron(root=/gorn/minio_iam_reconcile,hours=1)
 bin/mc/gc/cron(root=/gorn/updater,hours=24)
+bin/mc/gc/cron(root=/gorn/updater_fixer,hours=24)
 {% endblock %}

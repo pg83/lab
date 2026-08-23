@@ -1587,6 +1587,9 @@ class JobScheduler:
             'HF_TOKEN': get_key('/hf/token').decode().strip(),
             'GHCR_TOKEN': get_key('/ghcr/token').decode().strip(),
             'GITHUB_TOKEN': get_key('/github/token').decode().strip(),
+            # Keep the JSON opaque while it crosses scheduler argv and the
+            # gorn task API.  updater_fixer decodes it into CODEX_HOME/auth.json.
+            'CODEX_AUTH_B64': base64.b64encode(get_key('/codex/auth')).decode(),
         }
 
         # Per-bucket creds — each cron file forwards the one bucket it

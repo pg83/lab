@@ -75,7 +75,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon_bot,runsh_script=sha256:be6d1a1fbb7570ac,srv_user=samogon_bot,extra_deps=YmluL3NhbW9nb24=)",
                 "bin/job/scheduler(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=job_scheduler)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:2557a8e5ea5d7841,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:82179ce80597ae09,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
                 "bin/event(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=event_http)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_http,runsh_script=sha256:db8927e645ff4f0d,srv_user=event_http,extra_deps=YmluL2V2ZW50)",
@@ -264,7 +264,7 @@
                 "bin/molot(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=molot_web)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=molot_web,runsh_script=sha256:512daaf3eafef4e9,srv_user=molot_web,extra_deps=YmluL21vbG90)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:956ae4186daf4f13)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:e574e2c1d9c39a8f)"
             ],
             "gofra": {
                 "hostname": "lab1.gofra",
@@ -384,7 +384,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon_bot,runsh_script=sha256:be6d1a1fbb7570ac,srv_user=samogon_bot,extra_deps=YmluL3NhbW9nb24=)",
                 "bin/job/scheduler(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=job_scheduler)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:2557a8e5ea5d7841,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:82179ce80597ae09,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
                 "bin/event(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=event_http)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_http,runsh_script=sha256:db8927e645ff4f0d,srv_user=event_http,extra_deps=YmluL2V2ZW50)",
@@ -563,7 +563,7 @@
                 "bin/molot(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=molot_web)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=molot_web,runsh_script=sha256:51b69098f7c8aad9,srv_user=molot_web,extra_deps=YmluL21vbG90)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:956ae4186daf4f13)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:e574e2c1d9c39a8f)"
             ],
             "gofra": {
                 "hostname": "lab2.gofra",
@@ -683,7 +683,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon_bot,runsh_script=sha256:be6d1a1fbb7570ac,srv_user=samogon_bot,extra_deps=YmluL3NhbW9nb24=)",
                 "bin/job/scheduler(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=job_scheduler)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:2557a8e5ea5d7841,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:82179ce80597ae09,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
                 "bin/event(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=event_http)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_http,runsh_script=sha256:db8927e645ff4f0d,srv_user=event_http,extra_deps=YmluL2V2ZW50)",
@@ -832,7 +832,7 @@
                 "bin/molot(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=molot_web)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=molot_web,runsh_script=sha256:516a8607e960c37a,srv_user=molot_web,extra_deps=YmluL21vbG90)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:956ae4186daf4f13)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:e574e2c1d9c39a8f)"
             ],
             "gofra": {
                 "hostname": "lab3.gofra",
@@ -954,7 +954,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon_bot,runsh_script=sha256:be6d1a1fbb7570ac,srv_user=samogon_bot,extra_deps=YmluL3NhbW9nb24=)",
                 "bin/job/scheduler(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=job_scheduler)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:2557a8e5ea5d7841,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:82179ce80597ae09,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
                 "bin/event(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=event_http)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_http,runsh_script=sha256:db8927e645ff4f0d,srv_user=event_http,extra_deps=YmluL2V2ZW50)",
@@ -1143,7 +1143,7 @@
                 "bin/molot(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=molot_web)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=molot_web,runsh_script=sha256:512daaf3eafef4e9,srv_user=molot_web,extra_deps=YmluL21vbG90)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:956ae4186daf4f13)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:e574e2c1d9c39a8f)"
             ],
             "gofra": {
                 "hostname": "lab1.gofra",
@@ -1263,7 +1263,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon_bot,runsh_script=sha256:be6d1a1fbb7570ac,srv_user=samogon_bot,extra_deps=YmluL3NhbW9nb24=)",
                 "bin/job/scheduler(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=job_scheduler)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:2557a8e5ea5d7841,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:82179ce80597ae09,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
                 "bin/event(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=event_http)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_http,runsh_script=sha256:db8927e645ff4f0d,srv_user=event_http,extra_deps=YmluL2V2ZW50)",
@@ -1442,7 +1442,7 @@
                 "bin/molot(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=molot_web)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=molot_web,runsh_script=sha256:51b69098f7c8aad9,srv_user=molot_web,extra_deps=YmluL21vbG90)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:956ae4186daf4f13)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:e574e2c1d9c39a8f)"
             ],
             "gofra": {
                 "hostname": "lab2.gofra",
@@ -1562,7 +1562,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon_bot,runsh_script=sha256:be6d1a1fbb7570ac,srv_user=samogon_bot,extra_deps=YmluL3NhbW9nb24=)",
                 "bin/job/scheduler(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=job_scheduler)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:2557a8e5ea5d7841,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:82179ce80597ae09,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
                 "bin/event(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=event_http)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_http,runsh_script=sha256:db8927e645ff4f0d,srv_user=event_http,extra_deps=YmluL2V2ZW50)",
@@ -1711,7 +1711,7 @@
                 "bin/molot(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=molot_web)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=molot_web,runsh_script=sha256:516a8607e960c37a,srv_user=molot_web,extra_deps=YmluL21vbG90)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:956ae4186daf4f13)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:e574e2c1d9c39a8f)"
             ],
             "gofra": {
                 "hostname": "lab3.gofra",
