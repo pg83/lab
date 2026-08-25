@@ -5,7 +5,7 @@ bin/gorn
 bin/molot
 bin/dedup
 bin/python
-bin/etcd/ctl
+bin/etcd/lock
 bin/ci/metrics
 bin/git/unwrap
 bin/ci/scripts

@@ -4,7 +4,7 @@
 bin/gorn
 bin/dedup
 bin/python
-bin/etcd/ctl
+bin/etcd/lock
 bin/ix/timeout
 bin/minio/patched/client
 bin/job/scheduler/scripts

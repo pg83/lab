@@ -12,7 +12,7 @@ mkdir -p ${out}/etc/cron
 cat << 'EOF' > ${out}/etc/cron/300-updater-fixer.json
 {
     "cmd": [
-        "etcdctl", "lock", "/lock/updater/fixer/schedule", "--",
+        "etcd_lock", "/lock/updater/fixer/schedule", "--",
         "dedup", "/updater/fixer/v2", "--",
         "gorn", "ignite",
         "--root", "updater_fixer",
@@ -32,7 +32,7 @@ cat << 'EOF' > ${out}/etc/cron/300-updater-fixer.json
         "--env", "MOLOT_FULL_SLOTS=10",
         "--",
         "/bin/env", "PATH=/bin",
-        "etcdctl", "lock", "/lock/updater/fixer/work", "--",
+        "etcd_lock", "/lock/updater/fixer/work", "--",
         "updater_fixer", "run"
     ]
 }

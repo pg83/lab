@@ -17,7 +17,7 @@ mkdir -p ${out}/etc/cron
 cat << 'EOF' > ${out}/etc/cron/{{period}}-mc-gc-{{safe_root}}.json
 {
     "cmd": [
-        "etcdctl", "lock", "/lock/mc/gc{{root}}", "--",
+        "etcd_lock", "/lock/mc/gc{{root}}", "--",
         "dedup", "/mc/gc{{root}}", "--",
         "gorn", "ignite",
         "--root", "mc_gc",

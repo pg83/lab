@@ -6,7 +6,7 @@ mkdir -p ${out}/etc/cron
 cat << 'EOF' > ${out}/etc/cron/300-minio-iam-reconcile.json
 {
     "cmd": [
-        "etcdctl", "lock", "/lock/minio/iam", "--",
+        "etcd_lock", "/lock/minio/iam", "--",
         "dedup", "/minio/iam", "--",
         "gorn", "ignite",
         "--root", "minio_iam_reconcile",

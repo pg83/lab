@@ -18,7 +18,7 @@ semantics of IX's bin/ix/tools/upver, but every build is executed by Molot:
 
 Molot's success cache is seeded from and merged into s3://cix/complete, the
 same durable cache used by CI.  ``cache-update`` is the small helper invoked
-under the shared /lock/ci/cache etcd lock for the read-modify-write step.
+under the shared /lock/ci/cache etcd_lock for the read-modify-write step.
 """
 
 import json
@@ -537,7 +537,7 @@ def require_run_env(env):
 def merge_cache(cache_path, env):
     log(f'merge Molot cache {cache_path}')
     subprocess.run(
-        ('etcdctl', 'lock', CACHE_LOCK_KEY, '--', 'updater', 'cache-update', str(cache_path)),
+        ('etcd_lock', CACHE_LOCK_KEY, '--', 'updater', 'cache-update', str(cache_path)),
         env=env,
         check=True,
     )

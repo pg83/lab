@@ -2,7 +2,7 @@
 
 {% block run_deps %}
 bin/python
-bin/etcd/ctl
+bin/etcd/lock
 bin/event/scripts
 
 bin/mirror/fetch/event

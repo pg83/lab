@@ -24,9 +24,9 @@ Each tick:
     into our log. Exit 0 → state[filename] = now. Non-zero → leave
     state alone, next tick retries.
 
-Designed to run under `etcdctl lock /lock/job/scheduler` across 3
+Designed to run under `etcd_lock /lock/job/scheduler` across 3
 hosts so only the lock-holder actually fires jobs; peers block inside
-etcdctl until the holder dies.
+etcd_lock until the holder dies or loses its lease.
 """
 
 import json

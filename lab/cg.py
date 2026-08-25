@@ -1047,7 +1047,7 @@ class MolotWeb:
 SECOND_IP = '''
 set -x
 ip addr del {addr} dev eth0
-exec etcdctl lock /lock/{name} -- /bin/sh -c "set -xue; ip addr add {addr} dev eth0; sleep 1000"
+exec etcd_lock /lock/{name} -- /bin/sh -c "set -xue; ip addr add {addr} dev eth0; sleep 1000"
 '''
 
 
@@ -1062,6 +1062,9 @@ class SecondIP:
 
     def user(self):
         return 'root'
+
+    def pkgs(self):
+        yield {'pkg': 'bin/etcd/lock'}
 
     def run(self):
         s = self.script
@@ -1507,7 +1510,7 @@ class Samogon:
 
 
 class SamogonBot:
-    # Telegram bot for `samogon fetch`; cluster singleton via etcdctl lock.
+    # Telegram bot for `samogon fetch`; cluster singleton via etcd_lock.
     def __init__(self, s3_endpoint, gorn_api, tg_allow_users, etcd_endpoints):
         self.s3_endpoint = s3_endpoint
         self.gorn_api = gorn_api
@@ -1522,6 +1525,7 @@ class SamogonBot:
 
     def pkgs(self):
         yield {'pkg': 'bin/samogon'}
+        yield {'pkg': 'bin/etcd/lock'}
 
     def run(self):
         env = {
@@ -1544,11 +1548,11 @@ class SamogonBot:
         # Stagger lock attempts so all 3 hosts don't dogpile etcd.
         time.sleep(random.random() * 10)
 
-        exec_into('etcdctl', 'lock', '/lock/samogon_bot', 'samogon', 'bot', **env)
+        exec_into('etcd_lock', '/lock/samogon_bot', '--', 'samogon', 'bot', **env)
 
 
 class JobScheduler:
-    # Cluster cron; singleton via etcdctl lock /lock/job/scheduler.
+    # Cluster cron; singleton via etcd_lock /lock/job/scheduler.
     def __init__(self, gorn_api, s3_endpoint, etcd_endpoints, etcd_persist_endpoints,
                  codex_gorn_api, codex_s3_endpoint):
         self.gorn_api = gorn_api
@@ -1617,7 +1621,7 @@ class JobScheduler:
         # Stagger lock attempts across hosts.
         time.sleep(random.random() * 10)
 
-        exec_into('etcdctl', 'lock', '/lock/job/scheduler', 'job_scheduler', **env)
+        exec_into('etcd_lock', '/lock/job/scheduler', '--', 'job_scheduler', **env)
 
 
 class EventHttp:
@@ -1681,7 +1685,7 @@ class EventRunner:
 class EventDispatch(EventRunner):
     def run(self):
         exec_into(
-            'etcdctl', 'lock', '/lock/event/dispatch',
+            'etcd_lock', '/lock/event/dispatch', '--',
             'event', 'dispatch',
             **self.env(),
         )
@@ -1690,7 +1694,7 @@ class EventDispatch(EventRunner):
 class EventRetry(EventRunner):
     def run(self):
         exec_into(
-            'etcdctl', 'lock', '/lock/event/retry',
+            'etcd_lock', '/lock/event/retry', '--',
             'event', 'retry',
             **self.env(),
         )

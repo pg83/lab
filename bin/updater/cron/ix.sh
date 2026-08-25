@@ -8,7 +8,7 @@ mkdir -p ${out}/etc/cron
 cat << 'EOF' > ${out}/etc/cron/3600-updater.json
 {
     "cmd": [
-        "etcdctl", "lock", "/lock/updater", "--",
+        "etcd_lock", "/lock/updater", "--",
         "dedup", "/updater/v1", "--",
         "gorn", "ignite",
         "--root", "updater",
@@ -25,7 +25,7 @@ cat << 'EOF' > ${out}/etc/cron/3600-updater.json
         "--env", "MOLOT_FULL_SLOTS=10",
         "--",
         "/bin/env", "PATH=/bin",
-        "etcdctl", "lock", "/lock/updater/work", "--",
+        "etcd_lock", "/lock/updater/work", "--",
         "updater", "run"
     ]
 }

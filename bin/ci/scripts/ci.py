@@ -22,10 +22,9 @@ Subcommands:
   ci update <local_cache_path>
       Reads a local molot-cache from <local_cache_path>, unions
       it with the shared cix/complete object in S3, writes the
-      union back. Intended to be invoked under `etcdctl lock
+      union back. Intended to be invoked under `etcd_lock
       /lock/ci/cache` from ci check at the end of each build.
-      Takes the path as argv instead of stdin because etcdctl
-      lock eats stdin before handing off to its child cmd.
+      Takes the path as argv so the operation is explicit in logs.
 """
 
 import json
@@ -101,7 +100,7 @@ def mc_cat(uri, env):
 def update(local_path):
     """Merge <local_path> (caller's local cache file) with the shared
     <bucket>/complete in S3 and push the union back. Expected to be
-    run under `etcdctl lock /lock/ci/cache` — no locking here.
+    run under `etcd_lock /lock/ci/cache` — no locking here.
     Pure read-modify-write, single S3 PUT."""
     env = mc_env_for(os.environ)
     uri = s3_cache_uri()
@@ -251,12 +250,12 @@ def check(tier, sha):
             check=False,
         )
     finally:
-        # Always push additions back; RMW serialized via etcdctl lock.
+        # Always push additions back; RMW serialized via etcd_lock.
         size = os.path.getsize(cache_path) if os.path.exists(cache_path) else '-'
         log(f'merging cache_path={cache_path} size={size}')
 
         subprocess.run(
-            ('etcdctl', 'lock', CACHE_LOCK_KEY, '--',
+            ('etcd_lock', CACHE_LOCK_KEY, '--',
              'ci', 'update', cache_path),
             env=cix_mc_env,
             check=True,

@@ -8,7 +8,7 @@ mkdir -p ${out}/etc/cron
 cat << 'EOF' > ${out}/etc/cron/3600-etcd-backup.json
 {
     "cmd": [
-        "etcdctl", "lock", "/lock/backup/etcd", "--",
+        "etcd_lock", "/lock/backup/etcd", "--",
         "dedup", "/backup/etcd", "--",
         "gorn", "ignite",
         "--root", "backup",

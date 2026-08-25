@@ -16,10 +16,10 @@ Uses gorn's /v1/tasks/<guid>/queued endpoint — pure etcd-existence
 check, no S3 fallback, no root needed. dedup only cares about
 "queued vs not"; that's all this endpoint answers.
 
-Usage in practice — cron-file `cmd` array, under etcdctl lock so
+Usage in practice — cron-file `cmd` array, under etcd_lock so
 two schedulers can't race the read-check-write:
 
-    etcdctl lock /lock/ci/tier_0 \\
+    etcd_lock /lock/ci/tier_0 -- \\
         dedup /ci/tier_0 -- \\
             gorn ignite --root ci --env AWS_ACCESS_KEY_ID=$... \\
                 -- /bin/env PATH=/bin ci check set/ci/tier/0

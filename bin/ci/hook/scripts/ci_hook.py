@@ -41,7 +41,7 @@ def main():
     # cix creds run cache I/O against s3://cix/complete.
     molot_key = os.environ['AWS_ACCESS_KEY_ID_MOLOT']
     molot_sec = os.environ['AWS_SECRET_ACCESS_KEY_MOLOT']
-    # ci uses /lock/ci/cache — session lock, lives on tmpfs etcd_3.
+    # ci uses /lock/ci/cache through etcd_lock; it lives on tmpfs etcd_3.
     etcd = os.environ['ETCD_TMPFS_ENDPOINTS']
 
     for tier in (0, 1, 2):

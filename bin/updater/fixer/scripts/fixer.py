@@ -131,7 +131,7 @@ def seed_cache(path, env):
 def merge_cache(path, env):
     log(f'merge Molot cache {path}')
     subprocess.run(
-        ('etcdctl', 'lock', CACHE_LOCK_KEY, '--',
+        ('etcd_lock', CACHE_LOCK_KEY, '--',
          'updater', 'cache-update', str(path)),
         env=env,
         check=True,

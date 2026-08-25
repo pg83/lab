@@ -13,7 +13,7 @@ Subcommands:
       always sees a local listener.
 
   event dispatch
-      Drains /event/queue/* under (caller-held) etcdctl lock
+      Drains /event/queue/* under (caller-held) etcd_lock
       /lock/event/dispatch — singleton via the lock, runit
       restarts on lock loss. For each entry, walks
       /etc/event/<kind>/**/*.json recursively, parses

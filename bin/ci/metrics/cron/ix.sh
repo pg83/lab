@@ -8,7 +8,7 @@ mkdir -p ${out}/etc/cron
 cat << 'EOF' > ${out}/etc/cron/30-ci-metrics.json
 {
     "cmd": [
-        "etcdctl", "lock", "/lock/ci/metrics", "--",
+        "etcd_lock", "/lock/ci/metrics", "--",
         "dedup", "/ci/metrics", "--",
         "gorn", "ignite",
         "--root", "ci_metrics",

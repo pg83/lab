@@ -4,7 +4,7 @@
 bin/python
 bin/gorn
 bin/molot
-bin/etcd/ctl
+bin/etcd/lock
 bin/git/unwrap
 bin/git/passenv
 bin/minio/patched/client

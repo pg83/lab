@@ -8,7 +8,7 @@ mkdir -p ${out}/etc/cron
 cat << 'EOF' > ${out}/etc/cron/3600-etcd-defrag.json
 {
     "cmd": [
-        "etcdctl", "lock", "/lock/etcd/defrag", "--",
+        "etcd_lock", "/lock/etcd/defrag", "--",
         "dedup", "/etcd/defrag", "--",
         "gorn", "ignite",
         "--root", "etcd_defrag",
