@@ -290,6 +290,7 @@ class FixerTests(unittest.TestCase):
         self.assertEqual(got['GORN_API'], 'http://192.168.100.16:8027')
         self.assertEqual(got['S3_ENDPOINT'], 'http://192.168.103.16:8012')
         self.assertEqual(got['IX_EXEC_KIND'], 'molot')
+        self.assertNotIn('ETCD_PERSIST_ENDPOINTS', got)
         self.assertNotIn('GIT_USER', got)
         self.assertNotIn('GIT_PASS', got)
         self.assertNotIn('GIT_ASKPASS', got)

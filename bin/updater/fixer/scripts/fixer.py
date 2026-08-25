@@ -495,6 +495,9 @@ def materialize_codex_home(work, auth):
 
 def codex_agent_env(base_env, cache_path, codex_home):
     env = molot_env(base_env, cache_path)
+    # The supervisor needs persistent etcd for auth state.  The repair agent
+    # only needs Molot/Gorn and must not receive the durable etcd endpoint.
+    env.pop('ETCD_PERSIST_ENDPOINTS', None)
     # The agent runs in Wirez's network namespace.  Host-loopback endpoints
     # are unreachable there, so use the cluster-facing 192.* listeners which
     # the codex wrapper explicitly bypasses around SOCKS.
