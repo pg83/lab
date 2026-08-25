@@ -45,7 +45,9 @@ from pathlib import Path
 IX_GIT_URL = 'https://github.com/pg83/ix.git'
 IX_BRANCH = 'main'
 IX_TARGET = 'set/ci/tier/0'
-FIXER_GENERATION = '4'
+FIXER_GENERATION = '5'
+CODEX_MODEL = 'gpt-5.6-sol'
+CODEX_REASONING_EFFORT = 'xhigh'
 GIT_TOKEN_URL = 'http://127.0.0.1:8022/github/token'
 CODEX_AUTH_URL = 'http://127.0.0.1:8022/codex/auth'
 CODEX_AUTH_KEY_URL = 'http://127.0.0.1:8022/codex/auth/key'
@@ -483,12 +485,18 @@ def materialize_codex_home(work, auth):
     auth_path.write_bytes(auth)
     auth_path.chmod(0o600)
 
-    # Codex defaults to a reduced shell environment.  The supervisor has
-    # already removed repository credentials and the auth payload before the
-    # agent starts, so let its shell commands inherit the remaining curated
-    # environment, including IX_EXEC_KIND and Molot's endpoints/cache.
+    # A login shell sources /etc/profile and overwrites the supervisor's
+    # IX_EXEC_KIND=molot with IX_EXEC_KIND=system.  Keep agent commands in a
+    # regular shell and let them inherit the supervisor's curated environment,
+    # including Molot's endpoints/cache.  Repository credentials and the auth
+    # payload have already been removed.
     config_path = home / 'config.toml'
-    config_path.write_text('[shell_environment_policy]\ninherit = "all"\n')
+    config_path.write_text(
+        'allow_login_shell = false\n'
+        '\n'
+        '[shell_environment_policy]\n'
+        'inherit = "all"\n'
+    )
     config_path.chmod(0o600)
     return home
 
@@ -634,7 +642,11 @@ Perform one repair cycle:
    c. Revert the dependency update only as a last resort.  When reverting it,
       add the `noauto` marker to its recipe so the updater cannot immediately
       apply the same broken update again.
-3. Validate the affected package with `./ix build <package> --seed=1`.
+3. Validate the affected package with `./ix build <package> --seed=1`.  Run
+   that command directly, without a pipeline that can hide its exit status.
+   A zero exit status from the validation build is mandatory.
+   If validation cannot execute or exits nonzero, do not commit.  Restore the
+   clean checkout and stop.
 4. If the failure is transient infrastructure trouble and needs no repository
    change, leave the tree clean and stop.
 5. Otherwise create exactly one local commit directly on top of `{revision}`.
@@ -652,6 +664,8 @@ repair commit; the supervisor exclusively owns remote publication.
 def codex_command(repo, prompt):
     return (
         'timeout', '3600', 'codex', 'exec',
+        '--model', CODEX_MODEL,
+        '--config', f'model_reasoning_effort="{CODEX_REASONING_EFFORT}"',
         '--dangerously-bypass-approvals-and-sandbox',
         '--ephemeral',
         '--color', 'never',

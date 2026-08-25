@@ -120,6 +120,9 @@ class FixerTests(unittest.TestCase):
         prompt = fixer.codex_prompt(fixer.IX_TARGET, 'abc123', 'node failed: root')
         self.assertIn('./ix build set/ci/tier/0 --seed=1', prompt)
         self.assertIn('./ix build <package> --seed=1', prompt)
+        self.assertIn('without a pipeline that can hide its exit status', prompt)
+        self.assertIn('A zero exit status from the validation build is mandatory', prompt)
+        self.assertIn('If validation cannot execute or exits nonzero, do not commit', prompt)
         self.assertIn('create exactly one local commit directly on top', prompt)
         self.assertIn('concise factual commit message', prompt)
         self.assertIn('Do not fetch, rebase, push, amend', prompt)
@@ -190,6 +193,13 @@ class FixerTests(unittest.TestCase):
     def test_codex_runs_noninteractively_without_external_profile(self):
         cmd = fixer.codex_command(Path('/work/ix'), 'repair it')
         self.assertEqual(cmd[:4], ('timeout', '3600', 'codex', 'exec'))
+        self.assertIn('--model', cmd)
+        self.assertEqual(cmd[cmd.index('--model') + 1], 'gpt-5.6-sol')
+        self.assertIn('--config', cmd)
+        self.assertEqual(
+            cmd[cmd.index('--config') + 1],
+            'model_reasoning_effort="xhigh"',
+        )
         self.assertNotIn('-p', cmd)
         self.assertIn('--dangerously-bypass-approvals-and-sandbox', cmd)
         self.assertIn('--ephemeral', cmd)
@@ -209,7 +219,10 @@ class FixerTests(unittest.TestCase):
             self.assertEqual(auth_path.read_bytes(), auth)
             self.assertEqual(
                 config_path.read_text(),
-                '[shell_environment_policy]\ninherit = "all"\n',
+                'allow_login_shell = false\n'
+                '\n'
+                '[shell_environment_policy]\n'
+                'inherit = "all"\n',
             )
             self.assertEqual(home.stat().st_mode & 0o777, 0o700)
             self.assertEqual(auth_path.stat().st_mode & 0o777, 0o600)
