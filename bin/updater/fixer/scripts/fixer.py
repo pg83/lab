@@ -22,8 +22,8 @@ host-only secret service and materialized as CODEX_HOME/auth.json only inside
 this worker's temporary directory.  Codex may rotate its refresh token, so the
 updated file is always written back before the temporary directory disappears.
 Repository credentials are not present while the agent runs: the supervisor
-fetches /github/token only after Codex exits, then commits and publishes the
-prepared tree.
+fetches /github/token only after Codex exits, validates the agent's local
+commit, and publishes that exact commit without rewriting it.
 """
 
 import base64
@@ -45,7 +45,7 @@ from pathlib import Path
 IX_GIT_URL = 'https://github.com/pg83/ix.git'
 IX_BRANCH = 'main'
 IX_TARGET = 'set/ci/tier/0'
-FIXER_GENERATION = '3'
+FIXER_GENERATION = '4'
 GIT_TOKEN_URL = 'http://127.0.0.1:8022/github/token'
 CODEX_AUTH_URL = 'http://127.0.0.1:8022/codex/auth'
 CODEX_AUTH_KEY_URL = 'http://127.0.0.1:8022/codex/auth/key'
@@ -637,12 +637,15 @@ Perform one repair cycle:
 3. Validate the affected package with `./ix build <package> --seed=1`.
 4. If the failure is transient infrastructure trouble and needs no repository
    change, leave the tree clean and stop.
-5. Otherwise leave the tested fix in the working tree for the supervisor.
-   Do not commit, fetch, rebase, push, or change git remotes and configuration.
+5. Otherwise create exactly one local commit directly on top of `{revision}`.
+   Use a concise factual commit message that names the package or shared logic
+   and describes the actual fix.  Leave the working tree clean.
+6. Do not fetch, rebase, push, amend or rewrite existing commits, or change git
+   remotes and configuration.  Repository credentials are intentionally absent.
 
 This is an unattended repair job.  Complete the diagnosis, edit, and
-validation without asking for interactive input.  The supervisor exclusively
-owns git history and publication.
+validation without asking for interactive input.  You own the single local
+repair commit; the supervisor exclusively owns remote publication.
 """
 
 
@@ -684,51 +687,102 @@ def run_codex(repo, cache_path, build_log, env):
     return revision
 
 
-def publish_fix(repo, revision, branch, env):
-    """Commit and push an agent-prepared working tree under supervisor auth."""
-    head = subprocess.check_output(
-        ('git', 'rev-parse', 'HEAD'), cwd=repo, text=True,
+def git_output(repo, *args):
+    return subprocess.check_output(
+        ('git', *args),
+        cwd=repo,
+        text=True,
     ).strip()
 
-    if head != revision:
-        raise InfrastructureFailure('Codex changed git history; refusing to publish')
 
-    subprocess.run(('git', 'add', '-A'), cwd=repo, check=True)
-    clean = subprocess.run(
-        ('git', 'diff', '--cached', '--quiet'), cwd=repo, check=False,
-    )
+def validate_agent_commit(repo, revision):
+    """Return the one clean agent commit, or None for a clean no-op."""
+    head = git_output(repo, 'rev-parse', 'HEAD')
+    status = git_output(repo, 'status', '--porcelain=v1', '--untracked-files=all')
 
-    if clean.returncode == 0:
+    if head == revision:
+        if status:
+            raise InfrastructureFailure(
+                'Codex left uncommitted repository changes; refusing to publish'
+            )
+
         log('Codex left no repository change; nothing to publish')
-        return False
+        return None
 
-    if clean.returncode != 1:
-        raise InfrastructureFailure(f'git diff --cached failed with {clean.returncode}')
+    if status:
+        raise InfrastructureFailure(
+            'Codex committed with a dirty working tree; refusing to publish'
+        )
 
-    subprocess.run(('git', 'diff', '--cached', '--check'), cwd=repo, check=True)
+    commit_line = git_output(repo, 'rev-list', '--parents', '-n', '1', head).split()
+
+    if len(commit_line) != 2 or commit_line[1] != revision:
+        raise InfrastructureFailure(
+            'Codex did not leave exactly one commit on the original HEAD'
+        )
+
+    subject = git_output(repo, 'log', '-1', '--format=%s', head)
+
+    if not subject or len(subject) > 120:
+        raise InfrastructureFailure('Codex left an invalid commit subject')
+
+    changed = git_output(
+        repo,
+        'diff-tree', '--no-commit-id', '--name-only', '-r', head,
+    ).splitlines()
+    forbidden = {'.fixer-build.log', '.fixer-molot-cache'}
+
+    if not changed:
+        raise InfrastructureFailure('Codex left an empty repair commit')
+
+    if forbidden.intersection(changed):
+        raise InfrastructureFailure('Codex committed fixer scratch files')
+
     subprocess.run(
-        ('git', 'commit', '-m', f'fix CI after {revision[:12]}'),
+        ('git', 'diff', '--check', revision, head),
         cwd=repo,
         check=True,
     )
+    log(f'validated Codex commit {head[:12]}: {subject}')
+    return head
+
+
+def publish_fix(repo, revision, branch, env):
+    """Validate and push the agent's exact commit under supervisor auth."""
+    head = validate_agent_commit(repo, revision)
+
+    if head is None:
+        return False
 
     git_url = env.get('IX_FIXER_GIT_URL', IX_GIT_URL)
-    subprocess.run(('git', 'remote', 'set-url', 'origin', git_url), cwd=repo, check=True)
     subprocess.run(
-        ('git', 'fetch', 'origin', branch),
+        ('git', 'fetch', git_url, branch),
         cwd=repo,
         env=git_read_env(env),
         check=True,
     )
-    subprocess.run(('git', 'rebase', f'origin/{branch}'), cwd=repo, check=True)
+    remote_head = git_output(repo, 'rev-parse', 'FETCH_HEAD')
+
+    if remote_head != revision:
+        log(
+            f'origin {branch} moved from {revision[:12]} to '
+            f'{remote_head[:12]}; discard agent checkout and retry next cycle'
+        )
+        return False
+
     token = load_repo_token(env)
     subprocess.run(
-        ('git', 'push', 'origin', f'HEAD:refs/heads/{branch}'),
+        (
+            'git',
+            '-c', 'core.hooksPath=/dev/null',
+            '-c', 'credential.helper=',
+            'push', git_url, f'{head}:refs/heads/{branch}',
+        ),
         cwd=repo,
         env=git_push_env(env, token),
         check=True,
     )
-    log(f'published Codex fix to {branch}')
+    log(f'published Codex commit {head[:12]} to {branch}')
     return True
 
 

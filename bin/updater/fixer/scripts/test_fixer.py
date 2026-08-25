@@ -6,6 +6,7 @@ import io
 import json
 import os
 import signal
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -40,6 +41,35 @@ class FixerTests(unittest.TestCase):
         }
         env['IX_FIXER_GENERATION'] = fixer.FIXER_GENERATION
         return env
+
+    def init_git_repo(self, root):
+        repo = Path(root) / 'repo'
+        subprocess.run(('git', 'init', '-q', str(repo)), check=True)
+        subprocess.run(('git', 'config', 'user.name', 'test'), cwd=repo, check=True)
+        subprocess.run(('git', 'config', 'user.email', 'test@example.invalid'), cwd=repo, check=True)
+        (repo / 'README').write_text('base\n')
+        subprocess.run(('git', 'add', 'README'), cwd=repo, check=True)
+        subprocess.run(
+            ('git', '-c', 'commit.gpgsign=false', 'commit', '-q', '-m', 'base'),
+            cwd=repo,
+            check=True,
+        )
+        base = subprocess.check_output(
+            ('git', 'rev-parse', 'HEAD'), cwd=repo, text=True,
+        ).strip()
+        return repo, base
+
+    def commit_file(self, repo, path, contents, message):
+        (repo / path).write_text(contents)
+        subprocess.run(('git', 'add', path), cwd=repo, check=True)
+        subprocess.run(
+            ('git', '-c', 'commit.gpgsign=false', 'commit', '-q', '-m', message),
+            cwd=repo,
+            check=True,
+        )
+        return subprocess.check_output(
+            ('git', 'rev-parse', 'HEAD'), cwd=repo, text=True,
+        ).strip()
 
     def test_target_failure_recognizes_colored_molot_marker(self):
         with tempfile.TemporaryDirectory() as td:
@@ -86,12 +116,14 @@ class FixerTests(unittest.TestCase):
         self.assertTrue(got['MOLOT_CACHE'].endswith('/cache'))
         self.assertNotIn('CODEX_AUTH_B64', got)
 
-    def test_prompt_only_asks_for_a_validated_worktree_fix(self):
+    def test_prompt_asks_for_one_local_commit_without_publication(self):
         prompt = fixer.codex_prompt(fixer.IX_TARGET, 'abc123', 'node failed: root')
         self.assertIn('./ix build set/ci/tier/0 --seed=1', prompt)
         self.assertIn('./ix build <package> --seed=1', prompt)
-        self.assertIn('leave the tested fix in the working tree', prompt)
-        self.assertIn('Do not commit, fetch, rebase, push', prompt)
+        self.assertIn('create exactly one local commit directly on top', prompt)
+        self.assertIn('concise factual commit message', prompt)
+        self.assertIn('Do not fetch, rebase, push, amend', prompt)
+        self.assertIn('supervisor exclusively owns remote publication', prompt)
         self.assertIn('Fix the updated dependency itself', prompt)
         self.assertIn('only one consumer is incompatible', prompt)
         self.assertIn('Revert the dependency update only as a last resort', prompt)
@@ -316,26 +348,94 @@ class FixerTests(unittest.TestCase):
         env = self.run_env()
 
         with tempfile.TemporaryDirectory() as td, \
-             mock.patch.object(fixer.subprocess, 'check_output', side_effect=['abc123\n']), \
+             mock.patch.object(fixer, 'validate_agent_commit', return_value='fix123'), \
+             mock.patch.object(fixer.subprocess, 'check_output', return_value='abc123\n'), \
              mock.patch.object(fixer, 'load_repo_token', return_value='repo-token'):
             repo = Path(td)
-            clean = mock.Mock(returncode=1)
 
-            with mock.patch.object(fixer.subprocess, 'run', return_value=clean) as run:
+            with mock.patch.object(fixer.subprocess, 'run') as run:
                 self.assertTrue(fixer.publish_fix(repo, 'abc123', 'main', env))
 
         calls = run.call_args_list
-        push = next(call for call in calls if call.args[0][:2] == ('git', 'push'))
+        push = next(call for call in calls if 'push' in call.args[0])
         fetch = next(call for call in calls if call.args[0][:2] == ('git', 'fetch'))
+        self.assertIn('fix123:refs/heads/main', push.args[0])
+        self.assertNotIn('--force', push.args[0])
         self.assertEqual(push.kwargs['env']['GIT_ASKPASS'], 'passenv')
         self.assertEqual(push.kwargs['env']['GIT_PASS'], 'repo-token')
         self.assertNotIn('GIT_PASS', fetch.kwargs['env'])
+        self.assertFalse(any('commit' in call.args[0] for call in calls))
+        self.assertFalse(any('rebase' in call.args[0] for call in calls))
 
-    def test_publish_refuses_agent_history_changes(self):
+    def test_publish_discards_commit_when_remote_moved(self):
+        env = self.run_env()
+
         with tempfile.TemporaryDirectory() as td, \
-             mock.patch.object(fixer.subprocess, 'check_output', return_value='changed\n'):
-            with self.assertRaisesRegex(fixer.InfrastructureFailure, 'changed git history'):
-                fixer.publish_fix(Path(td), 'original', 'main', self.run_env())
+             mock.patch.object(fixer, 'validate_agent_commit', return_value='fix123'), \
+             mock.patch.object(fixer.subprocess, 'check_output', return_value='moved\n'), \
+             mock.patch.object(fixer, 'load_repo_token') as token, \
+             mock.patch.object(fixer.subprocess, 'run') as run:
+            self.assertFalse(fixer.publish_fix(Path(td), 'original', 'main', env))
+
+        token.assert_not_called()
+        self.assertFalse(any('push' in call.args[0] for call in run.call_args_list))
+
+    def test_validate_accepts_one_clean_agent_commit(self):
+        with tempfile.TemporaryDirectory() as td:
+            repo, base = self.init_git_repo(td)
+            head = self.commit_file(
+                repo,
+                'recipe',
+                'fixed\n',
+                'fix exfat-progs configure flags',
+            )
+            self.assertEqual(fixer.validate_agent_commit(repo, base), head)
+
+    def test_validate_accepts_clean_noop(self):
+        with tempfile.TemporaryDirectory() as td:
+            repo, base = self.init_git_repo(td)
+            self.assertIsNone(fixer.validate_agent_commit(repo, base))
+
+    def test_validate_rejects_uncommitted_changes(self):
+        with tempfile.TemporaryDirectory() as td:
+            repo, base = self.init_git_repo(td)
+            (repo / 'recipe').write_text('dirty\n')
+
+            with self.assertRaisesRegex(
+                fixer.InfrastructureFailure,
+                'uncommitted repository changes',
+            ):
+                fixer.validate_agent_commit(repo, base)
+
+    def test_validate_rejects_multiple_agent_commits(self):
+        with tempfile.TemporaryDirectory() as td:
+            repo, base = self.init_git_repo(td)
+            self.commit_file(repo, 'one', 'one\n', 'first fix')
+            self.commit_file(repo, 'two', 'two\n', 'second fix')
+
+            with self.assertRaisesRegex(
+                fixer.InfrastructureFailure,
+                'exactly one commit',
+            ):
+                fixer.validate_agent_commit(repo, base)
+
+    def test_validate_rejects_empty_agent_commit(self):
+        with tempfile.TemporaryDirectory() as td:
+            repo, base = self.init_git_repo(td)
+            subprocess.run(
+                (
+                    'git', '-c', 'commit.gpgsign=false',
+                    'commit', '-q', '--allow-empty', '-m', 'pretend fix',
+                ),
+                cwd=repo,
+                check=True,
+            )
+
+            with self.assertRaisesRegex(
+                fixer.InfrastructureFailure,
+                'empty repair commit',
+            ):
+                fixer.validate_agent_commit(repo, base)
 
     def test_required_environment_does_not_require_codex_package_variable(self):
         env = self.run_env()
