@@ -10,6 +10,7 @@ etc/keys
 etc/hosts
 etc/sysctl
 etc/multihome
+etc/tun
 
 {% for d in hm.disabled %}
 etc/stopper(srv_dir={{d}})
