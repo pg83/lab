@@ -10,6 +10,8 @@ bin/git/passenv
 bin/minio/patched/client
 bin/ix/timeout
 bin/codex/wrap
+bin/openssl
+bin/etcd/ctl
 bin/updater/scripts
 bin/updater/fixer/scripts
 {% endblock %}

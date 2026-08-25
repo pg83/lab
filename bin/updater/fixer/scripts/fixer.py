@@ -17,15 +17,19 @@ holds /lock/updater/fixer/work around the complete process.  The worker:
 
 Infrastructure failures do not spend an agent run.  The next cron cycle will
 retry them.  The lab's bin/codex/wrap package forces Codex and every command it
-spawns through Wirez.  Authentication comes from the encrypted lab secret at
-/codex/auth and is materialized as CODEX_HOME/auth.json only inside this
-worker's temporary directory.  Repository credentials are not present while
-the agent runs: the supervisor fetches /github/token from the host-only secret
-service only after Codex exits, then commits and publishes the prepared tree.
+spawns through Wirez.  Authentication is loaded just in time from the
+host-only secret service and materialized as CODEX_HOME/auth.json only inside
+this worker's temporary directory.  Codex may rotate its refresh token, so the
+updated file is always written back before the temporary directory disappears.
+Repository credentials are not present while the agent runs: the supervisor
+fetches /github/token only after Codex exits, then commits and publishes the
+prepared tree.
 """
 
 import base64
 import binascii
+import hashlib
+import hmac
 import json
 import os
 import re
@@ -41,8 +45,16 @@ from pathlib import Path
 IX_GIT_URL = 'https://github.com/pg83/ix.git'
 IX_BRANCH = 'main'
 IX_TARGET = 'set/ci/tier/0'
-FIXER_GENERATION = '2'
+FIXER_GENERATION = '3'
 GIT_TOKEN_URL = 'http://127.0.0.1:8022/github/token'
+CODEX_AUTH_URL = 'http://127.0.0.1:8022/codex/auth'
+CODEX_AUTH_KEY_URL = 'http://127.0.0.1:8022/codex/auth/key'
+CODEX_AUTH_MAX_BYTES = 1024 * 1024
+CODEX_AUTH_ETCD_KEY = '/updater/fixer/codex-auth'
+CODEX_AUTH_ENVELOPE_VERSION = 1
+CODEX_AUTH_ENVELOPE_ALGORITHM = 'aes-256-cbc+hmac-sha256'
+CODEX_AUTH_HKDF_INFO = b'ix-updater-fixer/codex-auth/v1'
+CODEX_AUTH_AES = '-aes-256-cbc'
 
 CACHE_LOCK_KEY = '/lock/ci/cache'
 CACHE_S3_BUCKET = 'cix'
@@ -78,8 +90,8 @@ def require_env(env):
         'AWS_ACCESS_KEY_ID_MOLOT',
         'AWS_SECRET_ACCESS_KEY_MOLOT',
         'ETCDCTL_ENDPOINTS',
+        'ETCD_PERSIST_ENDPOINTS',
         'GIT_USER',
-        'CODEX_AUTH_B64',
         'IX_FIXER_CODEX_GORN_API',
         'IX_FIXER_CODEX_S3_ENDPOINT',
         'IX_FIXER_GENERATION',
@@ -208,10 +220,253 @@ def load_repo_token(env):
     return token
 
 
+def fetch_secret(url, description, limit=CODEX_AUTH_MAX_BYTES):
+    log(f'load {description} from {url}')
+
+    try:
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            value = resp.read(limit + 1)
+    except Exception as exc:
+        raise InfrastructureFailure(f'cannot load {description}') from exc
+
+    if not value:
+        raise InfrastructureFailure(f'{description} is empty')
+
+    if len(value) > limit:
+        raise InfrastructureFailure(f'{description} is too large')
+
+    return value
+
+
+def validate_codex_auth(auth):
+    if len(auth) > CODEX_AUTH_MAX_BYTES:
+        raise InfrastructureFailure('CODEX auth is too large')
+
+    try:
+        parsed = json.loads(auth)
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise InfrastructureFailure('invalid CODEX auth') from exc
+
+    if not isinstance(parsed, dict):
+        raise InfrastructureFailure('CODEX auth is not a JSON object')
+
+    return auth
+
+
+def load_codex_wrapping_key(env):
+    url = env.get('IX_FIXER_CODEX_AUTH_KEY_URL', CODEX_AUTH_KEY_URL)
+    raw = fetch_secret(url, 'CODEX auth wrapping key', limit=256).strip()
+
+    try:
+        key = bytes.fromhex(raw.decode())
+    except (UnicodeDecodeError, ValueError) as exc:
+        raise InfrastructureFailure(
+            'CODEX auth wrapping key must be 64 hexadecimal characters'
+        ) from exc
+
+    if len(key) != 32:
+        raise InfrastructureFailure(
+            'CODEX auth wrapping key must be 64 hexadecimal characters'
+        )
+
+    return key
+
+
+def load_codex_bootstrap(env):
+    url = env.get('IX_FIXER_CODEX_AUTH_URL', CODEX_AUTH_URL)
+    return validate_codex_auth(fetch_secret(url, 'CODEX auth'))
+
+
+def hkdf_sha256(secret, salt, info, length):
+    """RFC 5869 HKDF-SHA256 extract+expand."""
+    prk = hmac.new(salt, secret, hashlib.sha256).digest()
+    out = b''
+    block = b''
+    counter = 1
+
+    while len(out) < length:
+        block = hmac.new(
+            prk,
+            block + info + bytes((counter,)),
+            hashlib.sha256,
+        ).digest()
+        out += block
+        counter += 1
+
+    return out[:length]
+
+
+def codex_auth_keys(wrapping_key, salt):
+    material = hkdf_sha256(
+        wrapping_key,
+        salt,
+        CODEX_AUTH_HKDF_INFO,
+        64,
+    )
+    return material[:32], material[32:]
+
+
+def codex_auth_mac_input(seed_hash, salt, iv, ciphertext):
+    return (
+        b'ix-updater-fixer-codex-auth-v1\0'
+        + seed_hash.encode()
+        + salt
+        + iv
+        + ciphertext
+    )
+
+
+def encrypt_codex_auth(auth, wrapping_key, seed_hash):
+    validate_codex_auth(auth)
+    salt = os.urandom(32)
+    iv = os.urandom(16)
+    encryption_key, mac_key = codex_auth_keys(wrapping_key, salt)
+    ciphertext = subprocess.check_output(
+        (
+            'openssl', 'enc', CODEX_AUTH_AES,
+            '-K', encryption_key.hex(),
+            '-iv', iv.hex(),
+        ),
+        input=auth,
+    )
+    tag = hmac.new(
+        mac_key,
+        codex_auth_mac_input(seed_hash, salt, iv, ciphertext),
+        hashlib.sha256,
+    ).digest()
+    envelope = {
+        'alg': CODEX_AUTH_ENVELOPE_ALGORITHM,
+        'ct': base64.b64encode(ciphertext).decode(),
+        'iv': base64.b64encode(iv).decode(),
+        'key': hashlib.sha256(wrapping_key).hexdigest(),
+        'salt': base64.b64encode(salt).decode(),
+        'seed': seed_hash,
+        'tag': base64.b64encode(tag).decode(),
+        'v': CODEX_AUTH_ENVELOPE_VERSION,
+    }
+    return (json.dumps(envelope, separators=(',', ':'), sort_keys=True) + '\n').encode()
+
+
+def decrypt_codex_auth(raw, wrapping_key):
+    try:
+        envelope = json.loads(raw)
+
+        if envelope['v'] != CODEX_AUTH_ENVELOPE_VERSION:
+            raise ValueError('unsupported version')
+
+        if envelope['alg'] != CODEX_AUTH_ENVELOPE_ALGORITHM:
+            raise ValueError('unsupported algorithm')
+
+        seed_hash = envelope['seed']
+
+        if not re.fullmatch(r'[0-9a-f]{64}', seed_hash):
+            raise ValueError('invalid seed fingerprint')
+
+        if envelope['key'] != hashlib.sha256(wrapping_key).hexdigest():
+            return None, None
+
+        salt = base64.b64decode(envelope['salt'], validate=True)
+        iv = base64.b64decode(envelope['iv'], validate=True)
+        ciphertext = base64.b64decode(envelope['ct'], validate=True)
+        tag = base64.b64decode(envelope['tag'], validate=True)
+    except (KeyError, TypeError, binascii.Error, json.JSONDecodeError, ValueError) as exc:
+        raise InfrastructureFailure('invalid encrypted CODEX auth in etcd') from exc
+
+    if len(salt) != 32 or len(iv) != 16 or len(tag) != hashlib.sha256().digest_size:
+        raise InfrastructureFailure('invalid encrypted CODEX auth sizes in etcd')
+
+    encryption_key, mac_key = codex_auth_keys(wrapping_key, salt)
+    expected = hmac.new(
+        mac_key,
+        codex_auth_mac_input(seed_hash, salt, iv, ciphertext),
+        hashlib.sha256,
+    ).digest()
+
+    if not hmac.compare_digest(tag, expected):
+        raise InfrastructureFailure('encrypted CODEX auth authentication failed')
+
+    try:
+        auth = subprocess.check_output(
+            (
+                'openssl', 'enc', CODEX_AUTH_AES,
+                '-K', encryption_key.hex(),
+                '-iv', iv.hex(),
+                '-d',
+            ),
+            input=ciphertext,
+            stderr=subprocess.PIPE,
+        )
+    except subprocess.CalledProcessError as exc:
+        raise InfrastructureFailure('cannot decrypt CODEX auth from etcd') from exc
+
+    return validate_codex_auth(auth), seed_hash
+
+
+def read_codex_auth_etcd(env):
+    etcd_env = dict(env)
+    etcd_env['ETCDCTL_ENDPOINTS'] = env['ETCD_PERSIST_ENDPOINTS']
+    result = subprocess.run(
+        ('etcdctl', 'get', '--print-value-only', CODEX_AUTH_ETCD_KEY),
+        env=etcd_env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+
+    if result.returncode != 0:
+        sys.stderr.buffer.write(result.stderr)
+        raise InfrastructureFailure('cannot load encrypted CODEX auth from etcd')
+
+    return result.stdout
+
+
+def load_codex_auth(env):
+    wrapping_key = load_codex_wrapping_key(env)
+    bootstrap = load_codex_bootstrap(env)
+    seed_hash = hashlib.sha256(bootstrap).hexdigest()
+    encrypted = read_codex_auth_etcd(env)
+
+    if not encrypted:
+        log('no runtime CODEX auth in etcd; use encrypted-store bootstrap')
+        return bootstrap, wrapping_key, seed_hash
+
+    auth, saved_seed_hash = decrypt_codex_auth(encrypted, wrapping_key)
+
+    if auth is None:
+        log('CODEX wrapping key changed; use encrypted-store bootstrap')
+        return bootstrap, wrapping_key, seed_hash
+
+    if saved_seed_hash != seed_hash:
+        log('CODEX auth bootstrap changed; replace stale runtime state')
+        return bootstrap, wrapping_key, seed_hash
+
+    return auth, wrapping_key, seed_hash
+
+
+def save_codex_auth(auth, wrapping_key, seed_hash, env):
+    encrypted = encrypt_codex_auth(auth, wrapping_key, seed_hash)
+    log(f'save refreshed CODEX auth to etcd {CODEX_AUTH_ETCD_KEY}')
+    etcd_env = dict(env)
+    etcd_env['ETCDCTL_ENDPOINTS'] = env['ETCD_PERSIST_ENDPOINTS']
+    result = subprocess.run(
+        ('etcdctl', 'put', CODEX_AUTH_ETCD_KEY),
+        env=etcd_env,
+        input=encrypted,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+
+    if result.returncode != 0:
+        sys.stderr.buffer.write(result.stderr)
+        raise InfrastructureFailure('cannot save encrypted CODEX auth to etcd')
+
+
 def molot_env(base_env, cache_path):
     env = dict(base_env)
-    # Molot needs its own S3 credentials, but never the Codex login payload.
-    env.pop('CODEX_AUTH_B64', None)
+    # Molot needs its own S3 credentials.  Codex auth never crosses the task
+    # environment; it is loaded from the host-only secret service just in time.
+    env.pop('CODEX_AUTH_B64', None)  # Do not leak payloads from obsolete tasks.
     env['IX_EXEC_KIND'] = 'molot'
     env['AWS_ACCESS_KEY_ID'] = base_env['AWS_ACCESS_KEY_ID_MOLOT']
     env['AWS_SECRET_ACCESS_KEY'] = base_env['AWS_SECRET_ACCESS_KEY_MOLOT']
@@ -220,13 +475,8 @@ def molot_env(base_env, cache_path):
     return env
 
 
-def materialize_codex_home(work, env):
-    try:
-        auth = base64.b64decode(env['CODEX_AUTH_B64'], validate=True)
-        json.loads(auth)
-    except (KeyError, binascii.Error, json.JSONDecodeError, UnicodeDecodeError) as exc:
-        raise InfrastructureFailure('invalid CODEX auth from /codex/auth') from exc
-
+def materialize_codex_home(work, auth):
+    auth = validate_codex_auth(auth)
     home = work / 'codex-home'
     home.mkdir(mode=0o700)
     auth_path = home / 'auth.json'
@@ -410,11 +660,24 @@ def run_codex(repo, cache_path, build_log, env):
         ('git', 'rev-parse', 'HEAD'), cwd=repo, text=True,
     ).strip()
     prompt = codex_prompt(target, revision, failure_summary(build_log))
-    codex_home = materialize_codex_home(repo.parent, env)
+    auth, wrapping_key, seed_hash = load_codex_auth(env)
+    codex_home = materialize_codex_home(repo.parent, auth)
     agent_env = codex_agent_env(env, cache_path, codex_home)
     cmd = codex_command(repo, prompt)
     log(f'run codex target={target}')
-    subprocess.run(cmd, cwd=repo, env=agent_env, check=True)
+
+    try:
+        subprocess.run(cmd, cwd=repo, env=agent_env, check=True)
+    finally:
+        # Persist rotations even on a non-zero Codex exit or timeout.  Losing
+        # an updated auth.json here would leave the saved refresh token stale.
+        save_codex_auth(
+            (codex_home / 'auth.json').read_bytes(),
+            wrapping_key,
+            seed_hash,
+            env,
+        )
+
     return revision
 
 

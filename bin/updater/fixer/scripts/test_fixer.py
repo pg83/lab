@@ -3,6 +3,7 @@
 import importlib.util
 import base64
 import io
+import json
 import os
 import signal
 import sys
@@ -30,6 +31,7 @@ class FixerTests(unittest.TestCase):
                 'AWS_ACCESS_KEY_ID_MOLOT',
                 'AWS_SECRET_ACCESS_KEY_MOLOT',
                 'ETCDCTL_ENDPOINTS',
+                'ETCD_PERSIST_ENDPOINTS',
                 'GIT_USER',
                 'IX_FIXER_CODEX_GORN_API',
                 'IX_FIXER_CODEX_S3_ENDPOINT',
@@ -37,7 +39,6 @@ class FixerTests(unittest.TestCase):
             )
         }
         env['IX_FIXER_GENERATION'] = fixer.FIXER_GENERATION
-        env['CODEX_AUTH_B64'] = base64.b64encode(b'{"tokens":{}}').decode()
         return env
 
     def test_target_failure_recognizes_colored_molot_marker(self):
@@ -169,7 +170,7 @@ class FixerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             home = fixer.materialize_codex_home(
                 Path(td),
-                {'CODEX_AUTH_B64': base64.b64encode(auth).decode()},
+                auth,
             )
             auth_path = home / 'auth.json'
             config_path = home / 'config.toml'
@@ -181,6 +182,96 @@ class FixerTests(unittest.TestCase):
             self.assertEqual(home.stat().st_mode & 0o777, 0o700)
             self.assertEqual(auth_path.stat().st_mode & 0o777, 0o600)
             self.assertEqual(config_path.stat().st_mode & 0o777, 0o600)
+
+    def test_codex_auth_etcd_envelope_is_authenticated(self):
+        auth = b'{"tokens":{"access_token":"secret"}}\n'
+        key = bytes(range(32))
+        seed_hash = '1' * 64
+        encrypted = fixer.encrypt_codex_auth(auth, key, seed_hash)
+        decrypted, got_seed_hash = fixer.decrypt_codex_auth(encrypted, key)
+        self.assertEqual(decrypted, auth)
+        self.assertEqual(got_seed_hash, seed_hash)
+
+        envelope = json.loads(encrypted)
+        tag = bytearray(base64.b64decode(envelope['tag']))
+        tag[0] ^= 1
+        envelope['tag'] = base64.b64encode(tag).decode()
+
+        with self.assertRaisesRegex(
+            fixer.InfrastructureFailure,
+            'authentication failed',
+        ):
+            fixer.decrypt_codex_auth(json.dumps(envelope).encode(), key)
+
+    def test_codex_auth_key_rotation_uses_bootstrap(self):
+        auth = b'{"tokens":{"access_token":"old"}}\n'
+        encrypted = fixer.encrypt_codex_auth(auth, bytes(range(32)), '1' * 64)
+        self.assertEqual(
+            fixer.decrypt_codex_auth(encrypted, bytes(range(1, 33))),
+            (None, None),
+        )
+
+    def test_codex_auth_bootstrap_rotation_replaces_runtime(self):
+        old_auth = b'{"tokens":{"access_token":"old"}}\n'
+        new_auth = b'{"tokens":{"access_token":"new"}}\n'
+        key = bytes(range(32))
+        encrypted = fixer.encrypt_codex_auth(
+            old_auth,
+            key,
+            fixer.hashlib.sha256(old_auth).hexdigest(),
+        )
+
+        with mock.patch.object(fixer, 'load_codex_wrapping_key', return_value=key), \
+             mock.patch.object(fixer, 'load_codex_bootstrap', return_value=new_auth), \
+             mock.patch.object(fixer, 'read_codex_auth_etcd', return_value=encrypted):
+            got, got_key, seed_hash = fixer.load_codex_auth(self.run_env())
+
+        self.assertEqual(got, new_auth)
+        self.assertEqual(got_key, key)
+        self.assertEqual(seed_hash, fixer.hashlib.sha256(new_auth).hexdigest())
+
+    def test_codex_auth_uses_persistent_etcd(self):
+        env = self.run_env()
+        env['ETCDCTL_ENDPOINTS'] = 'tmpfs:2379'
+        env['ETCD_PERSIST_ENDPOINTS'] = 'persist:2379'
+        result = mock.Mock(returncode=0, stdout=b'', stderr=b'')
+
+        with mock.patch.object(fixer.subprocess, 'run', return_value=result) as run:
+            self.assertEqual(fixer.read_codex_auth_etcd(env), b'')
+
+        self.assertEqual(
+            run.call_args.kwargs['env']['ETCDCTL_ENDPOINTS'],
+            'persist:2379',
+        )
+
+    def test_refreshed_auth_is_saved_even_when_codex_fails(self):
+        auth = b'{"tokens":{"access_token":"secret"}}\n'
+        key = bytes(range(32))
+
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td) / 'ix'
+            repo.mkdir()
+            build_log = repo / '.fixer-build.log'
+            build_log.write_text('node failed: root\n')
+
+            with mock.patch.object(
+                fixer.subprocess,
+                'check_output',
+                return_value='abc123\n',
+            ), mock.patch.object(
+                fixer,
+                'load_codex_auth',
+                return_value=(auth, key, '1' * 64),
+            ), mock.patch.object(
+                fixer.subprocess,
+                'run',
+                side_effect=fixer.subprocess.CalledProcessError(1, 'codex'),
+            ), mock.patch.object(fixer, 'save_codex_auth') as save:
+                with self.assertRaises(fixer.subprocess.CalledProcessError):
+                    fixer.run_codex(repo, repo / 'cache', build_log, self.run_env())
+
+            save.assert_called_once()
+            self.assertEqual(save.call_args.args[0], auth)
 
     def test_codex_agent_uses_cluster_endpoints_inside_wirez(self):
         env = self.run_env()

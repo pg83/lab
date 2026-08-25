@@ -13,7 +13,7 @@ cat << 'EOF' > ${out}/etc/cron/300-updater-fixer.json
 {
     "cmd": [
         "etcd_lock", "/lock/updater/fixer/schedule", "--",
-        "dedup", "/updater/fixer/v2", "--",
+        "dedup", "/updater/fixer/v3", "--",
         "gorn", "ignite",
         "--root", "updater_fixer",
         "--env", "GORN_API=$GORN_API",
@@ -23,11 +23,11 @@ cat << 'EOF' > ${out}/etc/cron/300-updater-fixer.json
         "--env", "AWS_ACCESS_KEY_ID_MOLOT=$AWS_ACCESS_KEY_ID_MOLOT",
         "--env", "AWS_SECRET_ACCESS_KEY_MOLOT=$AWS_SECRET_ACCESS_KEY_MOLOT",
         "--env", "ETCDCTL_ENDPOINTS=$ETCDCTL_ENDPOINTS",
+        "--env", "ETCD_PERSIST_ENDPOINTS=$ETCD_PERSIST_ENDPOINTS",
         "--env", "GIT_USER=pg83",
-        "--env", "CODEX_AUTH_B64=$CODEX_AUTH_B64",
         "--env", "IX_FIXER_CODEX_GORN_API=$CODEX_GORN_API",
         "--env", "IX_FIXER_CODEX_S3_ENDPOINT=$CODEX_S3_ENDPOINT",
-        "--env", "IX_FIXER_GENERATION=2",
+        "--env", "IX_FIXER_GENERATION=3",
         "--env", "MOLOT_QUIET=1",
         "--env", "MOLOT_FULL_SLOTS=10",
         "--",

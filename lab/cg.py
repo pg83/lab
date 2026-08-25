@@ -1601,9 +1601,6 @@ class JobScheduler:
             'HF_TOKEN': get_key('/hf/token').decode().strip(),
             'GHCR_TOKEN': get_key('/ghcr/token').decode().strip(),
             'GITHUB_TOKEN': get_key('/github/token').decode().strip(),
-            # Keep the JSON opaque while it crosses scheduler argv and the
-            # gorn task API.  updater_fixer decodes it into CODEX_HOME/auth.json.
-            'CODEX_AUTH_B64': base64.b64encode(get_key('/codex/auth')).decode(),
             # Wirez gives 192.* a direct route; loopback is a different netns.
             'CODEX_GORN_API': self.codex_gorn_api,
             'CODEX_S3_ENDPOINT': self.codex_s3_endpoint,
