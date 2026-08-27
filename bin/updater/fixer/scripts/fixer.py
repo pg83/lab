@@ -615,31 +615,23 @@ def run_build(repo, cache_path, env):
     return returncode, build_log
 
 
-def codex_prompt(target, revision, summary):
-    return f"""You are the autonomous repair worker for the IX package repository.
+def codex_prompt(target, summary):
+    return f"""Repair the failed IX package build.
 
-Repository HEAD before this attempt: {revision}
-The CI probe failed.  Reproduce it with:
+Reproduce it with:
 
     ./ix build {target} --seed=1
 
-It was intentionally run without -k and the probe was stopped immediately
-after its first direct `node failed:` marker.  Its complete combined output up
-to that marker is in `.fixer-build.log`, which is locally ignored by git.
-Initial direct failure markers are:
+The build log is in `.fixer-build.log`.  Initial failure markers are:
 
 {summary or '(inspect .fixer-build.log)'}
 
-Act as the developer responsible for getting this broken package building
-again.  Inspect the log, the recipes, and their dependencies; find the real
-cause and make whatever repository changes are needed for a correct repair.
-Ignore nodes reported only as `BROKEN BY DEP`.
+Inspect the log, recipes, and dependencies.  Find the first direct failure and
+its root cause; ignore nodes reported only as `BROKEN BY DEP`.  Fix the affected
+package or dependency.
 
 Build the affected package directly with `./ix build <package> --seed=1` as
-often as needed.  A repair is finished only when that build exits zero.  If a
-change gets past the original error and exposes another related build error,
-keep diagnosing and fixing it.  Do not throw away a valid partial repair merely
-because the next validation revealed the next problem.
+often as needed.  Continue through related errors until that build exits zero.
 
 If an updated dependency caused the failure, prefer fixing that dependency so
 all of its consumers benefit.  If the dependency is correct and only one
@@ -647,17 +639,10 @@ consumer is incompatible, fix the consumer.  Revert the dependency update only
 as a last resort; in that case add the `noauto` marker so the updater does not
 immediately apply the same broken update again.
 
-Once the affected package builds successfully, create exactly one coherent
-local commit directly on top of `{revision}`.  Use a concise factual commit
-message naming what was fixed, and leave the working tree clean.  Do not fetch,
-rebase, push, amend or rewrite existing commits, or change git remotes or
-configuration.  Repository credentials are intentionally absent; the
-supervisor exclusively owns remote publication.
-
 If the original failure is genuinely transient infrastructure trouble and no
-repository repair is needed, leave the tree clean and stop.  This is an
-unattended job: investigate, edit, rebuild, and commit without asking for
-interactive input.
+repository repair is needed, leave the tree clean and stop.  Otherwise create
+one local commit with a concise factual message and leave the working tree
+clean.
 """
 
 
@@ -679,7 +664,7 @@ def run_codex(repo, cache_path, build_log, env):
     revision = subprocess.check_output(
         ('git', 'rev-parse', 'HEAD'), cwd=repo, text=True,
     ).strip()
-    prompt = codex_prompt(target, revision, failure_summary(build_log))
+    prompt = codex_prompt(target, failure_summary(build_log))
     auth, wrapping_key, seed_hash = load_codex_auth(env)
     codex_home = materialize_codex_home(repo.parent, auth)
     agent_env = codex_agent_env(env, cache_path, codex_home)
