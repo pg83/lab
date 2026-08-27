@@ -29,6 +29,7 @@ import subprocess
 import sys
 import tempfile
 import urllib.request
+import urllib.parse
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -45,6 +46,7 @@ MC_ALIAS = 'updater_cache'
 GOOD_SHA_CHARS = frozenset('0123456789abcdef')
 SENTINEL_SHA = '0' * 64
 BUILD_FLAGS = ('--opengl=fake', '--vulkan=fake', '--seed=1')
+REPOLOGY_PAGE_SIZE = 200
 
 GO_LATEST = 25
 GO_TOOL = (
@@ -177,7 +179,16 @@ def candidates_from_repology(data):
         yield candidate
 
 
-def fetch_repology(url):
+def repology_page_url(url, bound):
+    if not bound:
+        return url
+
+    parts = urllib.parse.urlsplit(url)
+    path = parts.path.rstrip('/') + '/' + urllib.parse.quote(bound, safe='') + '/'
+    return urllib.parse.urlunsplit((parts.scheme, parts.netloc, path, parts.query, parts.fragment))
+
+
+def fetch_repology_page(url):
     log(f'fetch {url}')
     req = urllib.request.Request(url, headers={'User-Agent': 'ix-updater/1'})
 
@@ -187,6 +198,27 @@ def fetch_repology(url):
 
     with urllib.request.urlopen(req, timeout=60, context=ctx) as resp:
         return json.load(resp)
+
+
+def fetch_repology(url):
+    result = {}
+    bound = None
+
+    while True:
+        page = fetch_repology_page(repology_page_url(url, bound))
+        result.update(page)
+
+        if len(page) < REPOLOGY_PAGE_SIZE:
+            break
+
+        next_bound = max(page)
+
+        if next_bound == bound:
+            break
+
+        bound = next_bound
+
+    return result
 
 
 def is_sha(value):
@@ -204,11 +236,12 @@ def recipe_sha(data):
 
 def prepare_recipe(path, old, new):
     data = path.read_text()
+    old_line = f'\n{old}\n'
 
-    if 'noauto' in data or old not in data:
+    if 'noauto' in data or old_line not in data:
         return False
 
-    updated = data.replace(recipe_sha(data), SENTINEL_SHA).replace(old, new)
+    updated = data.replace(recipe_sha(data), SENTINEL_SHA).replace(old_line, f'\n{new}\n')
 
     if 'cargo_url' in updated:
         if 'cargo_tool' not in updated:
@@ -230,7 +263,7 @@ def prepare_recipe(path, old, new):
 
 def recipe_accepts_update(path, old):
     data = path.read_text()
-    return 'noauto' not in data and old in data
+    return 'noauto' not in data and f'\n{old}\n' in data
 
 
 def install_sha(path, sha):
@@ -446,7 +479,7 @@ class PackageUpdater:
         except subprocess.CalledProcessError as exc:
             raise CandidateFailure(f'ix dep failed: {exc}') from exc
 
-        paths = [self.repo / 'pkgs' / name for name in files]
+        paths = [path for name in files if (path := self.repo / 'pkgs' / name).is_file()]
 
         try:
             accepts_update = any(recipe_accepts_update(path, candidate.old) for path in paths)

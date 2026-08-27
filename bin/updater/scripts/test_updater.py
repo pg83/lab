@@ -77,11 +77,29 @@ class UpdaterTests(unittest.TestCase):
             [updater.Candidate('1.2', '1.3', ('lib/zlib',))],
         )
 
+    def test_repology_fetches_every_page(self):
+        first = {f'p{number:03d}': [number] for number in range(200)}
+        second = {'p199': [199], 'p200': [200]}
+        url = 'https://repology.example/api/v1/projects/?inrepo=stalix_dev&outdated=1'
+
+        with mock.patch.object(
+            updater, 'fetch_repology_page', side_effect=(first, second),
+        ) as fetch:
+            data = updater.fetch_repology(url)
+
+        self.assertEqual(len(data), 201)
+        self.assertEqual(data['p200'], [200])
+        self.assertEqual(fetch.call_count, 2)
+        self.assertEqual(
+            fetch.call_args_list[1].args[0],
+            'https://repology.example/api/v1/projects/p199/?inrepo=stalix_dev&outdated=1',
+        )
+
     def test_prepare_recipe_keeps_go_upgrade_rule(self):
         with tempfile.TemporaryDirectory() as td:
             path = Path(td) / 'ix.sh'
             path.write_text(
-                "{% block version %}1.0{% endblock %}\n"
+                "{% block version %}\n1.0\n{% endblock %}\n"
                 "{% block go_url %}https://x/v1.0.tar.gz{% endblock %}\n"
                 "{% block go_sha %}\n" + 'a' * 64 + "\n{% endblock %}\n"
                 "{% block go_tool %}bin/go/lang/23{% endblock %}\n"
@@ -93,6 +111,19 @@ class UpdaterTests(unittest.TestCase):
             self.assertIn(updater.SENTINEL_SHA, data)
             self.assertIn('bin/go/lang/25', data)
             self.assertIn('{% block go_tool %}', data)
+
+    def test_prepare_recipe_matches_complete_version_line(self):
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / 'ix.sh'
+            original = (
+                "{% block version %}\n1.9.4\n{% endblock %}\n"
+                "{% block fetch %}\nhttps://x/v{{self.version().strip()}}.tar.gz\n" +
+                'a' * 64 + "\n{% endblock %}\n"
+            )
+            path.write_text(original)
+
+            self.assertFalse(updater.prepare_recipe(path, '1.9', '1.9.4'))
+            self.assertEqual(path.read_text(), original)
 
     def test_noauto_recipe_is_not_changed(self):
         with tempfile.TemporaryDirectory() as td:
@@ -152,7 +183,7 @@ class UpdaterTests(unittest.TestCase):
             recipe = repo / 'pkgs/bin/foo/ix.sh'
             recipe.parent.mkdir(parents=True)
             recipe.write_text(
-                "{% block version %}1.0{% endblock %}\n"
+                "{% block version %}\n1.0\n{% endblock %}\n"
                 "{% block fetch %}\nhttps://x/foo-1.0.tar.gz\n" + 'a' * 64 + "\n{% endblock %}\n"
             )
             worker = FakePackageUpdater(repo, builder)
@@ -174,7 +205,7 @@ class UpdaterTests(unittest.TestCase):
             recipe = repo / 'pkgs/bin/foo/ix.sh'
             recipe.parent.mkdir(parents=True)
             original = (
-                "{% block version %}1.0{% endblock %}\n"
+                "{% block version %}\n1.0\n{% endblock %}\n"
                 "{% block fetch %}\nhttps://x/foo-1.0.tar.gz\n" + 'a' * 64 + "\n{% endblock %}\n"
             )
             recipe.write_text(original)
@@ -185,6 +216,39 @@ class UpdaterTests(unittest.TestCase):
 
             self.assertEqual(recipe.read_text(), original)
             self.assertEqual(worker.commits, [])
+
+    def test_process_ignores_non_file_dependency_entries(self):
+        actual = 'f' * 64
+        checksum_output = (
+            b'molot exec: predict mismatch: predict mismatch: /x expected=' +
+            updater.SENTINEL_SHA.encode() + b' actual=' + actual.encode()
+        )
+        builder = FakeBuilder([
+            updater.BuildResult(0, b'ok'),
+            updater.BuildResult(2, checksum_output),
+        ])
+
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            recipe = repo / 'pkgs/bin/foo/ix.sh'
+            recipe.parent.mkdir(parents=True)
+            recipe.write_text(
+                "{% block version %}\n1.0\n{% endblock %}\n"
+                "{% block fetch %}\nhttps://x/foo.tar.gz\n" +
+                'a' * 64 + "\n{% endblock %}\n"
+            )
+            source = recipe.parent / 'build.rs'
+            source.write_text('fn main() {}\n')
+            worker = FakePackageUpdater(repo, builder)
+            worker.dependency_files = lambda packages: [
+                'bin/foo/ix.sh',
+                'bin/foo/build.rs/base64',
+            ]
+
+            self.assertTrue(worker.process(
+                updater.Candidate('1.0', '2.0', ('bin/foo',)),
+            ))
+            self.assertIn(actual, recipe.read_text())
 
 
 if __name__ == '__main__':
