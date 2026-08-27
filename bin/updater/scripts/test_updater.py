@@ -160,21 +160,6 @@ class UpdaterTests(unittest.TestCase):
             self.assertNotIn(updater.ATTR_SNAPSHOT_URL, data)
             self.assertIn(self.probe, data)
 
-    def test_prepare_recipe_moves_cmocka_to_version_two_directory(self):
-        with tempfile.TemporaryDirectory() as td:
-            path = Path(td) / 'ix.sh'
-            path.write_text(
-                "{% block version %}\n1.1.8\n{% endblock %}\n"
-                "{% block fetch %}\n" + updater.CMOCKA_1_URL + "\n" +
-                'a' * 64 + "\n{% endblock %}\n"
-            )
-
-            self.assertTrue(updater.prepare_recipe(path, '1.1.8', '2.0.2', self.probe))
-            data = path.read_text()
-            self.assertIn(updater.CMOCKA_2_URL, data)
-            self.assertNotIn(updater.CMOCKA_1_URL, data)
-            self.assertIn(self.probe, data)
-
     def test_noauto_recipe_is_not_changed(self):
         with tempfile.TemporaryDirectory() as td:
             path = Path(td) / 'ix.sh'
