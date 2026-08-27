@@ -383,18 +383,25 @@ class FixerTests(unittest.TestCase):
         self.assertFalse(any('commit' in call.args[0] for call in calls))
         self.assertFalse(any('rebase' in call.args[0] for call in calls))
 
-    def test_publish_discards_commit_when_remote_moved(self):
+    def test_publish_rebases_and_pushes_when_remote_moved(self):
         env = self.run_env()
 
         with tempfile.TemporaryDirectory() as td, \
              mock.patch.object(fixer, 'validate_agent_commit', return_value='fix123'), \
-             mock.patch.object(fixer.subprocess, 'check_output', return_value='moved\n'), \
-             mock.patch.object(fixer, 'load_repo_token') as token, \
+             mock.patch.object(
+                 fixer.subprocess,
+                 'check_output',
+                 side_effect=('moved\n', 'rebased\n'),
+             ), \
+             mock.patch.object(fixer, 'load_repo_token', return_value='repo-token'), \
              mock.patch.object(fixer.subprocess, 'run') as run:
-            self.assertFalse(fixer.publish_fix(Path(td), 'original', 'main', env))
+            self.assertTrue(fixer.publish_fix(Path(td), 'original', 'main', env))
 
-        token.assert_not_called()
-        self.assertFalse(any('push' in call.args[0] for call in run.call_args_list))
+        commands = [call.args[0] for call in run.call_args_list]
+        self.assertIn(('git', 'rebase', 'FETCH_HEAD'), commands)
+        push = next(command for command in commands if 'push' in command)
+        self.assertIn('rebased:refs/heads/main', push)
+        self.assertNotIn('--force', push)
 
     def test_validate_accepts_one_clean_agent_commit(self):
         with tempfile.TemporaryDirectory() as td:

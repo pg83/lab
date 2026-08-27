@@ -23,7 +23,8 @@ this worker's temporary directory.  Codex may rotate its refresh token, so the
 updated file is always written back before the temporary directory disappears.
 Repository credentials are not present while the agent runs: the supervisor
 fetches /github/token only after Codex exits, validates the agent's local
-commit, and publishes that exact commit without rewriting it.
+commit, rebases it onto a concurrently advanced main when necessary, and
+publishes it.
 """
 
 import base64
@@ -761,7 +762,7 @@ def validate_agent_commit(repo, revision):
 
 
 def publish_fix(repo, revision, branch, env):
-    """Validate and push the agent's exact commit under supervisor auth."""
+    """Validate, rebase if needed, and push under supervisor auth."""
     head = validate_agent_commit(repo, revision)
 
     if head is None:
@@ -779,9 +780,14 @@ def publish_fix(repo, revision, branch, env):
     if remote_head != revision:
         log(
             f'origin {branch} moved from {revision[:12]} to '
-            f'{remote_head[:12]}; discard agent checkout and retry next cycle'
+            f'{remote_head[:12]}; rebase Codex fix'
         )
-        return False
+        subprocess.run(
+            ('git', 'rebase', 'FETCH_HEAD'),
+            cwd=repo,
+            check=True,
+        )
+        head = git_output(repo, 'rev-parse', 'HEAD')
 
     token = load_repo_token(env)
     subprocess.run(
