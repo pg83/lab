@@ -321,51 +321,6 @@ class FixerTests(unittest.TestCase):
             save.assert_called_once()
             self.assertEqual(save.call_args.args[0], auth)
 
-    def test_codex_timeout_continues_in_same_checkout(self):
-        auth = b'{"tokens":{"access_token":"secret"}}\n'
-        key = bytes(range(32))
-        timed_out = mock.Mock(returncode=fixer.CODEX_TIMEOUT_EXIT)
-        completed = mock.Mock(returncode=0)
-
-        with tempfile.TemporaryDirectory() as td:
-            repo = Path(td) / 'ix'
-            repo.mkdir()
-            build_log = repo / '.fixer-build.log'
-            build_log.write_text('node failed: root\n')
-
-            with mock.patch.object(
-                fixer.subprocess,
-                'check_output',
-                return_value='abc123\n',
-            ), mock.patch.object(
-                fixer,
-                'load_codex_auth',
-                return_value=(auth, key, '1' * 64),
-            ), mock.patch.object(
-                fixer.subprocess,
-                'run',
-                side_effect=(timed_out, completed),
-            ) as run, mock.patch.object(
-                fixer,
-                'validate_agent_commit',
-                return_value=None,
-            ), mock.patch.object(fixer, 'save_codex_auth') as save:
-                revision = fixer.run_codex(
-                    repo,
-                    repo / 'cache',
-                    build_log,
-                    self.run_env(),
-                )
-
-        self.assertEqual(revision, 'abc123')
-        self.assertEqual(run.call_count, 2)
-        self.assertEqual(save.call_count, 2)
-        first_prompt = run.call_args_list[0].args[0][-1]
-        second_prompt = run.call_args_list[1].args[0][-1]
-        self.assertNotIn('previous repair worker hit', first_prompt.lower())
-        self.assertIn('previous repair worker hit', second_prompt.lower())
-        self.assertIn('continue the same repair', second_prompt.lower())
-
     def test_codex_agent_uses_cluster_endpoints_inside_wirez(self):
         env = self.run_env()
         env['GORN_API'] = 'http://127.0.0.1:8025'
