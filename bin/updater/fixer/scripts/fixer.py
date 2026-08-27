@@ -648,7 +648,7 @@ clean.
 
 def codex_command(repo, prompt):
     return (
-        'timeout', '3600', 'codex', 'exec',
+        'timeout', '7200', 'codex', 'exec',
         '--model', CODEX_MODEL,
         '--config', f'model_reasoning_effort="{CODEX_REASONING_EFFORT}"',
         '--dangerously-bypass-approvals-and-sandbox',

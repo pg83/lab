@@ -194,7 +194,7 @@ class FixerTests(unittest.TestCase):
 
     def test_codex_runs_noninteractively_without_external_profile(self):
         cmd = fixer.codex_command(Path('/work/ix'), 'repair it')
-        self.assertEqual(cmd[:4], ('timeout', '3600', 'codex', 'exec'))
+        self.assertEqual(cmd[:4], ('timeout', '7200', 'codex', 'exec'))
         self.assertIn('--model', cmd)
         self.assertEqual(cmd[cmd.index('--model') + 1], 'gpt-5.6-sol')
         self.assertIn('--config', cmd)
