@@ -12,8 +12,9 @@ holds /lock/updater/fixer/work around the complete process.  The worker:
      without a keep-going flag, and stops its process group at the first
      direct ``node failed:`` marker;
   4. exits when the build is green;
-  5. on a real target failure, invokes one non-interactive Codex agent and
-     gives it the checkout plus the complete log.
+  5. on a real target failure, invokes a bounded non-interactive Codex attempt
+     and gives it the checkout plus the complete log; a timed-out attempt is
+     continued in the same checkout instead of losing its repair.
 
 Infrastructure failures do not spend an agent run.  The next cron cycle will
 retry them.  The lab's bin/codex/wrap package forces Codex and every command it
@@ -46,9 +47,11 @@ from pathlib import Path
 IX_GIT_URL = 'https://github.com/pg83/ix.git'
 IX_BRANCH = 'main'
 IX_TARGET = 'set/ci/tier/0'
-FIXER_GENERATION = '5'
+FIXER_GENERATION = '6'
 CODEX_MODEL = 'gpt-5.6-sol'
 CODEX_REASONING_EFFORT = 'xhigh'
+CODEX_MAX_ATTEMPTS = 3
+CODEX_TIMEOUT_EXIT = 124
 GIT_TOKEN_URL = 'http://127.0.0.1:8022/github/token'
 CODEX_AUTH_URL = 'http://127.0.0.1:8022/codex/auth'
 CODEX_AUTH_KEY_URL = 'http://127.0.0.1:8022/codex/auth/key'
@@ -683,22 +686,61 @@ def run_codex(repo, cache_path, build_log, env):
     auth, wrapping_key, seed_hash = load_codex_auth(env)
     codex_home = materialize_codex_home(repo.parent, auth)
     agent_env = codex_agent_env(env, cache_path, codex_home)
-    cmd = codex_command(repo, prompt)
-    log(f'run codex target={target}')
+    for attempt in range(1, CODEX_MAX_ATTEMPTS + 1):
+        attempt_prompt = prompt
 
-    try:
-        subprocess.run(cmd, cwd=repo, env=agent_env, check=True)
-    finally:
-        # Persist rotations even on a non-zero Codex exit or timeout.  Losing
-        # an updated auth.json here would leave the saved refresh token stale.
-        save_codex_auth(
-            (codex_home / 'auth.json').read_bytes(),
-            wrapping_key,
-            seed_hash,
-            env,
+        if attempt > 1:
+            attempt_prompt += f"""
+
+A previous repair worker hit its one-hour watchdog.  Continue the same repair
+from the existing checkout.  Preserve and inspect its current changes, then
+finish validation and the single local commit requested above.  This is
+continuation attempt {attempt} of {CODEX_MAX_ATTEMPTS}; do not start over.
+"""
+
+        cmd = codex_command(repo, attempt_prompt)
+        log(
+            f'run codex target={target} '
+            f'attempt={attempt}/{CODEX_MAX_ATTEMPTS}'
         )
 
-    return revision
+        try:
+            result = subprocess.run(cmd, cwd=repo, env=agent_env, check=False)
+        finally:
+            # Persist rotations after every bounded attempt.  Losing an
+            # updated auth.json here would leave the saved refresh token stale.
+            save_codex_auth(
+                (codex_home / 'auth.json').read_bytes(),
+                wrapping_key,
+                seed_hash,
+                env,
+            )
+
+        if result.returncode == 0:
+            return revision
+
+        if result.returncode != CODEX_TIMEOUT_EXIT:
+            result.check_returncode()
+
+        # Codex commits only after successful validation.  If it completed the
+        # commit just before timeout, let the supervisor publish it.  Otherwise
+        # keep the same dirty checkout for the next bounded attempt.
+        try:
+            completed = validate_agent_commit(repo, revision)
+        except InfrastructureFailure:
+            completed = None
+
+        if completed is not None:
+            log(f'Codex timed out after completing commit {completed[:12]}')
+            return revision
+
+        if attempt < CODEX_MAX_ATTEMPTS:
+            log('Codex timed out; continue repair in the same checkout')
+            continue
+
+        result.check_returncode()
+
+    raise AssertionError('unreachable')
 
 
 def git_output(repo, *args):
