@@ -618,7 +618,7 @@ def codex_prompt(target, revision, summary):
     return f"""You are the autonomous repair worker for the IX package repository.
 
 Repository HEAD before this attempt: {revision}
-Reproduce the failure with:
+The CI probe failed.  Reproduce it with:
 
     ./ix build {target} --seed=1
 
@@ -629,35 +629,35 @@ Initial direct failure markers are:
 
 {summary or '(inspect .fixer-build.log)'}
 
-Perform one repair cycle:
+Act as the developer responsible for getting this broken package building
+again.  Inspect the log, the recipes, and their dependencies; find the real
+cause and make whatever repository changes are needed for a correct repair.
+Ignore nodes reported only as `BROKEN BY DEP`.  Do not perform unrelated
+mechanical version upgrades and do not edit the build log.
 
-1. Inspect `.fixer-build.log`.  Find the first direct failed node and its root
-   cause; ignore nodes reported only as `BROKEN BY DEP`.
-2. Fix that package or shared build logic with the smallest correct change.
-   Do not perform mechanical version upgrades and do not edit the build log.
-   If an updated dependency caused the failure, use this preference order:
-   a. Fix the updated dependency itself so every consumer benefits.
-   b. If the dependency is correct and only one consumer is incompatible, fix
-      that broken consumer.
-   c. Revert the dependency update only as a last resort.  When reverting it,
-      add the `noauto` marker to its recipe so the updater cannot immediately
-      apply the same broken update again.
-3. Validate the affected package with `./ix build <package> --seed=1`.  Run
-   that command directly, without a pipeline that can hide its exit status.
-   A zero exit status from the validation build is mandatory.
-   If validation cannot execute or exits nonzero, do not commit.  Restore the
-   clean checkout and stop.
-4. If the failure is transient infrastructure trouble and needs no repository
-   change, leave the tree clean and stop.
-5. Otherwise create exactly one local commit directly on top of `{revision}`.
-   Use a concise factual commit message that names the package or shared logic
-   and describes the actual fix.  Leave the working tree clean.
-6. Do not fetch, rebase, push, amend or rewrite existing commits, or change git
-   remotes and configuration.  Repository credentials are intentionally absent.
+Build the affected package directly with `./ix build <package> --seed=1` as
+often as needed.  A repair is finished only when that build exits zero.  If a
+change gets past the original error and exposes another related build error,
+keep diagnosing and fixing it.  Do not throw away a valid partial repair merely
+because the next validation revealed the next problem.
 
-This is an unattended repair job.  Complete the diagnosis, edit, and
-validation without asking for interactive input.  You own the single local
-repair commit; the supervisor exclusively owns remote publication.
+If an updated dependency caused the failure, prefer fixing that dependency so
+all of its consumers benefit.  If the dependency is correct and only one
+consumer is incompatible, fix the consumer.  Revert the dependency update only
+as a last resort; in that case add the `noauto` marker so the updater does not
+immediately apply the same broken update again.
+
+Once the affected package builds successfully, create exactly one coherent
+local commit directly on top of `{revision}`.  Use a concise factual commit
+message naming what was fixed, and leave the working tree clean.  Do not fetch,
+rebase, push, amend or rewrite existing commits, or change git remotes or
+configuration.  Repository credentials are intentionally absent; the
+supervisor exclusively owns remote publication.
+
+If the original failure is genuinely transient infrastructure trouble and no
+repository repair is needed, leave the tree clean and stop.  This is an
+unattended job: investigate, edit, rebuild, and commit without asking for
+interactive input.
 """
 
 
