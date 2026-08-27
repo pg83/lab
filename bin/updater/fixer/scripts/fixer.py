@@ -23,8 +23,7 @@ this worker's temporary directory.  Codex may rotate its refresh token, so the
 updated file is always written back before the temporary directory disappears.
 Repository credentials are not present while the agent runs: the supervisor
 fetches /github/token only after Codex exits, validates the agent's local
-commit, and publishes it without rewriting it.  If the updater advanced main
-in parallel, the supervisor preserves both histories with a merge commit.
+commit, and publishes that exact commit without rewriting it.
 """
 
 import base64
@@ -762,80 +761,42 @@ def validate_agent_commit(repo, revision):
 
 
 def publish_fix(repo, revision, branch, env):
-    """Validate and publish the agent commit without rewriting history."""
-    agent_head = validate_agent_commit(repo, revision)
+    """Validate and push the agent's exact commit under supervisor auth."""
+    head = validate_agent_commit(repo, revision)
 
-    if agent_head is None:
+    if head is None:
         return False
 
     git_url = env.get('IX_FIXER_GIT_URL', IX_GIT_URL)
+    subprocess.run(
+        ('git', 'fetch', git_url, branch),
+        cwd=repo,
+        env=git_read_env(env),
+        check=True,
+    )
+    remote_head = git_output(repo, 'rev-parse', 'FETCH_HEAD')
+
+    if remote_head != revision:
+        log(
+            f'origin {branch} moved from {revision[:12]} to '
+            f'{remote_head[:12]}; discard agent checkout and retry next cycle'
+        )
+        return False
+
     token = load_repo_token(env)
-
-    for attempt in range(3):
-        subprocess.run(
-            ('git', 'fetch', git_url, branch),
-            cwd=repo,
-            env=git_read_env(env),
-            check=True,
-        )
-        remote_head = git_output(repo, 'rev-parse', 'FETCH_HEAD')
-
-        contains_agent = subprocess.run(
-            ('git', 'merge-base', '--is-ancestor', agent_head, remote_head),
-            cwd=repo,
-            check=False,
-        )
-
-        if contains_agent.returncode == 0:
-            log(f'Codex commit {agent_head[:12]} is already in {branch}')
-            return True
-
-        contains_remote = subprocess.run(
-            ('git', 'merge-base', '--is-ancestor', remote_head, 'HEAD'),
-            cwd=repo,
-            check=False,
-        )
-
-        if contains_remote.returncode != 0:
-            log(
-                f'{branch} advanced from {revision[:12]} to '
-                f'{remote_head[:12]}; merge without rewriting Codex commit'
-            )
-            merged = subprocess.run(
-                ('git', 'merge', '--no-edit', '--no-ff', 'FETCH_HEAD'),
-                cwd=repo,
-                check=False,
-            )
-
-            if merged.returncode != 0:
-                subprocess.run(
-                    ('git', 'merge', '--abort'),
-                    cwd=repo,
-                    check=False,
-                )
-                log('concurrent main conflicts with Codex fix; retry next cycle')
-                return False
-
-        publish_head = git_output(repo, 'rev-parse', 'HEAD')
-        pushed = subprocess.run(
-            (
-                'git',
-                '-c', 'core.hooksPath=/dev/null',
-                '-c', 'credential.helper=',
-                'push', git_url, f'{publish_head}:refs/heads/{branch}',
-            ),
-            cwd=repo,
-            env=git_push_env(env, token),
-            check=False,
-        )
-
-        if pushed.returncode == 0:
-            log(f'published Codex commit {agent_head[:12]} to {branch}')
-            return True
-
-        log(f'git push raced with another publisher; retry {attempt + 1}/3')
-
-    raise InfrastructureFailure('git push failed after merge retries')
+    subprocess.run(
+        (
+            'git',
+            '-c', 'core.hooksPath=/dev/null',
+            '-c', 'credential.helper=',
+            'push', git_url, f'{head}:refs/heads/{branch}',
+        ),
+        cwd=repo,
+        env=git_push_env(env, token),
+        check=True,
+    )
+    log(f'published Codex commit {head[:12]} to {branch}')
+    return True
 
 
 def run_fixer(env):
