@@ -71,6 +71,14 @@ ATTR_RELEASE_URL = (
     'https://download.savannah.gnu.org/releases/attr/'
     'attr-{{self.version().strip()}}.tar.gz'
 )
+CMOCKA_1_URL = (
+    'https://cmocka.org/files/1.1/'
+    'cmocka-{{self.version().strip()}}.tar.xz'
+)
+CMOCKA_2_URL = (
+    'https://cmocka.org/files/2.0/'
+    'cmocka-{{self.version().strip()}}.tar.xz'
+)
 
 # This is the grep -v chain from IX's bin/ix/tools/upver/scripts/fix.
 # Match against the complete "old new pkg..." line to preserve its exact
@@ -245,6 +253,7 @@ def prepare_recipe(path, old, new, probe_sha):
 
     updated = data.replace(recipe_sha(data), probe_sha).replace(old_line, f'\n{new}\n')
     updated = updated.replace(ATTR_SNAPSHOT_URL, ATTR_RELEASE_URL)
+    updated = updated.replace(CMOCKA_1_URL, CMOCKA_2_URL)
 
     if 'cargo_url' in updated:
         if 'cargo_tool' not in updated:
