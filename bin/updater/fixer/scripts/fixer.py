@@ -632,8 +632,7 @@ Initial direct failure markers are:
 Act as the developer responsible for getting this broken package building
 again.  Inspect the log, the recipes, and their dependencies; find the real
 cause and make whatever repository changes are needed for a correct repair.
-Ignore nodes reported only as `BROKEN BY DEP`.  Do not perform unrelated
-mechanical version upgrades and do not edit the build log.
+Ignore nodes reported only as `BROKEN BY DEP`.
 
 Build the affected package directly with `./ix build <package> --seed=1` as
 often as needed.  A repair is finished only when that build exits zero.  If a
