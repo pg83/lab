@@ -63,6 +63,15 @@ CARGO_TOOL = (
     + chr(123) + '% endblock %}\n'
 )
 
+ATTR_SNAPSHOT_URL = (
+    'https://git.savannah.nongnu.org/cgit/attr.git/snapshot/'
+    'attr-{{self.version().strip()}}.tar.gz'
+)
+ATTR_RELEASE_URL = (
+    'https://download.savannah.gnu.org/releases/attr/'
+    'attr-{{self.version().strip()}}.tar.gz'
+)
+
 # This is the grep -v chain from IX's bin/ix/tools/upver/scripts/fix.
 # Match against the complete "old new pkg..." line to preserve its exact
 # (occasionally broad) semantics rather than reinterpret it as package paths.
@@ -235,6 +244,7 @@ def prepare_recipe(path, old, new, probe_sha):
         return False
 
     updated = data.replace(recipe_sha(data), probe_sha).replace(old_line, f'\n{new}\n')
+    updated = updated.replace(ATTR_SNAPSHOT_URL, ATTR_RELEASE_URL)
 
     if 'cargo_url' in updated:
         if 'cargo_tool' not in updated:

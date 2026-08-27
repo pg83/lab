@@ -145,6 +145,21 @@ class UpdaterTests(unittest.TestCase):
             self.assertFalse(updater.prepare_recipe(path, '1.9', '1.9.4', self.probe))
             self.assertEqual(path.read_text(), original)
 
+    def test_prepare_recipe_moves_attr_from_cgit_snapshot_to_release(self):
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / 'ix.sh'
+            path.write_text(
+                "{% block version %}\n2.5.2\n{% endblock %}\n"
+                "{% block fetch %}\n" + updater.ATTR_SNAPSHOT_URL + "\n" +
+                'a' * 64 + "\n{% endblock %}\n"
+            )
+
+            self.assertTrue(updater.prepare_recipe(path, '2.5.2', '2.6.0', self.probe))
+            data = path.read_text()
+            self.assertIn(updater.ATTR_RELEASE_URL, data)
+            self.assertNotIn(updater.ATTR_SNAPSHOT_URL, data)
+            self.assertIn(self.probe, data)
+
     def test_noauto_recipe_is_not_changed(self):
         with tempfile.TemporaryDirectory() as td:
             path = Path(td) / 'ix.sh'
