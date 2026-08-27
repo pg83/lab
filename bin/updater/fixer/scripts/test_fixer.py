@@ -365,11 +365,17 @@ class FixerTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as td, \
              mock.patch.object(fixer, 'validate_agent_commit', return_value='fix123'), \
-             mock.patch.object(fixer.subprocess, 'check_output', return_value='abc123\n'), \
+             mock.patch.object(fixer, 'git_output', side_effect=('abc123', 'fix123')), \
              mock.patch.object(fixer, 'load_repo_token', return_value='repo-token'):
             repo = Path(td)
 
             with mock.patch.object(fixer.subprocess, 'run') as run:
+                run.side_effect = (
+                    mock.Mock(returncode=0),  # fetch
+                    mock.Mock(returncode=1),  # remote does not contain agent
+                    mock.Mock(returncode=0),  # agent already contains remote
+                    mock.Mock(returncode=0),  # push
+                )
                 self.assertTrue(fixer.publish_fix(repo, 'abc123', 'main', env))
 
         calls = run.call_args_list
@@ -383,18 +389,37 @@ class FixerTests(unittest.TestCase):
         self.assertFalse(any('commit' in call.args[0] for call in calls))
         self.assertFalse(any('rebase' in call.args[0] for call in calls))
 
-    def test_publish_discards_commit_when_remote_moved(self):
+    def test_publish_merges_remote_without_rewriting_agent_commit(self):
         env = self.run_env()
 
         with tempfile.TemporaryDirectory() as td, \
              mock.patch.object(fixer, 'validate_agent_commit', return_value='fix123'), \
-             mock.patch.object(fixer.subprocess, 'check_output', return_value='moved\n'), \
-             mock.patch.object(fixer, 'load_repo_token') as token, \
+             mock.patch.object(
+                 fixer, 'git_output', side_effect=('moved', 'merge123'),
+             ), \
+             mock.patch.object(fixer, 'load_repo_token', return_value='repo-token'), \
              mock.patch.object(fixer.subprocess, 'run') as run:
-            self.assertFalse(fixer.publish_fix(Path(td), 'original', 'main', env))
+            run.side_effect = (
+                mock.Mock(returncode=0),  # fetch
+                mock.Mock(returncode=1),  # remote does not contain agent
+                mock.Mock(returncode=1),  # agent does not contain remote
+                mock.Mock(returncode=0),  # merge
+                mock.Mock(returncode=0),  # push
+            )
+            self.assertTrue(fixer.publish_fix(Path(td), 'original', 'main', env))
 
-        token.assert_not_called()
-        self.assertFalse(any('push' in call.args[0] for call in run.call_args_list))
+        commands = [call.args[0] for call in run.call_args_list]
+        self.assertIn(('git', 'merge', '--no-edit', '--no-ff', 'FETCH_HEAD'), commands)
+        self.assertIn(
+            (
+                'git', '-c', 'core.hooksPath=/dev/null',
+                '-c', 'credential.helper=', 'push',
+                fixer.IX_GIT_URL, 'merge123:refs/heads/main',
+            ),
+            commands,
+        )
+        self.assertFalse(any('rebase' in command for command in commands))
+        self.assertFalse(any('amend' in command for command in commands))
 
     def test_validate_accepts_one_clean_agent_commit(self):
         with tempfile.TemporaryDirectory() as td:
