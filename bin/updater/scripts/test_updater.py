@@ -40,6 +40,8 @@ class FakePackageUpdater(updater.PackageUpdater):
 
 
 class UpdaterTests(unittest.TestCase):
+    probe = '0' * 64
+
     def test_publish_rebases_before_push_for_parallel_fixer(self):
         worker = updater.PackageUpdater(Path('/work/ix'), None, branch='main', env={})
         candidate = updater.Candidate('1.0', '2.0', ('bin/foo',))
@@ -105,12 +107,30 @@ class UpdaterTests(unittest.TestCase):
                 "{% block go_tool %}bin/go/lang/23{% endblock %}\n"
             )
 
-            self.assertTrue(updater.prepare_recipe(path, '1.0', '2.0'))
+            self.assertTrue(updater.prepare_recipe(path, '1.0', '2.0', self.probe))
             data = path.read_text()
             self.assertIn('2.0', data)
-            self.assertIn(updater.SENTINEL_SHA, data)
-            self.assertIn('bin/go/lang/25', data)
+            self.assertIn(self.probe, data)
+            self.assertIn('bin/go/lang/26', data)
             self.assertIn('{% block go_tool %}', data)
+
+    def test_prepare_recipe_uses_current_cargo_toolchain(self):
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / 'ix.sh'
+            path.write_text(
+                "{% block version %}\n1.0\n{% endblock %}\n"
+                "{% block cargo_url %}https://x/v1.0.tar.gz{% endblock %}\n"
+                "{% block cargo_sha %}\n" + 'a' * 64 + "\n{% endblock %}\n"
+                "{% block cargo_tool %}bld/cargo/91{% endblock %}\n"
+                "{% block bld_tool %}bld/rust/91{% endblock %}\n"
+            )
+
+            self.assertTrue(updater.prepare_recipe(path, '1.0', '2.0', self.probe))
+            data = path.read_text()
+            self.assertIn('bld/cargo/96', data)
+            self.assertIn('bld/rust/96', data)
+            self.assertNotIn('bld/cargo/91', data)
+            self.assertNotIn('bld/rust/91', data)
 
     def test_prepare_recipe_matches_complete_version_line(self):
         with tempfile.TemporaryDirectory() as td:
@@ -122,7 +142,7 @@ class UpdaterTests(unittest.TestCase):
             )
             path.write_text(original)
 
-            self.assertFalse(updater.prepare_recipe(path, '1.9', '1.9.4'))
+            self.assertFalse(updater.prepare_recipe(path, '1.9', '1.9.4', self.probe))
             self.assertEqual(path.read_text(), original)
 
     def test_noauto_recipe_is_not_changed(self):
@@ -131,7 +151,7 @@ class UpdaterTests(unittest.TestCase):
             original = 'noauto\n1.0\n' + 'a' * 64 + '\n'
             path.write_text(original)
 
-            self.assertFalse(updater.prepare_recipe(path, '1.0', '2.0'))
+            self.assertFalse(updater.prepare_recipe(path, '1.0', '2.0', self.probe))
             self.assertEqual(path.read_text(), original)
 
     def test_redirect_and_unwrap_rules_match_ix_upver(self):
@@ -152,26 +172,49 @@ class UpdaterTests(unittest.TestCase):
         output = (
             unrelated.encode() + b' task-guid\n' +
             b'molot exec: predict mismatch: predict mismatch: /x '
-            b'expected=' + updater.SENTINEL_SHA.encode() + b' actual=' + actual.encode() + b'\n' +
+            b'expected=' + self.probe.encode() + b' actual=' + actual.encode() + b'\n' +
             unrelated.encode() + b' later-noise\n'
         )
 
-        self.assertEqual(updater.extract_reported_sha(output), actual)
+        self.assertEqual(updater.extract_reported_sha(output, self.probe), actual)
 
     def test_extracts_colored_direct_fetch_checksum(self):
         actual = 'e' * 64
         output = (
             b'got \x1b[91m' + actual.encode() + b'\x1b[0m checksum, not ' +
-            updater.SENTINEL_SHA.encode()
+            self.probe.encode()
         )
 
-        self.assertEqual(updater.extract_reported_sha(output), actual)
+        self.assertEqual(updater.extract_reported_sha(output, self.probe), actual)
+
+    def test_pzd_checksum_is_bound_to_this_attempts_probe(self):
+        tarball = 'a' * 64
+        pzd = 'b' * 64
+        stale_pzd = 'c' * 64
+
+        for filename in (
+            'go_v3_' + self.probe + '.pzd',
+            'cargo_v4_' + self.probe + '.pzd',
+            'git_v3_src_' + self.probe + '.pzd',
+        ):
+            with self.subTest(filename=filename):
+                output = (
+                    tarball.encode() + b'  /tmp/source.tar.gz\n' +
+                    pzd.encode() + b'  /tmp/' + filename.encode() + b'\n' +
+                    stale_pzd.encode() + b'  /tmp/go_v3_' +
+                    ('1' * 64).encode() + b'.pzd\n'
+                )
+
+                self.assertEqual(
+                    updater.extract_reported_sha(output, self.probe),
+                    pzd,
+                )
 
     def test_success_is_two_builds_then_commit_without_final_build(self):
         actual = 'd' * 64
         checksum_output = (
             b'molot exec: predict mismatch: predict mismatch: /x expected=' +
-            updater.SENTINEL_SHA.encode() + b' actual=' + actual.encode()
+            self.probe.encode() + b' actual=' + actual.encode()
         )
         builder = FakeBuilder([
             updater.BuildResult(0, b'ok'),
@@ -189,11 +232,12 @@ class UpdaterTests(unittest.TestCase):
             worker = FakePackageUpdater(repo, builder)
             candidate = updater.Candidate('1.0', '2.0', ('bin/foo',))
 
-            self.assertTrue(worker.process(candidate))
+            with mock.patch.object(updater.secrets, 'token_hex', return_value=self.probe):
+                self.assertTrue(worker.process(candidate))
             self.assertEqual(builder.calls, [['bin/foo'], ['bin/foo']])
             self.assertEqual(worker.commits, [candidate])
             self.assertIn(actual, recipe.read_text())
-            self.assertNotIn(updater.SENTINEL_SHA, recipe.read_text())
+            self.assertNotIn(self.probe, recipe.read_text())
 
     def test_failed_preflight_does_not_touch_recipe(self):
         builder = FakeBuilder([
@@ -221,7 +265,7 @@ class UpdaterTests(unittest.TestCase):
         actual = 'f' * 64
         checksum_output = (
             b'molot exec: predict mismatch: predict mismatch: /x expected=' +
-            updater.SENTINEL_SHA.encode() + b' actual=' + actual.encode()
+            self.probe.encode() + b' actual=' + actual.encode()
         )
         builder = FakeBuilder([
             updater.BuildResult(0, b'ok'),
@@ -245,10 +289,41 @@ class UpdaterTests(unittest.TestCase):
                 'bin/foo/build.rs/base64',
             ]
 
-            self.assertTrue(worker.process(
-                updater.Candidate('1.0', '2.0', ('bin/foo',)),
-            ))
+            with mock.patch.object(updater.secrets, 'token_hex', return_value=self.probe):
+                self.assertTrue(worker.process(
+                    updater.Candidate('1.0', '2.0', ('bin/foo',)),
+                ))
             self.assertIn(actual, recipe.read_text())
+
+    def test_go_update_installs_pzd_not_tarball_checksum(self):
+        tarball = 'a' * 64
+        pzd = 'b' * 64
+        checksum_output = (
+            pzd.encode() + b'  /tmp/go_v3_' + self.probe.encode() + b'.pzd\n' +
+            tarball.encode() + b'  /tmp/source.tar.gz\n'
+        )
+        builder = FakeBuilder([
+            updater.BuildResult(0, b'ok'),
+            updater.BuildResult(2, checksum_output),
+        ])
+
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            recipe = repo / 'pkgs/bin/foo/ix.sh'
+            recipe.parent.mkdir(parents=True)
+            recipe.write_text(
+                "{% block version %}\n1.0\n{% endblock %}\n"
+                "{% block go_url %}\nhttps://x/foo.tar.gz\n{% endblock %}\n"
+                "{% block go_sha %}\n" + 'c' * 64 + "\n{% endblock %}\n"
+            )
+            worker = FakePackageUpdater(repo, builder)
+
+            with mock.patch.object(updater.secrets, 'token_hex', return_value=self.probe):
+                self.assertTrue(worker.process(
+                    updater.Candidate('1.0', '2.0', ('bin/foo',)),
+                ))
+            self.assertIn(pzd, recipe.read_text())
+            self.assertNotIn(tarball, recipe.read_text())
 
 
 if __name__ == '__main__':

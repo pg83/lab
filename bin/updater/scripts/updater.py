@@ -10,8 +10,9 @@ semantics of IX's bin/ix/tools/upver, but every build is executed by Molot:
   1. Fetch Repology's stale-package list and apply the original skip list.
   2. Build the current package before touching its recipe.  A package build
      failure skips only that candidate.
-  3. Replace exactly one recipe's old version and checksum (with 64 zeros),
-     preserving the original redirect, noauto, Go and Cargo rules.
+  3. Replace exactly one recipe's old version and checksum (with a fresh
+     invalid probe), preserving the original redirect, noauto, Go and Cargo
+     rules.
   4. Build again, extract the checksum reported by IX/Molot, and write it.
   5. Commit and push immediately.  Deliberately do not run a third build;
      CI and the repair agent own failures after the mechanical update.
@@ -24,6 +25,7 @@ under the shared /lock/ci/cache etcd_lock for the read-modify-write step.
 import json
 import os
 import re
+import secrets
 import ssl
 import subprocess
 import sys
@@ -44,18 +46,17 @@ CACHE_S3_KEY = 'complete'
 MC_ALIAS = 'updater_cache'
 
 GOOD_SHA_CHARS = frozenset('0123456789abcdef')
-SENTINEL_SHA = '0' * 64
 BUILD_FLAGS = ('--opengl=fake', '--vulkan=fake', '--seed=1')
 REPOLOGY_PAGE_SIZE = 200
 
-GO_LATEST = 25
+GO_LATEST = 26
 GO_TOOL = (
     '\n' + chr(123) + '% block go_tool %}\n'
     f'bin/go/lang/{GO_LATEST}\n'
     + chr(123) + '% endblock %}\n'
 )
 
-CARGO_LATEST = 91
+CARGO_LATEST = 96
 CARGO_TOOL = (
     '\n' + chr(123) + '% block cargo_tool %}\n'
     f'bld/cargo/{CARGO_LATEST}\n'
@@ -96,14 +97,6 @@ SKIP_SUBSTRINGS = (
 )
 
 ANSI_RE = re.compile(rb'\x1b\[[0-9;?]*[ -/]*[@-~]')
-SHA_OUTPUT_PATTERNS = (
-    # Current Molot verifies IX graph predict entries after the command.
-    re.compile(rb'predict mismatch:.*?expected=[0]{64}\s+actual=([0-9a-f]{64})'),
-    # IX's direct fetcher checksum error.
-    re.compile(rb'got\s+([0-9a-f]{64})\s+checksum,\s+not\s+[0]{64}'),
-    # stable_pack_v3 prints sha256sum immediately before its check fails.
-    re.compile(rb'(?m)^([0-9a-f]{64})\s{2,}\S+'),
-)
 
 
 def log(*args):
@@ -234,14 +227,14 @@ def recipe_sha(data):
     raise CandidateFailure('recipe contains no standalone sha256')
 
 
-def prepare_recipe(path, old, new):
+def prepare_recipe(path, old, new, probe_sha):
     data = path.read_text()
     old_line = f'\n{old}\n'
 
     if 'noauto' in data or old_line not in data:
         return False
 
-    updated = data.replace(recipe_sha(data), SENTINEL_SHA).replace(old_line, f'\n{new}\n')
+    updated = data.replace(recipe_sha(data), probe_sha).replace(old_line, f'\n{new}\n')
 
     if 'cargo_url' in updated:
         if 'cargo_tool' not in updated:
@@ -266,13 +259,13 @@ def recipe_accepts_update(path, old):
     return 'noauto' not in data and f'\n{old}\n' in data
 
 
-def install_sha(path, sha):
+def install_sha(path, probe_sha, sha):
     data = path.read_text()
 
-    if SENTINEL_SHA not in data:
+    if probe_sha not in data:
         return False
 
-    path.write_text(data.replace(SENTINEL_SHA, sha))
+    path.write_text(data.replace(probe_sha, sha))
     return True
 
 
@@ -295,19 +288,41 @@ def packages_to_build(repo, packages):
             yield package
 
 
-def extract_reported_sha(output):
+def extract_reported_sha(output, probe_sha):
     clean = ANSI_RE.sub(b'', output)
-    matches = []
+    probe = re.escape(probe_sha.encode())
+    patterns = (
+        # Current Molot verifies IX graph predict entries after the command.
+        re.compile(
+            rb'predict mismatch:.*?expected=' + probe +
+            rb'\s+actual=([0-9a-f]{64})'
+        ),
+        # IX's direct fetcher checksum error.
+        re.compile(
+            rb'got\s+([0-9a-f]{64})\s+checksum,\s+not\s+' + probe
+        ),
+        # aux/{go,cargo,git} uses the supplied checksum in the .pzd name.
+        # Binding the filename to this attempt's probe avoids selecting an
+        # adjacent source checksum or another vendoring node's archive.
+        re.compile(
+            rb'(?m)^([0-9a-f]{64})\s{2,}\S*' + probe + rb'\.pzd\s*$'
+        ),
+    )
+    matches = [
+        match.group(1).decode()
+        for pattern in patterns
+        for match in pattern.finditer(clean)
+        if match.group(1).decode() != probe_sha
+    ]
+    unique = set(matches)
 
-    for pattern in SHA_OUTPUT_PATTERNS:
-        matches.extend((match.start(), match.group(1).decode()) for match in pattern.finditer(clean))
+    if not unique:
+        raise CandidateFailure('build output contains no checksum for this probe')
 
-    matches = [(pos, sha) for pos, sha in matches if sha != SENTINEL_SHA]
+    if len(unique) != 1:
+        raise CandidateFailure('build output contains conflicting checksums for this probe')
 
-    if not matches:
-        raise CandidateFailure('build output contains no checksum for the zero-sha source')
-
-    return max(matches)[1]
+    return unique.pop()
 
 
 def mc_env(base_env):
@@ -502,8 +517,18 @@ class PackageUpdater:
             # trouble only postpones this candidate until the next cron run.
             raise CandidateFailure(f'current package does not build (exit {preflight.returncode})')
 
+        # IX derives predicted node UIDs from the expected checksum.  A shared
+        # all-zero placeholder therefore gives every Go, Cargo, and git probe
+        # the same Molot/Gorn GUID; Gorn then reuses the first task's payload.
+        # A fresh invalid checksum keeps each probe isolated while preserving
+        # the old updater's checksum-mismatch discovery mechanism.
+        probe_sha = secrets.token_hex(32)
+
         try:
-            fixed = sum(prepare_recipe(path, candidate.old, candidate.new) for path in paths)
+            fixed = sum(
+                prepare_recipe(path, candidate.old, candidate.new, probe_sha)
+                for path in paths
+            )
         except OSError as exc:
             raise CandidateFailure(f'cannot rewrite dependency recipes: {exc}') from exc
 
@@ -513,10 +538,10 @@ class PackageUpdater:
         self.show_diff()
         checksum_build = self.builder.build(build_packages)
 
-        sha = extract_reported_sha(checksum_build.output)
+        sha = extract_reported_sha(checksum_build.output, probe_sha)
 
         try:
-            changed = sum(install_sha(path, sha) for path in paths)
+            changed = sum(install_sha(path, probe_sha, sha) for path in paths)
         except OSError as exc:
             raise CandidateFailure(f'cannot install checksum: {exc}') from exc
 
