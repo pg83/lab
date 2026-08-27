@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import importlib.util
+import signal
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -41,6 +43,39 @@ class FakePackageUpdater(updater.PackageUpdater):
 
 class UpdaterTests(unittest.TestCase):
     probe = '0' * 64
+
+    def builder_env(self):
+        return {
+            'AWS_ACCESS_KEY_ID_MOLOT': 'key',
+            'AWS_SECRET_ACCESS_KEY_MOLOT': 'secret',
+        }
+
+    def test_molot_build_timeout_stops_process_group(self):
+        builder = updater.MolotBuilder(
+            '/work/ix', '/work/cache',
+            {**self.builder_env(), 'IX_UPDATER_BUILD_TIMEOUT_S': '7'},
+        )
+        proc = mock.Mock(pid=1234, returncode=None)
+        proc.communicate.side_effect = (
+            subprocess.TimeoutExpired(('ix', 'build'), 7),
+            (b'partial output\n', None),
+        )
+
+        with mock.patch.object(updater.subprocess, 'Popen', return_value=proc), \
+             mock.patch.object(updater.os, 'killpg') as killpg:
+            result = builder.build(['bin/foo'])
+
+        self.assertEqual(result.returncode, 124)
+        self.assertIn(b'partial output', result.output)
+        self.assertIn(b'build timed out after 7s', result.output)
+        killpg.assert_called_once_with(1234, signal.SIGTERM)
+
+    def test_molot_build_timeout_must_be_positive(self):
+        with self.assertRaisesRegex(updater.InfrastructureFailure, 'must be positive'):
+            updater.MolotBuilder(
+                '/work/ix', '/work/cache',
+                {**self.builder_env(), 'IX_UPDATER_BUILD_TIMEOUT_S': '0'},
+            )
 
     def test_publish_rebases_before_push_for_parallel_fixer(self):
         worker = updater.PackageUpdater(Path('/work/ix'), None, branch='main', env={})

@@ -26,6 +26,7 @@ import json
 import os
 import re
 import secrets
+import signal
 import ssl
 import subprocess
 import sys
@@ -48,6 +49,8 @@ MC_ALIAS = 'updater_cache'
 GOOD_SHA_CHARS = frozenset('0123456789abcdef')
 BUILD_FLAGS = ('--opengl=fake', '--vulkan=fake', '--seed=1')
 REPOLOGY_PAGE_SIZE = 200
+DEFAULT_BUILD_TIMEOUT_S = 30 * 60
+BUILD_STOP_TIMEOUT_S = 10
 
 GO_LATEST = 26
 GO_TOOL = (
@@ -409,24 +412,62 @@ class MolotBuilder:
         self.env['AWS_SECRET_ACCESS_KEY'] = base_env['AWS_SECRET_ACCESS_KEY_MOLOT']
         self.env['S3_BUCKET'] = 'molot'
         self.env['MOLOT_CACHE'] = str(Path(cache_path).resolve())
+        self.timeout = int(base_env.get(
+            'IX_UPDATER_BUILD_TIMEOUT_S',
+            DEFAULT_BUILD_TIMEOUT_S,
+        ))
+
+        if self.timeout <= 0:
+            raise InfrastructureFailure('IX_UPDATER_BUILD_TIMEOUT_S must be positive')
 
     def build(self, packages):
         cmd = ('./ix', 'build', *BUILD_FLAGS, *packages)
         log('run', *cmd, '(molot)')
 
-        res = subprocess.run(
+        proc = subprocess.Popen(
             cmd,
             cwd=self.repo,
             env=self.env,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             start_new_session=True,
-            check=False,
         )
 
-        sys.stderr.buffer.write(res.stdout)
+        try:
+            output, _ = proc.communicate(timeout=self.timeout)
+            returncode = proc.returncode
+        except subprocess.TimeoutExpired:
+            log(f'build timed out after {self.timeout}s; stop process group {proc.pid}')
+
+            try:
+                os.killpg(proc.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+
+            try:
+                output, _ = proc.communicate(timeout=BUILD_STOP_TIMEOUT_S)
+            except subprocess.TimeoutExpired:
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+
+                output, _ = proc.communicate()
+
+            output += f'\nupdater: build timed out after {self.timeout}s\n'.encode()
+            returncode = 124
+        except BaseException:
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+
+            proc.wait()
+            raise
+
+        sys.stderr.buffer.write(output)
         sys.stderr.flush()
-        return BuildResult(res.returncode, res.stdout)
+        return BuildResult(returncode, output)
 
 
 class PackageUpdater:
