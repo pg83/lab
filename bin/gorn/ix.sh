@@ -9,7 +9,7 @@ https://github.com/pg83/gorn/archive/refs/tags/27.tar.gz
 {% endblock %}
 
 {% block go_sha %}
-3a004996aa5a869193319398ec2e18ba40b38d1342d14123422918c163a5ce82
+c4bbe4bf4e77d03e49430f0c7c8bb3bc6d397d9331e61f01a0306a23d2cfe650
 {% endblock %}
 
 {% block go_bins %}
