@@ -798,6 +798,16 @@ class GornSsh:
     def work_dir(self):
         return f'/var/run/{self.name()}/work'
 
+    def log_sources(self):
+        yield {
+            'job_name': f'{self.name()}/task',
+            'path': f'{self.home_dir()}/gorn-wrap.log',
+            'labels': {
+                'service': 'gorn_task',
+                'stream': self.name(),
+            },
+        }
+
     def prepare(self):
         u = self.name()
         make_dirs(self.home_dir(), owner=u)

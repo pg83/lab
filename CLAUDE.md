@@ -133,6 +133,9 @@ logcli labels service
 
 # Live tail across the cluster:
 logcli query '{service="samogon"}' --tail
+
+# Live output of one running Gorn task (stdout/stderr JSONL from its worker):
+logcli query '{service="gorn_task"} |= `"guid":"TASK_GUID"`' --tail --output=raw
 ```
 
 Log labels: `host` ∈ {lab1,lab2,lab3}, `service` = `cg.py`-registered name, `stream` = "tinylog" default or custom from service's `log_sources()` (see `Service.iter_log_sources()`).
@@ -169,6 +172,9 @@ curl -sG 'http://10.1.1.2:8040/' --data-urlencode 'path=loki' --data-urlencode '
 
 # body regex:
 curl -sG 'http://10.1.1.2:8040/' --data-urlencode 'q=panic|error' --data-urlencode 'n=200'
+
+# running Gorn task by guid:
+curl -sG 'http://10.1.1.2:8040/' --data-urlencode 'q="guid":"TASK_GUID"' --data-urlencode 'n=500'
 
 # time-sliced:
 curl -sG 'http://10.1.1.2:8040/' --data-urlencode "since=$(date -d '5 min ago' +%s)"
