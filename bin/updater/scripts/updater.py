@@ -15,8 +15,10 @@ semantics of IX's bin/ix/tools/upver, but every build is executed by Molot:
      invalid probe), preserving the original redirect, noauto, Go and Cargo
      rules.
   4. Build again, extract the checksum reported by IX/Molot, and write it.
-  5. Commit and push immediately.  Deliberately do not run a third build;
-     CI and the repair agent own failures after the mechanical update.
+  5. Rebase that recipe update onto current main, regenerate the complete
+     Repology dump from the resulting tree, and publish both in one commit.
+     Deliberately do not run a third package build; CI and the repair agent
+     own failures after the mechanical update.
 
 Molot's success cache is seeded from and merged into s3://cix/complete, the
 same durable cache used by CI.  ``cache-update`` is the small helper invoked
@@ -40,6 +42,7 @@ from pathlib import Path
 REPOLOGY_URL = 'https://repology.org/api/v1/projects/?inrepo=stalix_dev&outdated=1'
 IX_GIT_URL = 'https://github.com/pg83/ix.git'
 IX_BRANCH = 'main'
+REPOLOGY_STATS_PATH = 'pkgs/die/scripts/dump.json'
 
 CACHE_LOCK_KEY = '/lock/ci/cache'
 CACHE_S3_BUCKET = 'cix'
@@ -465,6 +468,26 @@ class PackageUpdater:
     def show_diff(self):
         self.git('diff')
 
+    def regenerate_repology_stats(self):
+        log(f'regenerate {REPOLOGY_STATS_PATH}')
+
+        try:
+            subprocess.run(
+                ('ix_repo_export',),
+                cwd=self.repo,
+                env=self.env,
+                check=True,
+            )
+        except (OSError, subprocess.CalledProcessError) as exc:
+            raise InfrastructureFailure('cannot regenerate Repology stats') from exc
+
+    def remove_repology_stats_from_commit(self):
+        self.git(
+            'restore', '--source=HEAD^', '--staged', '--worktree',
+            '--', REPOLOGY_STATS_PATH,
+        )
+        self.git('commit', '--amend', '--no-edit')
+
     def commit_and_push(self, candidate):
         self.git('add', '-A')
         clean = self.git('diff', '--cached', '--quiet', check=False)
@@ -486,6 +509,9 @@ class PackageUpdater:
         for attempt in range(2):
             self.git('fetch', 'origin', self.branch)
             self.git('rebase', f'origin/{self.branch}')
+            self.regenerate_repology_stats()
+            self.git('add', '--', REPOLOGY_STATS_PATH)
+            self.git('commit', '--amend', '--no-edit')
             pushed = self.git(
                 'push', 'origin', f'HEAD:refs/heads/{self.branch}',
                 check=False, env=push_env,
@@ -495,6 +521,13 @@ class PackageUpdater:
                 return
 
             log(f'git push raced with another publisher; retry {attempt + 1}/2')
+
+            if attempt == 0:
+                # The concurrently published commit may have regenerated the
+                # same whole-repository file.  Remove our derived copy before
+                # rebasing the actual recipe update, then rebuild it from the
+                # new complete tree on the next attempt.
+                self.remove_repology_stats_from_commit()
 
         raise InfrastructureFailure('git push failed after rebase retries')
 

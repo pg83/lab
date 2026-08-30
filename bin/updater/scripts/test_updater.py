@@ -49,14 +49,56 @@ class UpdaterTests(unittest.TestCase):
         def git_result(*args, **kwargs):
             return mock.Mock(returncode=1 if args[:3] == ('diff', '--cached', '--quiet') else 0)
 
-        with mock.patch.object(worker, 'git', side_effect=git_result) as git:
+        with mock.patch.object(worker, 'git', side_effect=git_result) as git, \
+             mock.patch.object(worker, 'regenerate_repology_stats') as regenerate:
             worker.commit_and_push(candidate)
 
         commands = [call.args for call in git.call_args_list]
+        stats_add = ('add', '--', updater.REPOLOGY_STATS_PATH)
+        amend = ('commit', '--amend', '--no-edit')
         self.assertLess(commands.index(('fetch', 'origin', 'main')),
                         commands.index(('rebase', 'origin/main')))
         self.assertLess(commands.index(('rebase', 'origin/main')),
+                        commands.index(stats_add))
+        self.assertLess(commands.index(stats_add), commands.index(amend))
+        self.assertLess(commands.index(amend),
                         commands.index(('push', 'origin', 'HEAD:refs/heads/main')))
+        regenerate.assert_called_once_with()
+
+    def test_publish_rebuilds_stats_after_push_race(self):
+        worker = updater.PackageUpdater(Path('/work/ix'), None, branch='main', env={})
+        candidate = updater.Candidate('1.0', '2.0', ('bin/foo',))
+        pushes = 0
+
+        def git_result(*args, **kwargs):
+            nonlocal pushes
+
+            if args[:3] == ('diff', '--cached', '--quiet'):
+                return mock.Mock(returncode=1)
+
+            if args and args[0] == 'push':
+                pushes += 1
+                return mock.Mock(returncode=1 if pushes == 1 else 0)
+
+            return mock.Mock(returncode=0)
+
+        with mock.patch.object(worker, 'git', side_effect=git_result) as git, \
+             mock.patch.object(worker, 'regenerate_repology_stats') as regenerate:
+            worker.commit_and_push(candidate)
+
+        commands = [call.args for call in git.call_args_list]
+        self.assertEqual(regenerate.call_count, 2)
+        self.assertIn(
+            (
+                'restore', '--source=HEAD^', '--staged', '--worktree',
+                '--', updater.REPOLOGY_STATS_PATH,
+            ),
+            commands,
+        )
+        self.assertEqual(
+            commands.count(('push', 'origin', 'HEAD:refs/heads/main')),
+            2,
+        )
 
     def test_restore_returns_to_run_source_revision(self):
         worker = updater.PackageUpdater(
@@ -76,6 +118,19 @@ class UpdaterTests(unittest.TestCase):
                 ('restore', '--source=HEAD', '--staged', '--worktree', '--', '.'),
                 ('switch', '--detach', '0123456789abcdef'),
             ],
+        )
+
+    def test_repology_stats_use_complete_repository_export(self):
+        worker = updater.PackageUpdater(Path('/work/ix'), None, env={'X': '1'})
+
+        with mock.patch.object(updater.subprocess, 'run') as run:
+            worker.regenerate_repology_stats()
+
+        run.assert_called_once_with(
+            ('ix_repo_export',),
+            cwd=Path('/work/ix'),
+            env={'X': '1'},
+            check=True,
         )
 
     def test_repology_filter_keeps_original_skip_semantics(self):

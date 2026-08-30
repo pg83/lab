@@ -23,8 +23,8 @@ this worker's temporary directory.  Codex may rotate its refresh token, so the
 updated file is always written back before the temporary directory disappears.
 Repository credentials are not present while the agent runs: the supervisor
 fetches /github/token only after Codex exits, validates the agent's local
-commit, rebases it onto a concurrently advanced main when necessary, and
-publishes it.
+commit, rebases it onto a concurrently advanced main when necessary,
+regenerates the complete Repology dump, and publishes both atomically.
 """
 
 import base64
@@ -46,7 +46,8 @@ from pathlib import Path
 IX_GIT_URL = 'https://github.com/pg83/ix.git'
 IX_BRANCH = 'main'
 IX_TARGET = 'set/ci/tier/0'
-FIXER_GENERATION = '5'
+REPOLOGY_STATS_PATH = 'pkgs/die/scripts/dump.json'
+FIXER_GENERATION = '6'
 CODEX_MODEL = 'gpt-5.6-sol'
 CODEX_REASONING_EFFORT = 'xhigh'
 GIT_TOKEN_URL = 'http://127.0.0.1:8022/github/token'
@@ -694,6 +695,51 @@ def git_output(repo, *args):
     ).strip()
 
 
+def regenerate_repology_stats(repo, env):
+    log(f'regenerate {REPOLOGY_STATS_PATH}')
+
+    try:
+        subprocess.run(
+            ('ix_repo_export',),
+            cwd=repo,
+            env=env,
+            check=True,
+        )
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise InfrastructureFailure('cannot regenerate Repology stats') from exc
+
+
+def amend_repology_stats(repo, env):
+    regenerate_repology_stats(repo, env)
+    subprocess.run(
+        ('git', 'add', '--', REPOLOGY_STATS_PATH),
+        cwd=repo,
+        check=True,
+    )
+    subprocess.run(
+        ('git', 'commit', '--amend', '--no-edit'),
+        cwd=repo,
+        check=True,
+    )
+    return git_output(repo, 'rev-parse', 'HEAD')
+
+
+def remove_repology_stats_from_commit(repo):
+    subprocess.run(
+        (
+            'git', 'restore', '--source=HEAD^', '--staged', '--worktree',
+            '--', REPOLOGY_STATS_PATH,
+        ),
+        cwd=repo,
+        check=True,
+    )
+    subprocess.run(
+        ('git', 'commit', '--amend', '--no-edit'),
+        cwd=repo,
+        check=True,
+    )
+
+
 def validate_agent_commit(repo, revision):
     """Return the one clean agent commit, or None for a clean no-op."""
     head = git_output(repo, 'rev-parse', 'HEAD')
@@ -754,40 +800,52 @@ def publish_fix(repo, revision, branch, env):
         return False
 
     git_url = env.get('IX_FIXER_GIT_URL', IX_GIT_URL)
-    subprocess.run(
-        ('git', 'fetch', git_url, branch),
-        cwd=repo,
-        env=git_read_env(env),
-        check=True,
-    )
-    remote_head = git_output(repo, 'rev-parse', 'FETCH_HEAD')
+    token = load_repo_token(env)
 
-    if remote_head != revision:
-        log(
-            f'origin {branch} moved from {revision[:12]} to '
-            f'{remote_head[:12]}; rebase Codex fix'
-        )
+    for attempt in range(2):
         subprocess.run(
-            ('git', 'rebase', 'FETCH_HEAD'),
+            ('git', 'fetch', git_url, branch),
             cwd=repo,
+            env=git_read_env(env),
             check=True,
         )
-        head = git_output(repo, 'rev-parse', 'HEAD')
+        remote_head = git_output(repo, 'rev-parse', 'FETCH_HEAD')
+        parent = git_output(repo, 'rev-parse', 'HEAD^')
 
-    token = load_repo_token(env)
-    subprocess.run(
-        (
-            'git',
-            '-c', 'core.hooksPath=/dev/null',
-            '-c', 'credential.helper=',
-            'push', git_url, f'{head}:refs/heads/{branch}',
-        ),
-        cwd=repo,
-        env=git_push_env(env, token),
-        check=True,
-    )
-    log(f'published Codex commit {head[:12]} to {branch}')
-    return True
+        if remote_head != parent:
+            log(
+                f'origin {branch} moved from {parent[:12]} to '
+                f'{remote_head[:12]}; rebase Codex fix'
+            )
+            subprocess.run(
+                ('git', 'rebase', 'FETCH_HEAD'),
+                cwd=repo,
+                check=True,
+            )
+
+        head = amend_repology_stats(repo, env)
+        pushed = subprocess.run(
+            (
+                'git',
+                '-c', 'core.hooksPath=/dev/null',
+                '-c', 'credential.helper=',
+                'push', git_url, f'{head}:refs/heads/{branch}',
+            ),
+            cwd=repo,
+            env=git_push_env(env, token),
+            check=False,
+        )
+
+        if pushed.returncode == 0:
+            log(f'published Codex commit {head[:12]} to {branch}')
+            return True
+
+        log(f'git push raced with another publisher; retry {attempt + 1}/2')
+
+        if attempt == 0:
+            remove_repology_stats_from_commit(repo)
+
+    raise InfrastructureFailure('git push failed after rebase retries')
 
 
 def run_fixer(env):

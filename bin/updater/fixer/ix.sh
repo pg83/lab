@@ -12,6 +12,7 @@ bin/ix/timeout
 bin/codex/wrap
 bin/openssl
 bin/etcd/ctl
+bin/ix/tools/regen
 bin/updater/scripts
 bin/updater/fixer/scripts
 {% endblock %}

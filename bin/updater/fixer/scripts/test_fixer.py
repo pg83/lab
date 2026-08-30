@@ -361,39 +361,48 @@ class FixerTests(unittest.TestCase):
 
     def test_publish_uses_supervisor_credentials_after_agent(self):
         env = self.run_env()
+        ok = mock.Mock(returncode=0)
 
         with tempfile.TemporaryDirectory() as td, \
              mock.patch.object(fixer, 'validate_agent_commit', return_value='fix123'), \
-             mock.patch.object(fixer.subprocess, 'check_output', return_value='abc123\n'), \
+             mock.patch.object(
+                 fixer, 'git_output', side_effect=('abc123', 'abc123'),
+             ), \
+             mock.patch.object(
+                 fixer, 'amend_repology_stats', return_value='amended123',
+             ) as amend, \
              mock.patch.object(fixer, 'load_repo_token', return_value='repo-token'):
             repo = Path(td)
 
-            with mock.patch.object(fixer.subprocess, 'run') as run:
+            with mock.patch.object(fixer.subprocess, 'run', return_value=ok) as run:
                 self.assertTrue(fixer.publish_fix(repo, 'abc123', 'main', env))
 
         calls = run.call_args_list
         push = next(call for call in calls if 'push' in call.args[0])
         fetch = next(call for call in calls if call.args[0][:2] == ('git', 'fetch'))
-        self.assertIn('fix123:refs/heads/main', push.args[0])
+        self.assertIn('amended123:refs/heads/main', push.args[0])
         self.assertNotIn('--force', push.args[0])
         self.assertEqual(push.kwargs['env']['GIT_ASKPASS'], 'passenv')
         self.assertEqual(push.kwargs['env']['GIT_PASS'], 'repo-token')
         self.assertNotIn('GIT_PASS', fetch.kwargs['env'])
         self.assertFalse(any('commit' in call.args[0] for call in calls))
         self.assertFalse(any('rebase' in call.args[0] for call in calls))
+        amend.assert_called_once_with(repo, env)
 
     def test_publish_rebases_and_pushes_when_remote_moved(self):
         env = self.run_env()
+        ok = mock.Mock(returncode=0)
 
         with tempfile.TemporaryDirectory() as td, \
              mock.patch.object(fixer, 'validate_agent_commit', return_value='fix123'), \
              mock.patch.object(
-                 fixer.subprocess,
-                 'check_output',
-                 side_effect=('moved\n', 'rebased\n'),
+                 fixer, 'git_output', side_effect=('moved', 'original'),
+             ), \
+             mock.patch.object(
+                 fixer, 'amend_repology_stats', return_value='rebased',
              ), \
              mock.patch.object(fixer, 'load_repo_token', return_value='repo-token'), \
-             mock.patch.object(fixer.subprocess, 'run') as run:
+             mock.patch.object(fixer.subprocess, 'run', return_value=ok) as run:
             self.assertTrue(fixer.publish_fix(Path(td), 'original', 'main', env))
 
         commands = [call.args[0] for call in run.call_args_list]
@@ -401,6 +410,61 @@ class FixerTests(unittest.TestCase):
         push = next(command for command in commands if 'push' in command)
         self.assertIn('rebased:refs/heads/main', push)
         self.assertNotIn('--force', push)
+
+    def test_publish_rebuilds_stats_after_push_race(self):
+        env = self.run_env()
+        pushes = 0
+
+        def run_result(command, **kwargs):
+            nonlocal pushes
+
+            if 'push' in command:
+                pushes += 1
+                return mock.Mock(returncode=1 if pushes == 1 else 0)
+
+            return mock.Mock(returncode=0)
+
+        with tempfile.TemporaryDirectory() as td, \
+             mock.patch.object(fixer, 'validate_agent_commit', return_value='fix123'), \
+             mock.patch.object(
+                 fixer,
+                 'git_output',
+                 side_effect=('base', 'base', 'moved', 'base'),
+             ), \
+             mock.patch.object(
+                 fixer,
+                 'amend_repology_stats',
+                 side_effect=('first-amended', 'second-amended'),
+             ) as amend, \
+             mock.patch.object(fixer, 'remove_repology_stats_from_commit') as remove, \
+             mock.patch.object(fixer, 'load_repo_token', return_value='repo-token'), \
+             mock.patch.object(fixer.subprocess, 'run', side_effect=run_result) as run:
+            repo = Path(td)
+            self.assertTrue(fixer.publish_fix(repo, 'base', 'main', env))
+
+        self.assertEqual(amend.call_count, 2)
+        remove.assert_called_once_with(repo)
+        commands = [call.args[0] for call in run.call_args_list]
+        self.assertEqual(sum('push' in command for command in commands), 2)
+        self.assertIn(('git', 'rebase', 'FETCH_HEAD'), commands)
+
+    def test_amend_repology_stats_rebuilds_complete_file(self):
+        with tempfile.TemporaryDirectory() as td, \
+             mock.patch.object(fixer, 'regenerate_repology_stats') as regenerate, \
+             mock.patch.object(fixer.subprocess, 'run') as run, \
+             mock.patch.object(fixer, 'git_output', return_value='amended'):
+            repo = Path(td)
+            self.assertEqual(fixer.amend_repology_stats(repo, self.run_env()), 'amended')
+
+        regenerate.assert_called_once_with(repo, self.run_env())
+        commands = [call.args[0] for call in run.call_args_list]
+        self.assertEqual(
+            commands,
+            [
+                ('git', 'add', '--', fixer.REPOLOGY_STATS_PATH),
+                ('git', 'commit', '--amend', '--no-edit'),
+            ],
+        )
 
     def test_validate_accepts_one_clean_agent_commit(self):
         with tempfile.TemporaryDirectory() as td:
