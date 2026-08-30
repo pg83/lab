@@ -58,6 +58,26 @@ class UpdaterTests(unittest.TestCase):
         self.assertLess(commands.index(('rebase', 'origin/main')),
                         commands.index(('push', 'origin', 'HEAD:refs/heads/main')))
 
+    def test_restore_returns_to_run_source_revision(self):
+        worker = updater.PackageUpdater(
+            Path('/work/ix'),
+            None,
+            branch='main',
+            source_revision='0123456789abcdef',
+            env={},
+        )
+
+        with mock.patch.object(worker, 'git') as git:
+            worker.restore()
+
+        self.assertEqual(
+            [call.args for call in git.call_args_list],
+            [
+                ('restore', '--source=HEAD', '--staged', '--worktree', '--', '.'),
+                ('switch', '--detach', '0123456789abcdef'),
+            ],
+        )
+
     def test_repology_filter_keeps_original_skip_semantics(self):
         data = {
             'zlib': [

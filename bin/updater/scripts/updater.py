@@ -8,8 +8,9 @@ fire-and-forget gorn task.  It copies the discovery and package-rewrite
 semantics of IX's bin/ix/tools/upver, but every build is executed by Molot:
 
   1. Fetch Repology's stale-package list and apply the original skip list.
-  2. Build the current package before touching its recipe.  A package build
-     failure skips only that candidate.
+  2. Pin the IX source revision for the whole run.  Build every current
+     package from that revision before touching its recipe, so updates
+     published earlier in the same run cannot poison later candidates.
   3. Replace exactly one recipe's old version and checksum (with a fresh
      invalid probe), preserving the original redirect, noauto, Go and Cargo
      rules.
@@ -421,10 +422,11 @@ class MolotBuilder:
 
 
 class PackageUpdater:
-    def __init__(self, repo, builder, branch=IX_BRANCH, env=None):
+    def __init__(self, repo, builder, branch=IX_BRANCH, source_revision='HEAD', env=None):
         self.repo = Path(repo)
         self.builder = builder
         self.branch = branch
+        self.source_revision = source_revision
         self.env = dict(os.environ if env is None else env)
 
     def git(self, *args, check=True, capture=False, env=None):
@@ -458,6 +460,7 @@ class PackageUpdater:
 
     def restore(self):
         self.git('restore', '--source=HEAD', '--staged', '--worktree', '--', '.')
+        self.git('switch', '--detach', self.source_revision)
 
     def show_diff(self):
         self.git('diff')
@@ -626,12 +629,27 @@ def run_updater(env):
         log(f'seeded Molot cache: {cache_path.stat().st_size} bytes')
 
         branch = clone_ix(repo, env)
+        source_revision = subprocess.check_output(
+            ('git', 'rev-parse', 'HEAD'),
+            cwd=repo,
+            env=env,
+            text=True,
+        ).strip()
+        log(f'pinned IX source revision {source_revision}')
         builder = MolotBuilder(repo, cache_path, env)
-        updater = PackageUpdater(repo, builder, branch=branch, env=env)
+        updater = PackageUpdater(
+            repo,
+            builder,
+            branch=branch,
+            source_revision=source_revision,
+            env=env,
+        )
         updated = 0
         failed = 0
 
         try:
+            updater.restore()
+
             for candidate in candidates:
                 log(f'candidate {candidate.line}')
 
