@@ -358,6 +358,21 @@ class FixerTests(unittest.TestCase):
         self.assertNotIn('GIT_PASS', clone_env)
         self.assertNotIn('GIT_ASKPASS', clone_env)
         self.assertEqual(clone_env['GIT_TERMINAL_PROMPT'], '0')
+        commands = [call.args[0] for call in run.call_args_list]
+        self.assertEqual(
+            commands[0],
+            (
+                'git', 'clone', '--single-branch', '--branch', 'main',
+                fixer.IX_GIT_READ_URL, str(repo),
+            ),
+        )
+        self.assertIn(
+            (
+                'git', 'remote', 'set-url', '--push', 'origin',
+                fixer.IX_GIT_PUSH_URL,
+            ),
+            commands,
+        )
 
     def test_publish_uses_supervisor_credentials_after_agent(self):
         env = self.run_env()
@@ -380,6 +395,8 @@ class FixerTests(unittest.TestCase):
         calls = run.call_args_list
         push = next(call for call in calls if 'push' in call.args[0])
         fetch = next(call for call in calls if call.args[0][:2] == ('git', 'fetch'))
+        self.assertEqual(fetch.args[0], ('git', 'fetch', 'origin', 'main'))
+        self.assertIn('origin', push.args[0])
         self.assertIn('amended123:refs/heads/main', push.args[0])
         self.assertNotIn('--force', push.args[0])
         self.assertEqual(push.kwargs['env']['GIT_ASKPASS'], 'passenv')
@@ -438,6 +455,7 @@ class FixerTests(unittest.TestCase):
              ) as amend, \
              mock.patch.object(fixer, 'remove_repology_stats_from_commit') as remove, \
              mock.patch.object(fixer, 'load_repo_token', return_value='repo-token'), \
+             mock.patch.object(fixer.time, 'sleep') as sleep, \
              mock.patch.object(fixer.subprocess, 'run', side_effect=run_result) as run:
             repo = Path(td)
             self.assertTrue(fixer.publish_fix(repo, 'base', 'main', env))
@@ -447,6 +465,7 @@ class FixerTests(unittest.TestCase):
         commands = [call.args[0] for call in run.call_args_list]
         self.assertEqual(sum('push' in command for command in commands), 2)
         self.assertIn(('git', 'rebase', 'FETCH_HEAD'), commands)
+        sleep.assert_called_once_with(fixer.GIT_MIRROR_RETRY_DELAY_S)
 
     def test_amend_repology_stats_rebuilds_complete_file(self):
         with tempfile.TemporaryDirectory() as td, \

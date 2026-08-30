@@ -33,6 +33,7 @@ import ssl
 import subprocess
 import sys
 import tempfile
+import time
 import urllib.request
 import urllib.parse
 from dataclasses import dataclass
@@ -40,7 +41,8 @@ from pathlib import Path
 
 
 REPOLOGY_URL = 'https://repology.org/api/v1/projects/?inrepo=stalix_dev&outdated=1'
-IX_GIT_URL = 'https://github.com/pg83/ix.git'
+IX_GIT_READ_URL = 'http://127.0.0.1:8035/mirror_ix.git'
+IX_GIT_PUSH_URL = 'https://github.com/pg83/ix.git'
 IX_BRANCH = 'main'
 REPOLOGY_STATS_PATH = 'pkgs/die/scripts/dump.json'
 
@@ -52,6 +54,7 @@ MC_ALIAS = 'updater_cache'
 GOOD_SHA_CHARS = frozenset('0123456789abcdef')
 BUILD_FLAGS = ('--opengl=fake', '--vulkan=fake', '--seed=1')
 REPOLOGY_PAGE_SIZE = 200
+GIT_MIRROR_RETRY_DELAY_S = 15
 
 GO_LATEST = 26
 GO_TOOL = (
@@ -526,8 +529,10 @@ class PackageUpdater:
                 # The concurrently published commit may have regenerated the
                 # same whole-repository file.  Remove our derived copy before
                 # rebasing the actual recipe update, then rebuild it from the
-                # new complete tree on the next attempt.
+                # new complete tree on the next attempt.  Give Ogorod's
+                # 10-second mirror cycle time to observe the winning push.
                 self.remove_repology_stats_from_commit()
+                time.sleep(GIT_MIRROR_RETRY_DELAY_S)
 
         raise InfrastructureFailure('git push failed after rebase retries')
 
@@ -601,13 +606,19 @@ class PackageUpdater:
 
 
 def clone_ix(dst, env):
-    git_url = env.get('IX_UPDATER_GIT_URL', IX_GIT_URL)
+    read_url = env.get('IX_UPDATER_GIT_READ_URL', IX_GIT_READ_URL)
+    push_url = env.get('IX_UPDATER_GIT_PUSH_URL', IX_GIT_PUSH_URL)
     branch = env.get('IX_UPDATER_BRANCH', IX_BRANCH)
-    log(f'clone {git_url} branch={branch}')
+    log(f'clone {read_url} branch={branch}; push={push_url}')
 
     subprocess.run(
-        ('git', 'clone', '--single-branch', '--branch', branch, git_url, str(dst)),
+        ('git', 'clone', '--single-branch', '--branch', branch, read_url, str(dst)),
         env=env,
+        check=True,
+    )
+    subprocess.run(
+        ('git', 'remote', 'set-url', '--push', 'origin', push_url),
+        cwd=dst,
         check=True,
     )
     subprocess.run(('git', 'config', 'user.name', 'ix updater'), cwd=dst, check=True)

@@ -6,7 +6,7 @@ One autonomous IX CI repair cycle.
 The cluster scheduler starts this command asynchronously through gorn and
 holds /lock/updater/fixer/work around the complete process.  The worker:
 
-  1. clones pg83/ix at main;
+  1. clones pg83/ix at main from the local Ogorod mirror;
   2. seeds Molot's durable success cache from cix/complete;
   3. runs ``./ix build set/ci/tier/0 --seed=1`` through Molot, deliberately
      without a keep-going flag, and stops its process group at the first
@@ -39,11 +39,13 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import urllib.request
 from pathlib import Path
 
 
-IX_GIT_URL = 'https://github.com/pg83/ix.git'
+IX_GIT_READ_URL = 'http://127.0.0.1:8035/mirror_ix.git'
+IX_GIT_PUSH_URL = 'https://github.com/pg83/ix.git'
 IX_BRANCH = 'main'
 IX_TARGET = 'set/ci/tier/0'
 REPOLOGY_STATS_PATH = 'pkgs/die/scripts/dump.json'
@@ -59,6 +61,7 @@ CODEX_AUTH_ENVELOPE_VERSION = 1
 CODEX_AUTH_ENVELOPE_ALGORITHM = 'aes-256-cbc+hmac-sha256'
 CODEX_AUTH_HKDF_INFO = b'ix-updater-fixer/codex-auth/v1'
 CODEX_AUTH_AES = '-aes-256-cbc'
+GIT_MIRROR_RETRY_DELAY_S = 15
 
 CACHE_LOCK_KEY = '/lock/ci/cache'
 CACHE_S3_BUCKET = 'cix'
@@ -155,13 +158,19 @@ def merge_cache(path, env):
 
 
 def clone_ix(dst, env):
-    git_url = env.get('IX_FIXER_GIT_URL', IX_GIT_URL)
+    read_url = env.get('IX_FIXER_GIT_READ_URL', IX_GIT_READ_URL)
+    push_url = env.get('IX_FIXER_GIT_PUSH_URL', IX_GIT_PUSH_URL)
     branch = env.get('IX_FIXER_BRANCH', IX_BRANCH)
-    log(f'clone {git_url} branch={branch}')
+    log(f'clone {read_url} branch={branch}; push={push_url}')
 
     subprocess.run(
-        ('git', 'clone', '--single-branch', '--branch', branch, git_url, str(dst)),
+        ('git', 'clone', '--single-branch', '--branch', branch, read_url, str(dst)),
         env=git_read_env(env),
+        check=True,
+    )
+    subprocess.run(
+        ('git', 'remote', 'set-url', '--push', 'origin', push_url),
+        cwd=dst,
         check=True,
     )
     subprocess.run(('git', 'config', 'user.name', 'ix fixer'), cwd=dst, check=True)
@@ -799,12 +808,11 @@ def publish_fix(repo, revision, branch, env):
     if head is None:
         return False
 
-    git_url = env.get('IX_FIXER_GIT_URL', IX_GIT_URL)
     token = load_repo_token(env)
 
     for attempt in range(2):
         subprocess.run(
-            ('git', 'fetch', git_url, branch),
+            ('git', 'fetch', 'origin', branch),
             cwd=repo,
             env=git_read_env(env),
             check=True,
@@ -829,7 +837,7 @@ def publish_fix(repo, revision, branch, env):
                 'git',
                 '-c', 'core.hooksPath=/dev/null',
                 '-c', 'credential.helper=',
-                'push', git_url, f'{head}:refs/heads/{branch}',
+                'push', 'origin', f'{head}:refs/heads/{branch}',
             ),
             cwd=repo,
             env=git_push_env(env, token),
@@ -844,6 +852,9 @@ def publish_fix(repo, revision, branch, env):
 
         if attempt == 0:
             remove_repology_stats_from_commit(repo)
+            # origin is the eventually consistent Ogorod mirror.  Let its
+            # 10-second cycle observe the commit which won the push race.
+            time.sleep(GIT_MIRROR_RETRY_DELAY_S)
 
     raise InfrastructureFailure('git push failed after rebase retries')
 

@@ -42,6 +42,28 @@ class FakePackageUpdater(updater.PackageUpdater):
 class UpdaterTests(unittest.TestCase):
     probe = '0' * 64
 
+    def test_clone_reads_from_ogorod_and_pushes_to_github(self):
+        with tempfile.TemporaryDirectory() as td, \
+             mock.patch.object(updater.subprocess, 'run') as run:
+            repo = Path(td) / 'ix'
+            updater.clone_ix(repo, {})
+
+        commands = [call.args[0] for call in run.call_args_list]
+        self.assertEqual(
+            commands[0],
+            (
+                'git', 'clone', '--single-branch', '--branch', 'main',
+                updater.IX_GIT_READ_URL, str(repo),
+            ),
+        )
+        self.assertIn(
+            (
+                'git', 'remote', 'set-url', '--push', 'origin',
+                updater.IX_GIT_PUSH_URL,
+            ),
+            commands,
+        )
+
     def test_publish_rebases_before_push_for_parallel_fixer(self):
         worker = updater.PackageUpdater(Path('/work/ix'), None, branch='main', env={})
         candidate = updater.Candidate('1.0', '2.0', ('bin/foo',))
@@ -83,7 +105,8 @@ class UpdaterTests(unittest.TestCase):
             return mock.Mock(returncode=0)
 
         with mock.patch.object(worker, 'git', side_effect=git_result) as git, \
-             mock.patch.object(worker, 'regenerate_repology_stats') as regenerate:
+             mock.patch.object(worker, 'regenerate_repology_stats') as regenerate, \
+             mock.patch.object(updater.time, 'sleep') as sleep:
             worker.commit_and_push(candidate)
 
         commands = [call.args for call in git.call_args_list]
@@ -99,6 +122,7 @@ class UpdaterTests(unittest.TestCase):
             commands.count(('push', 'origin', 'HEAD:refs/heads/main')),
             2,
         )
+        sleep.assert_called_once_with(updater.GIT_MIRROR_RETRY_DELAY_S)
 
     def test_restore_returns_to_run_source_revision(self):
         worker = updater.PackageUpdater(
