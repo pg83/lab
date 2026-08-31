@@ -132,10 +132,15 @@ class Candidate:
     old: str
     new: str
     packages: tuple
+    alternatives: tuple = ()
 
     @property
     def line(self):
         return ' '.join((self.old, self.new, *self.packages))
+
+    @property
+    def versions(self):
+        return (self.new, *self.alternatives)
 
 
 @dataclass(frozen=True)
@@ -144,12 +149,32 @@ class BuildResult:
     output: bytes
 
 
-def newest_version(records):
-    for rec in records:
-        if rec.get('status') == 'newest':
-            return rec.get('version')
+def levenshtein(left, right):
+    previous = list(range(len(right) + 1))
 
-    return None
+    for left_index, left_char in enumerate(left, 1):
+        current = [left_index]
+
+        for right_index, right_char in enumerate(right, 1):
+            current.append(min(
+                current[-1] + 1,
+                previous[right_index] + 1,
+                previous[right_index - 1] + (left_char != right_char),
+            ))
+
+        previous = current
+
+    return previous[-1]
+
+
+def newest_versions(records, old):
+    versions = {
+        rec.get('version')
+        for rec in records
+        if rec.get('status') == 'newest' and rec.get('version')
+    }
+
+    return tuple(sorted(versions, key=lambda version: (levenshtein(old, version), version)))
 
 
 def our_version(records):
@@ -174,12 +199,17 @@ def candidates_from_repology(data):
 
         records = data[name]
         old = our_version(records)
-        new = newest_version(records)
+        versions = newest_versions(records, old) if old else ()
 
-        if not old or not new:
+        if not old or not versions:
             continue
 
-        candidate = Candidate(old, new, tuple(our_packages(records)))
+        candidate = Candidate(
+            old,
+            versions[0],
+            tuple(our_packages(records)),
+            versions[1:],
+        )
 
         if any(part in candidate.line for part in SKIP_SUBSTRINGS):
             log(f'skip filtered {candidate.line}')
@@ -581,41 +611,59 @@ class PackageUpdater:
             # trouble only postpones this candidate until the next cron run.
             raise CandidateFailure(f'current package does not build (exit {preflight.returncode})')
 
-        # IX derives predicted node UIDs from the expected checksum.  A shared
-        # all-zero placeholder therefore gives every Go, Cargo, and git probe
-        # the same Molot/Gorn GUID; Gorn then reuses the first task's payload.
-        # A fresh invalid checksum keeps each probe isolated while preserving
-        # the old updater's checksum-mismatch discovery mechanism.
-        probe_sha = secrets.token_hex(32)
-
         try:
-            fixed = sum(
-                prepare_recipe(path, candidate.old, candidate.new, probe_sha)
-                for path in paths
-            )
+            originals = {path: path.read_bytes() for path in paths}
         except OSError as exc:
-            raise CandidateFailure(f'cannot rewrite dependency recipes: {exc}') from exc
+            raise CandidateFailure(f'cannot save dependency recipes: {exc}') from exc
 
-        if fixed != 1:
-            raise CandidateFailure(f'expected one changed recipe, got {fixed}')
+        failures = []
 
-        self.show_diff()
-        checksum_build = self.builder.build(build_packages)
+        for new in candidate.versions:
+            # IX derives predicted node UIDs from the expected checksum.  A
+            # shared all-zero placeholder would give every Go, Cargo, and git
+            # probe the same Molot/Gorn GUID.  Keep every spelling attempt
+            # isolated with a fresh invalid checksum.
+            probe_sha = secrets.token_hex(32)
 
-        sha = extract_reported_sha(checksum_build.output, probe_sha)
+            try:
+                fixed = sum(
+                    prepare_recipe(path, candidate.old, new, probe_sha)
+                    for path in paths
+                )
 
-        try:
-            changed = sum(install_sha(path, probe_sha, sha) for path in paths)
-        except OSError as exc:
-            raise CandidateFailure(f'cannot install checksum: {exc}') from exc
+                if fixed != 1:
+                    raise CandidateFailure(f'expected one changed recipe, got {fixed}')
 
-        if changed != 1:
-            raise CandidateFailure(f'expected one zero-sha recipe, got {changed}')
+                self.show_diff()
+                checksum_build = self.builder.build(build_packages)
+                sha = extract_reported_sha(checksum_build.output, probe_sha)
+                changed = sum(install_sha(path, probe_sha, sha) for path in paths)
 
-        log(f'new sha {sha}')
-        self.show_diff()
-        self.commit_and_push(candidate)
-        return True
+                if changed != 1:
+                    raise CandidateFailure(f'expected one probe-sha recipe, got {changed}')
+            except (OSError, CandidateFailure) as exc:
+                failures.append(f'{new}: {exc}')
+                log(f'version spelling failed {new}: {exc}')
+
+                try:
+                    for path, data in originals.items():
+                        path.write_bytes(data)
+                except OSError as restore_exc:
+                    raise InfrastructureFailure(
+                        f'cannot restore recipes after version spelling {new}'
+                    ) from restore_exc
+
+                continue
+
+            log(f'new sha {sha} for version spelling {new}')
+            self.show_diff()
+            selected = Candidate(candidate.old, new, candidate.packages)
+            self.commit_and_push(selected)
+            return True
+
+        raise CandidateFailure(
+            'all newest version spellings failed: ' + '; '.join(failures)
+        )
 
 
 def clone_ix(dst, env):

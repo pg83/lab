@@ -178,6 +178,37 @@ class UpdaterTests(unittest.TestCase):
             [updater.Candidate('1.2', '1.3', ('lib/zlib',))],
         )
 
+    def test_levenshtein(self):
+        self.assertEqual(updater.levenshtein('7.1.2.15', '7.1.2.30'), 2)
+        self.assertEqual(updater.levenshtein('7.1.2.15', '7.1.2-30'), 3)
+        self.assertEqual(updater.levenshtein('', 'abc'), 3)
+
+    def test_repology_orders_real_newest_spellings_by_levenshtein_distance(self):
+        data = {
+            'imagemagick': [
+                {
+                    'repo': 'stalix',
+                    'version': '7.1.2.15',
+                    'srcname': 'lib/image/magick',
+                },
+                {'status': 'newest', 'version': '7.1.2-30'},
+                {'status': 'newest', 'version': '7.1.2_30'},
+                {'status': 'newest', 'version': '7.1.2.30'},
+            ],
+        }
+
+        self.assertEqual(
+            list(updater.candidates_from_repology(data)),
+            [
+                updater.Candidate(
+                    '7.1.2.15',
+                    '7.1.2.30',
+                    ('lib/image/magick',),
+                    ('7.1.2-30', '7.1.2_30'),
+                ),
+            ],
+        )
+
     def test_repology_fetches_every_page(self):
         first = {f'p{number:03d}': [number] for number in range(200)}
         second = {'p199': [199], 'p200': [200]}
@@ -392,6 +423,55 @@ class UpdaterTests(unittest.TestCase):
             self.assertEqual(worker.commits, [candidate])
             self.assertIn(actual, recipe.read_text())
             self.assertNotIn(self.probe, recipe.read_text())
+
+    def test_process_tries_next_real_version_spelling_after_failed_probe(self):
+        first_probe = '0' * 64
+        second_probe = '1' * 64
+        actual = 'd' * 64
+        checksum_output = (
+            b'molot exec: predict mismatch: predict mismatch: /x expected=' +
+            second_probe.encode() + b' actual=' + actual.encode()
+        )
+        builder = FakeBuilder([
+            updater.BuildResult(0, b'ok'),
+            updater.BuildResult(2, b'upstream URL returned 404'),
+            updater.BuildResult(2, checksum_output),
+        ])
+
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            recipe = repo / 'pkgs/bin/foo/ix.sh'
+            recipe.parent.mkdir(parents=True)
+            recipe.write_text(
+                "{% block version %}\n1.0.1\n{% endblock %}\n"
+                "{% block fetch %}\nhttps://x/foo-1.0.1.tar.gz\n" +
+                'a' * 64 + "\n{% endblock %}\n"
+            )
+            worker = FakePackageUpdater(repo, builder)
+            candidate = updater.Candidate(
+                '1.0.1',
+                '2.0-2',
+                ('bin/foo',),
+                ('2.0.2',),
+            )
+
+            with mock.patch.object(
+                updater.secrets,
+                'token_hex',
+                side_effect=(first_probe, second_probe),
+            ):
+                self.assertTrue(worker.process(candidate))
+
+            self.assertEqual(
+                builder.calls,
+                [['bin/foo'], ['bin/foo'], ['bin/foo']],
+            )
+            self.assertEqual(
+                worker.commits,
+                [updater.Candidate('1.0.1', '2.0.2', ('bin/foo',))],
+            )
+            self.assertIn('2.0.2', recipe.read_text())
+            self.assertIn(actual, recipe.read_text())
 
     def test_failed_preflight_does_not_touch_recipe(self):
         builder = FakeBuilder([
