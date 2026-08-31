@@ -231,6 +231,46 @@ class UpdaterTests(unittest.TestCase):
             self.assertNotIn('bld/cargo/91', data)
             self.assertNotIn('bld/rust/91', data)
 
+    def test_split_recipe_honors_noauto_from_entrypoint(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            entrypoint = root / 'ix.sh'
+            version = root / 'ver.sh'
+            entrypoint.write_text(
+                "{% include 'ver.sh' %}\n"
+                "# noauto\n"
+                "{% block cargo_tool %}bld/cargo/86{% endblock %}\n"
+            )
+            original = (
+                "{% block version %}\n1.0\n{% endblock %}\n"
+                "{% block cargo_url %}https://x/v1.0.tar.gz{% endblock %}\n"
+                "{% block cargo_sha %}\n" + 'a' * 64 + "\n{% endblock %}\n"
+            )
+            version.write_text(original)
+
+            self.assertFalse(updater.recipe_accepts_update(version, '1.0'))
+            self.assertFalse(updater.prepare_recipe(version, '1.0', '2.0', self.probe))
+            self.assertEqual(version.read_text(), original)
+
+    def test_split_recipe_does_not_duplicate_entrypoint_cargo_tool(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            entrypoint = root / 'ix.sh'
+            version = root / 'ver.sh'
+            entrypoint.write_text(
+                "{% include 'ver.sh' %}\n"
+                "{% block cargo_tool %}bld/cargo/96{% endblock %}\n"
+            )
+            version.write_text(
+                "{% block version %}\n1.0\n{% endblock %}\n"
+                "{% block cargo_url %}https://x/v1.0.tar.gz{% endblock %}\n"
+                "{% block cargo_sha %}\n" + 'a' * 64 + "\n{% endblock %}\n"
+            )
+
+            self.assertTrue(updater.prepare_recipe(version, '1.0', '2.0', self.probe))
+            self.assertNotIn('{% block cargo_tool %}', version.read_text())
+            self.assertEqual(entrypoint.read_text().count('{% block cargo_tool %}'), 1)
+
     def test_prepare_recipe_matches_complete_version_line(self):
         with tempfile.TemporaryDirectory() as td:
             path = Path(td) / 'ix.sh'

@@ -243,25 +243,38 @@ def recipe_sha(data):
     raise CandidateFailure('recipe contains no standalone sha256')
 
 
+def recipe_context(path, data=None):
+    if data is None:
+        data = path.read_text()
+
+    entrypoint = path.parent / 'ix.sh'
+
+    if entrypoint != path and entrypoint.is_file():
+        return data + '\n' + entrypoint.read_text()
+
+    return data
+
+
 def prepare_recipe(path, old, new, probe_sha):
     data = path.read_text()
+    context = recipe_context(path, data)
     old_line = f'\n{old}\n'
 
-    if 'noauto' in data or old_line not in data:
+    if 'noauto' in context or old_line not in data:
         return False
 
     updated = data.replace(recipe_sha(data), probe_sha).replace(old_line, f'\n{new}\n')
     updated = updated.replace(ATTR_SNAPSHOT_URL, ATTR_RELEASE_URL)
 
     if 'cargo_url' in updated:
-        if 'cargo_tool' not in updated:
+        if 'cargo_tool' not in context:
             updated += CARGO_TOOL
 
         for version in range(75, CARGO_LATEST):
             updated = updated.replace(f'bld/rust/{version}', f'bld/rust/{CARGO_LATEST}')
             updated = updated.replace(f'bld/cargo/{version}', f'bld/cargo/{CARGO_LATEST}')
     elif 'go_url' in updated:
-        if 'go_tool' not in updated:
+        if 'go_tool' not in context:
             updated += GO_TOOL
 
         for version in range(21, GO_LATEST):
@@ -273,7 +286,7 @@ def prepare_recipe(path, old, new, probe_sha):
 
 def recipe_accepts_update(path, old):
     data = path.read_text()
-    return 'noauto' not in data and f'\n{old}\n' in data
+    return 'noauto' not in recipe_context(path, data) and f'\n{old}\n' in data
 
 
 def install_sha(path, probe_sha, sha):
