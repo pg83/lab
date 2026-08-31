@@ -113,7 +113,6 @@ SKIP_SUBSTRINGS = (
 )
 
 ANSI_RE = re.compile(rb'\x1b\[[0-9;?]*[ -/]*[@-~]')
-VERSION_ATOM_RE = re.compile(r'[0-9]+|[A-Za-z]+')
 
 
 def log(*args):
@@ -167,36 +166,6 @@ def our_packages(records):
             yield rec['srcname']
 
 
-def version_shape(value):
-    atoms = []
-    separators = []
-    offset = 0
-
-    for match in VERSION_ATOM_RE.finditer(value):
-        separators.append(value[offset:match.start()])
-        atoms.append(match.group())
-        offset = match.end()
-
-    separators.append(value[offset:])
-    return atoms, separators
-
-
-def normalize_version(old, new):
-    old_atoms, old_separators = version_shape(old)
-    new_atoms, _ = version_shape(new)
-
-    if not old_atoms or len(old_atoms) != len(new_atoms):
-        return new
-
-    result = []
-
-    for separator, atom in zip(old_separators, new_atoms):
-        result.extend((separator, atom))
-
-    result.append(old_separators[-1])
-    return ''.join(result)
-
-
 def candidates_from_repology(data):
     for name in sorted(data):
         if 'unclassified' in name:
@@ -209,13 +178,6 @@ def candidates_from_repology(data):
 
         if not old or not new:
             continue
-
-        normalized = normalize_version(old, new)
-
-        if normalized != new:
-            log(f'normalize version {new} -> {normalized} like {old}')
-
-        new = normalized
 
         candidate = Candidate(old, new, tuple(our_packages(records)))
 
