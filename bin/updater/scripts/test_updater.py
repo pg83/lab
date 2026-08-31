@@ -178,6 +178,49 @@ class UpdaterTests(unittest.TestCase):
             [updater.Candidate('1.2', '1.3', ('lib/zlib',))],
         )
 
+    def test_normalize_version_uses_existing_recipe_separators(self):
+        self.assertEqual(
+            updater.normalize_version('7.1.2.15', '7.1.2-30'),
+            '7.1.2.30',
+        )
+        self.assertEqual(
+            updater.normalize_version('2-13-0', '2.14.3'),
+            '2-14-3',
+        )
+        self.assertEqual(
+            updater.normalize_version('20250104-3.1', '20260512_3.1'),
+            '20260512-3.1',
+        )
+
+    def test_normalize_version_keeps_new_shape_when_component_count_changes(self):
+        self.assertEqual(
+            updater.normalize_version('5.0.0-beta6', '4.3'),
+            '4.3',
+        )
+
+    def test_repology_candidate_normalizes_new_version(self):
+        data = {
+            'imagemagick': [
+                {
+                    'repo': 'stalix',
+                    'version': '7.1.2.15',
+                    'srcname': 'lib/image/magick',
+                },
+                {'status': 'newest', 'version': '7.1.2-30'},
+            ],
+        }
+
+        self.assertEqual(
+            list(updater.candidates_from_repology(data)),
+            [
+                updater.Candidate(
+                    '7.1.2.15',
+                    '7.1.2.30',
+                    ('lib/image/magick',),
+                ),
+            ],
+        )
+
     def test_repology_fetches_every_page(self):
         first = {f'p{number:03d}': [number] for number in range(200)}
         second = {'p199': [199], 'p200': [200]}
