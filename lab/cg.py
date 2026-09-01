@@ -1054,6 +1054,37 @@ class MolotWeb:
         )
 
 
+class MolotCache:
+    # Shared IX package cache. Public inside the ordinary/overlay networks:
+    # the uid index and artifacts are content-addressed and contain no secrets.
+    def __init__(self, listen, s3_endpoint, s3_bucket):
+        self.listen = listen
+        self.s3_endpoint = s3_endpoint
+        self.s3_bucket = s3_bucket
+
+    def name(self):
+        return 'molot_cache'
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/molot',
+        }
+
+    def run(self):
+        aws_key = get_key('/s3/iam/molot/key').decode().strip()
+        aws_secret = get_key('/s3/iam/molot/secret').decode().strip()
+
+        exec_into(
+            'molot', 'cache',
+            '--listen', self.listen,
+            S3_ENDPOINT=self.s3_endpoint,
+            S3_BUCKET=self.s3_bucket,
+            AWS_ACCESS_KEY_ID=aws_key,
+            AWS_SECRET_ACCESS_KEY=aws_secret,
+            PATH='/bin',
+        )
+
+
 SECOND_IP = '''
 set -x
 ip addr del {addr} dev eth0
@@ -2436,6 +2467,11 @@ class ClusterMap:
                 'serv': MolotWeb(f"{h['nebula']['ip']}:{p['molot_web']}", f"http://127.0.0.1:{p['gorn_ctl']}", f"http://127.0.0.1:{p['minio']}", 'molot'),
             }
 
+            yield {
+                'host': hn,
+                'serv': MolotCache(f"0.0.0.0:{p['molot_cache']}", f"http://127.0.0.1:{p['minio']}", 'molot'),
+            }
+
 
 def exec_into(*args, user=None, **kwargs):
     args = [str(x) for x in args]
@@ -2825,12 +2861,14 @@ def do(code):
     users['gorn_ctl_nb'] = 1096
     users['gorn_prom'] = 1095
     users['molot_web'] = 1026
+    users['molot_cache'] = 1027
     users['gofra'] = 1094
     ports['gorn_ctl'] = 8025
     ports['gorn_web'] = 8026
     ports['gorn_ctl_nb'] = 8027
     ports['gorn_prom'] = 8028
     ports['molot_web'] = 8052
+    ports['molot_cache'] = 8054
 
     gorn_max = max(GORN_N.values(), default=0)
 
