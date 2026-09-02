@@ -14,7 +14,8 @@ Per run:
      a 2-event buffer for missed/failed prior events; CAS-dedup
      absorbs whatever is re-fetched.
 
-  2. Sequentially wget each URL, sha256sum it, upload to CAS
+  2. Sequentially curl each URL through the local SOCKS5 proxy,
+     sha256sum it, upload to CAS
      via /bin/cas. Per-URL failures log and move on so a flaky
      upstream for one URL doesn't poison the rest.
 
@@ -90,7 +91,17 @@ def fetch_one(url):
     os.makedirs(work)
     data = os.path.join(work, 'data')
 
-    subprocess.run(['wget', '-O', data, url], check=True)
+    subprocess.run(
+        [
+            '/bin/curl',
+            '--fail',
+            '--location',
+            '--proxy', 'socks5h://127.0.0.1:8015',
+            '--output', data,
+            url,
+        ],
+        check=True,
+    )
 
     res = subprocess.run(
         ['sha256sum', data],
