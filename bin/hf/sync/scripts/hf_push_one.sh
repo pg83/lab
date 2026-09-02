@@ -12,4 +12,5 @@ huggingface_cli upload \
     stal-ix/pkgsrc \
     _ "cas/$(echo ${sha} | cut -c1-2)/${sha}"
 
+sleep 30
 rm _
