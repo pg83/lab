@@ -384,7 +384,7 @@ class FixerTests(unittest.TestCase):
                  fixer, 'git_output', side_effect=('abc123', 'abc123'),
              ), \
              mock.patch.object(
-                 fixer, 'amend_repology_stats', return_value='amended123',
+                 fixer, 'amend_repository_metadata', return_value='amended123',
              ) as amend, \
              mock.patch.object(fixer, 'load_repo_token', return_value='repo-token'):
             repo = Path(td)
@@ -416,7 +416,7 @@ class FixerTests(unittest.TestCase):
                  fixer, 'git_output', side_effect=('moved', 'original'),
              ), \
              mock.patch.object(
-                 fixer, 'amend_repology_stats', return_value='rebased',
+                 fixer, 'amend_repository_metadata', return_value='rebased',
              ), \
              mock.patch.object(fixer, 'load_repo_token', return_value='repo-token'), \
              mock.patch.object(fixer.subprocess, 'run', return_value=ok) as run:
@@ -450,10 +450,10 @@ class FixerTests(unittest.TestCase):
              ), \
              mock.patch.object(
                  fixer,
-                 'amend_repology_stats',
+                 'amend_repository_metadata',
                  side_effect=('first-amended', 'second-amended'),
              ) as amend, \
-             mock.patch.object(fixer, 'remove_repology_stats_from_commit') as remove, \
+             mock.patch.object(fixer, 'remove_repository_metadata_from_commit') as remove, \
              mock.patch.object(fixer, 'load_repo_token', return_value='repo-token'), \
              mock.patch.object(fixer.time, 'sleep') as sleep, \
              mock.patch.object(fixer.subprocess, 'run', side_effect=run_result) as run:
@@ -467,20 +467,23 @@ class FixerTests(unittest.TestCase):
         self.assertIn(('git', 'rebase', 'FETCH_HEAD'), commands)
         sleep.assert_called_once_with(fixer.GIT_MIRROR_RETRY_DELAY_S)
 
-    def test_amend_repology_stats_rebuilds_complete_file(self):
+    def test_amend_repository_metadata_rebuilds_generated_files(self):
         with tempfile.TemporaryDirectory() as td, \
-             mock.patch.object(fixer, 'regenerate_repology_stats') as regenerate, \
+             mock.patch.object(fixer, 'regenerate_repository_metadata') as regenerate, \
              mock.patch.object(fixer.subprocess, 'run') as run, \
              mock.patch.object(fixer, 'git_output', return_value='amended'):
             repo = Path(td)
-            self.assertEqual(fixer.amend_repology_stats(repo, self.run_env()), 'amended')
+            self.assertEqual(
+                fixer.amend_repository_metadata(repo, self.run_env()),
+                'amended',
+            )
 
         regenerate.assert_called_once_with(repo, self.run_env())
         commands = [call.args[0] for call in run.call_args_list]
         self.assertEqual(
             commands,
             [
-                ('git', 'add', '--', fixer.REPOLOGY_STATS_PATH),
+                ('git', 'add', '--', *fixer.REGENERATED_PATHS),
                 ('git', 'commit', '--amend', '--no-edit'),
             ],
         )

@@ -1,0 +1,26 @@
+#!/usr/bin/env sh
+
+set -xue
+
+IX_DIR=${IX_DIR:-$(pwd)}
+cd ${IX_DIR}
+
+ix_repo_export
+
+cd pkgs/die/scripts/
+
+export LANG=C
+export LC_ALL=C
+
+(
+cat urls.txt
+cat dump.json | ix_flt_upstream
+find ${IX_DIR} -name '*.sh' | xargs cat | grep "http[s]*://"
+cat ${IX_DIR}/pkgs/pip/pypi.json | grep '://' | sed -e 's|.* "||' | tr -d '"'
+) | grep -v '#'  \
+  | grep -v ' '  \
+  | grep -v '{{' \
+  | grep -v 'skia.google' \
+  | ix_urls_flt \
+  > _
+mv _ urls.txt

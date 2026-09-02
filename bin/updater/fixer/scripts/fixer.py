@@ -24,7 +24,7 @@ updated file is always written back before the temporary directory disappears.
 Repository credentials are not present while the agent runs: the supervisor
 fetches /github/token only after Codex exits, validates the agent's local
 commit, rebases it onto a concurrently advanced main when necessary,
-regenerates the complete Repology dump, and publishes both atomically.
+regenerates repository metadata, and publishes it atomically.
 """
 
 import base64
@@ -48,7 +48,10 @@ IX_GIT_READ_URL = 'http://127.0.0.1:8035/mirror_ix.git'
 IX_GIT_PUSH_URL = 'https://github.com/pg83/ix.git'
 IX_BRANCH = 'main'
 IX_TARGET = 'set/ci/tier/0'
-REPOLOGY_STATS_PATH = 'pkgs/die/scripts/dump.json'
+REGENERATED_PATHS = (
+    'pkgs/die/scripts/dump.json',
+    'pkgs/die/scripts/urls.txt',
+)
 FIXER_GENERATION = '6'
 CODEX_MODEL = 'gpt-5.6-sol'
 CODEX_REASONING_EFFORT = 'xhigh'
@@ -704,24 +707,24 @@ def git_output(repo, *args):
     ).strip()
 
 
-def regenerate_repology_stats(repo, env):
-    log(f'regenerate {REPOLOGY_STATS_PATH}')
+def regenerate_repository_metadata(repo, env):
+    log(f'regenerate {", ".join(REGENERATED_PATHS)}')
 
     try:
         subprocess.run(
-            ('ix_repo_export',),
+            ('ix_regen',),
             cwd=repo,
             env=env,
             check=True,
         )
     except (OSError, subprocess.CalledProcessError) as exc:
-        raise InfrastructureFailure('cannot regenerate Repology stats') from exc
+        raise InfrastructureFailure('cannot regenerate repository metadata') from exc
 
 
-def amend_repology_stats(repo, env):
-    regenerate_repology_stats(repo, env)
+def amend_repository_metadata(repo, env):
+    regenerate_repository_metadata(repo, env)
     subprocess.run(
-        ('git', 'add', '--', REPOLOGY_STATS_PATH),
+        ('git', 'add', '--', *REGENERATED_PATHS),
         cwd=repo,
         check=True,
     )
@@ -733,11 +736,11 @@ def amend_repology_stats(repo, env):
     return git_output(repo, 'rev-parse', 'HEAD')
 
 
-def remove_repology_stats_from_commit(repo):
+def remove_repository_metadata_from_commit(repo):
     subprocess.run(
         (
             'git', 'restore', '--source=HEAD^', '--staged', '--worktree',
-            '--', REPOLOGY_STATS_PATH,
+            '--', *REGENERATED_PATHS,
         ),
         cwd=repo,
         check=True,
@@ -831,7 +834,7 @@ def publish_fix(repo, revision, branch, env):
                 check=True,
             )
 
-        head = amend_repology_stats(repo, env)
+        head = amend_repository_metadata(repo, env)
         pushed = subprocess.run(
             (
                 'git',
@@ -851,7 +854,7 @@ def publish_fix(repo, revision, branch, env):
         log(f'git push raced with another publisher; retry {attempt + 1}/2')
 
         if attempt == 0:
-            remove_repology_stats_from_commit(repo)
+            remove_repository_metadata_from_commit(repo)
             # origin is the eventually consistent Ogorod mirror.  Let its
             # 10-second cycle observe the commit which won the push race.
             time.sleep(GIT_MIRROR_RETRY_DELAY_S)

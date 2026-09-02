@@ -72,17 +72,17 @@ class UpdaterTests(unittest.TestCase):
             return mock.Mock(returncode=1 if args[:3] == ('diff', '--cached', '--quiet') else 0)
 
         with mock.patch.object(worker, 'git', side_effect=git_result) as git, \
-             mock.patch.object(worker, 'regenerate_repology_stats') as regenerate:
+             mock.patch.object(worker, 'regenerate_repository_metadata') as regenerate:
             worker.commit_and_push(candidate)
 
         commands = [call.args for call in git.call_args_list]
-        stats_add = ('add', '--', updater.REPOLOGY_STATS_PATH)
+        metadata_add = ('add', '--', *updater.REGENERATED_PATHS)
         amend = ('commit', '--amend', '--no-edit')
         self.assertLess(commands.index(('fetch', 'origin', 'main')),
                         commands.index(('rebase', 'origin/main')))
         self.assertLess(commands.index(('rebase', 'origin/main')),
-                        commands.index(stats_add))
-        self.assertLess(commands.index(stats_add), commands.index(amend))
+                        commands.index(metadata_add))
+        self.assertLess(commands.index(metadata_add), commands.index(amend))
         self.assertLess(commands.index(amend),
                         commands.index(('push', 'origin', 'HEAD:refs/heads/main')))
         regenerate.assert_called_once_with()
@@ -105,7 +105,7 @@ class UpdaterTests(unittest.TestCase):
             return mock.Mock(returncode=0)
 
         with mock.patch.object(worker, 'git', side_effect=git_result) as git, \
-             mock.patch.object(worker, 'regenerate_repology_stats') as regenerate, \
+             mock.patch.object(worker, 'regenerate_repository_metadata') as regenerate, \
              mock.patch.object(updater.time, 'sleep') as sleep:
             worker.commit_and_push(candidate)
 
@@ -114,7 +114,7 @@ class UpdaterTests(unittest.TestCase):
         self.assertIn(
             (
                 'restore', '--source=HEAD^', '--staged', '--worktree',
-                '--', updater.REPOLOGY_STATS_PATH,
+                '--', *updater.REGENERATED_PATHS,
             ),
             commands,
         )
@@ -144,14 +144,14 @@ class UpdaterTests(unittest.TestCase):
             ],
         )
 
-    def test_repology_stats_use_complete_repository_export(self):
+    def test_repository_metadata_uses_full_regen(self):
         worker = updater.PackageUpdater(Path('/work/ix'), None, env={'X': '1'})
 
         with mock.patch.object(updater.subprocess, 'run') as run:
-            worker.regenerate_repology_stats()
+            worker.regenerate_repository_metadata()
 
         run.assert_called_once_with(
-            ('ix_repo_export',),
+            ('ix_regen',),
             cwd=Path('/work/ix'),
             env={'X': '1'},
             check=True,

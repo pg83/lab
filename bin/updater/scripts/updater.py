@@ -15,8 +15,8 @@ semantics of IX's bin/ix/tools/upver, but every build is executed by Molot:
      invalid probe), preserving the original redirect, noauto, Go and Cargo
      rules.
   4. Build again, extract the checksum reported by IX/Molot, and write it.
-  5. Rebase that recipe update onto current main, regenerate the complete
-     Repology dump from the resulting tree, and publish both in one commit.
+  5. Rebase that recipe update onto current main, regenerate repository
+     metadata from the resulting tree, and publish it in the same commit.
      Deliberately do not run a third package build; CI and the repair agent
      own failures after the mechanical update.
 
@@ -44,7 +44,10 @@ REPOLOGY_URL = 'https://repology.org/api/v1/projects/?inrepo=stalix_dev&outdated
 IX_GIT_READ_URL = 'http://127.0.0.1:8035/mirror_ix.git'
 IX_GIT_PUSH_URL = 'https://github.com/pg83/ix.git'
 IX_BRANCH = 'main'
-REPOLOGY_STATS_PATH = 'pkgs/die/scripts/dump.json'
+REGENERATED_PATHS = (
+    'pkgs/die/scripts/dump.json',
+    'pkgs/die/scripts/urls.txt',
+)
 
 CACHE_LOCK_KEY = '/lock/ci/cache'
 CACHE_S3_BUCKET = 'cix'
@@ -514,23 +517,23 @@ class PackageUpdater:
     def show_diff(self):
         self.git('diff')
 
-    def regenerate_repology_stats(self):
-        log(f'regenerate {REPOLOGY_STATS_PATH}')
+    def regenerate_repository_metadata(self):
+        log(f'regenerate {", ".join(REGENERATED_PATHS)}')
 
         try:
             subprocess.run(
-                ('ix_repo_export',),
+                ('ix_regen',),
                 cwd=self.repo,
                 env=self.env,
                 check=True,
             )
         except (OSError, subprocess.CalledProcessError) as exc:
-            raise InfrastructureFailure('cannot regenerate Repology stats') from exc
+            raise InfrastructureFailure('cannot regenerate repository metadata') from exc
 
-    def remove_repology_stats_from_commit(self):
+    def remove_repository_metadata_from_commit(self):
         self.git(
             'restore', '--source=HEAD^', '--staged', '--worktree',
-            '--', REPOLOGY_STATS_PATH,
+            '--', *REGENERATED_PATHS,
         )
         self.git('commit', '--amend', '--no-edit')
 
@@ -555,8 +558,8 @@ class PackageUpdater:
         for attempt in range(2):
             self.git('fetch', 'origin', self.branch)
             self.git('rebase', f'origin/{self.branch}')
-            self.regenerate_repology_stats()
-            self.git('add', '--', REPOLOGY_STATS_PATH)
+            self.regenerate_repository_metadata()
+            self.git('add', '--', *REGENERATED_PATHS)
             self.git('commit', '--amend', '--no-edit')
             pushed = self.git(
                 'push', 'origin', f'HEAD:refs/heads/{self.branch}',
@@ -574,7 +577,7 @@ class PackageUpdater:
                 # rebasing the actual recipe update, then rebuild it from the
                 # new complete tree on the next attempt.  Give Ogorod's
                 # 10-second mirror cycle time to observe the winning push.
-                self.remove_repology_stats_from_commit()
+                self.remove_repository_metadata_from_commit()
                 time.sleep(GIT_MIRROR_RETRY_DELAY_S)
 
         raise InfrastructureFailure('git push failed after rebase retries')
