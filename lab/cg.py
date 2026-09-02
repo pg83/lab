@@ -1705,6 +1705,8 @@ class EventRunner:
             'ETCD_TMPFS_ENDPOINTS': ','.join(self.etcd_tmpfs_endpoints),
             'GORN_API': self.gorn_api,
             'S3_ENDPOINT': self.s3_endpoint,
+            'HF_TOKEN': get_key('/hf/token').decode().strip(),
+            'GHCR_TOKEN': get_key('/ghcr/token').decode().strip(),
             'ROOT_S3_USER': root_key,
             'ROOT_S3_PASSWORD': root_secret,
             'MC_HOST_minio_root': f'{scheme}://{root_key}:{root_secret}@{host}',
