@@ -14,6 +14,7 @@ cat << 'EOF' > ${out}/etc/event/new_sha/hf.json
         "/bin/env",
         "PATH=$PATH",
         "GORN_API=$GORN_API",
+        "ETCD_TMPFS_ENDPOINTS=$ETCD_TMPFS_ENDPOINTS",
         "S3_ENDPOINT=$S3_ENDPOINT",
         "AWS_ACCESS_KEY_ID_CAS=$AWS_ACCESS_KEY_ID_CAS",
         "AWS_SECRET_ACCESS_KEY_CAS=$AWS_SECRET_ACCESS_KEY_CAS",
