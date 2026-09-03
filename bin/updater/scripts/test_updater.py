@@ -473,6 +473,98 @@ class UpdaterTests(unittest.TestCase):
             self.assertIn('2.0.2', recipe.read_text())
             self.assertIn(actual, recipe.read_text())
 
+    def test_multi_fetch_recipe_reprobes_every_checksum(self):
+        first_probe = '0' * 64
+        second_probe = '1' * 64
+        old_first = 'a' * 64
+        old_second = 'b' * 64
+        new_first = 'd' * 64
+        new_second = 'e' * 64
+        builder = FakeBuilder([
+            updater.BuildResult(0, b'ok'),
+            updater.BuildResult(
+                2,
+                b'molot exec: predict mismatch: predict mismatch: /x expected=' +
+                first_probe.encode() + b' actual=' + new_first.encode(),
+            ),
+            updater.BuildResult(
+                2,
+                b'molot exec: predict mismatch: predict mismatch: /y expected=' +
+                second_probe.encode() + b' actual=' + new_second.encode(),
+            ),
+        ])
+
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            recipe = repo / 'pkgs/bin/foo/ix.sh'
+            recipe.parent.mkdir(parents=True)
+            recipe.write_text(
+                "{% block version %}\n1.0\n{% endblock %}\n"
+                "{% block fetch %}\n"
+                "https://x/foo-{{self.version().strip()}}.tar.gz\n" +
+                old_first + "\n"
+                "https://x/bar-{{self.version().strip()}}.tar.gz\n" +
+                old_second + "\n{% endblock %}\n"
+            )
+            worker = FakePackageUpdater(repo, builder)
+            candidate = updater.Candidate('1.0', '2.0', ('bin/foo',))
+
+            with mock.patch.object(
+                updater.secrets,
+                'token_hex',
+                side_effect=(first_probe, second_probe),
+            ):
+                self.assertTrue(worker.process(candidate))
+
+            data = recipe.read_text()
+            self.assertEqual(builder.calls, [['bin/foo']] * 3)
+            self.assertEqual(worker.commits, [candidate])
+            self.assertIn(new_first, data)
+            self.assertIn(new_second, data)
+            self.assertNotIn(old_first, data)
+            self.assertNotIn(old_second, data)
+
+    def test_unevaluated_second_checksum_survives_reprobe(self):
+        first_probe = '0' * 64
+        second_probe = '1' * 64
+        old_second = 'b' * 64
+        new_first = 'd' * 64
+        builder = FakeBuilder([
+            updater.BuildResult(0, b'ok'),
+            updater.BuildResult(
+                2,
+                b'molot exec: predict mismatch: predict mismatch: /x expected=' +
+                first_probe.encode() + b' actual=' + new_first.encode(),
+            ),
+            updater.BuildResult(0, b'ok'),
+        ])
+
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            recipe = repo / 'pkgs/bin/foo/ix.sh'
+            recipe.parent.mkdir(parents=True)
+            recipe.write_text(
+                "{% block version %}\n1.0\n{% endblock %}\n"
+                "{% block fetch %}\nhttps://x/foo.tar.gz\n" + 'a' * 64 + "\n{% endblock %}\n"
+                "# unused pin " + old_second + "\n"
+            )
+            worker = FakePackageUpdater(repo, builder)
+            candidate = updater.Candidate('1.0', '2.0', ('bin/foo',))
+
+            with mock.patch.object(
+                updater.secrets,
+                'token_hex',
+                side_effect=(first_probe, second_probe),
+            ):
+                self.assertTrue(worker.process(candidate))
+
+            data = recipe.read_text()
+            self.assertEqual(builder.calls, [['bin/foo']] * 3)
+            self.assertEqual(worker.commits, [candidate])
+            self.assertIn(new_first, data)
+            self.assertIn(old_second, data)
+            self.assertNotIn(second_probe, data)
+
     def test_failed_preflight_does_not_touch_recipe(self):
         builder = FakeBuilder([
             updater.BuildResult(2, b'node failed: bin/foo'),

@@ -11,10 +11,13 @@ semantics of IX's bin/ix/tools/upver, but every build is executed by Molot:
   2. Pin the IX source revision for the whole run.  Build every current
      package from that revision before touching its recipe, so updates
      published earlier in the same run cannot poison later candidates.
-  3. Replace exactly one recipe's old version and checksum (with a fresh
-     invalid probe), preserving the original redirect, noauto, Go and Cargo
-     rules.
+  3. Replace exactly one recipe's old version and its first checksum (with a
+     fresh invalid probe), preserving the original redirect, noauto, Go and
+     Cargo rules.
   4. Build again, extract the checksum reported by IX/Molot, and write it.
+     Then re-probe every remaining checksum of that recipe the same way:
+     fetch is content-addressed, so a stale pin does not fail the build —
+     it silently keeps serving the artifact of the previous version.
   5. Rebase that recipe update onto current main, regenerate repository
      metadata from the resulting tree, and publish it in the same commit.
      Deliberately do not run a third package build; CI and the repair agent
@@ -265,11 +268,20 @@ def is_sha(value):
     return len(value) == 64 and all(ch in GOOD_SHA_CHARS for ch in value)
 
 
-def recipe_sha(data):
+def recipe_shas(data):
+    shas = []
+
     for line in data.split('\n'):
         for word in line.split(' '):
-            if is_sha(word):
-                return word
+            if is_sha(word) and word not in shas:
+                shas.append(word)
+
+    return shas
+
+
+def recipe_sha(data):
+    if shas := recipe_shas(data):
+        return shas[0]
 
     raise CandidateFailure('recipe contains no standalone sha256')
 
@@ -544,6 +556,35 @@ class PackageUpdater:
 
         raise InfrastructureFailure('git push failed after rebase retries')
 
+    def resolve_remaining_checksums(self, path, build_packages, resolved):
+        # prepare_recipe probes only the first checksum, but the version bump
+        # rewrites every fetch URL.  A stale remaining checksum does not fail
+        # the build: fetch is content-addressed, so it keeps serving the old
+        # artifact under the new version.  Re-probe every other pin the same
+        # way, one build per pin.
+        while stale := [s for s in recipe_shas(path.read_text()) if s not in resolved]:
+            probe = secrets.token_hex(32)
+            path.write_text(path.read_text().replace(stale[0], probe))
+            self.show_diff()
+            build = self.builder.build(build_packages)
+
+            try:
+                sha = extract_reported_sha(build.output, probe)
+            except CandidateFailure:
+                if build.returncode == 0:
+                    # The build never evaluated this pin; keep it as it was.
+                    path.write_text(path.read_text().replace(probe, stale[0]))
+                    resolved.add(stale[0])
+                    continue
+
+                raise
+
+            if not install_sha(path, probe, sha):
+                raise CandidateFailure('cannot install re-probed checksum')
+
+            log(f'checksum {stale[0]} -> {sha}')
+            resolved.add(sha)
+
     def process(self, candidate):
         if not candidate.packages:
             raise CandidateFailure('Repology record contains no stalix source packages')
@@ -602,10 +643,12 @@ class PackageUpdater:
                 self.show_diff()
                 checksum_build = self.builder.build(build_packages)
                 sha = extract_reported_sha(checksum_build.output, probe_sha)
-                changed = sum(install_sha(path, probe_sha, sha) for path in paths)
+                changed = [path for path in paths if install_sha(path, probe_sha, sha)]
 
-                if changed != 1:
-                    raise CandidateFailure(f'expected one probe-sha recipe, got {changed}')
+                if len(changed) != 1:
+                    raise CandidateFailure(f'expected one probe-sha recipe, got {len(changed)}')
+
+                self.resolve_remaining_checksums(changed[0], build_packages, {sha})
             except (OSError, CandidateFailure) as exc:
                 failures.append(f'{new}: {exc}')
                 log(f'version spelling failed {new}: {exc}')
