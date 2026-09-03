@@ -690,9 +690,15 @@ def clone_ix(dst, env):
         cwd=dst,
         check=True,
     )
-    subprocess.run(('git', 'config', 'user.name', 'ix updater'), cwd=dst, check=True)
+    # GitHub attributes commits by author email; this is the noreply address
+    # of the versifikator[bot] GitHub App user, so updater commits show up
+    # under its profile and avatar.
+    subprocess.run(('git', 'config', 'user.name', 'Versifikator'), cwd=dst, check=True)
     subprocess.run(
-        ('git', 'config', 'user.email', 'ix-updater@users.noreply.github.com'),
+        (
+            'git', 'config', 'user.email',
+            '324678893+versifikator[bot]@users.noreply.github.com',
+        ),
         cwd=dst,
         check=True,
     )
