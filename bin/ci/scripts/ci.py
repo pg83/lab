@@ -8,7 +8,7 @@ against /ci/<tier>).
 
 Subcommands:
 
-  ci check <tier>
+  ci check <tier> <sha>
       Fresh clone of the local ogorod ix mirror at its current
       HEAD sha, run `./ix build <tier> --seed=1` via molot. Exits
       0 if the build reached completion — including target-build
@@ -16,15 +16,9 @@ Subcommands:
       (molot "node failed", ix "ERROR <descr>", etc.). Any other
       non-zero exit (clone died, binary missing, molot crashed) is
       an infra failure: gorn drops it as non-retriable, the
-      job_scheduler's 10s cron tick + dedup re-fires it on the next
-      pass — no --retry-error needed.
-
-  ci update <local_cache_path>
-      Reads a local molot-cache from <local_cache_path>, unions
-      it with the shared cix/complete object in S3, writes the
-      union back. Intended to be invoked under `etcd_lock
-      /lock/ci/cache` from ci check at the end of each build.
-      Takes the path as argv so the operation is explicit in logs.
+      job_scheduler's 5s cron tick + dedup re-fires it on the next
+      pass — no --retry-error needed. Seeds the disposable local
+      Molot cache from the complete UID snapshot at s3://molot/complete.
 """
 
 import json
@@ -37,10 +31,9 @@ import sys
 
 GIT_URL = 'http://127.0.0.1:8035/mirror_ix.git'
 
-CACHE_LOCK_KEY = '/lock/ci/cache'
-CACHE_S3_BUCKET = 'cix'
+CACHE_S3_BUCKET = 'molot'
 CACHE_S3_KEY = 'complete'
-MC_ALIAS = 'cix'
+MC_ALIAS = 'molot_cache'
 
 # Markers: target ran but failed → exit 0; their absence = infra error.
 TARGET_FAIL_PATTERNS = [
@@ -76,66 +69,13 @@ def s3_cache_uri():
 
 
 def mc_cat(uri, env):
-    """Fetch S3 object bytes. Returns empty bytes on 'object does not
-    exist' (first run before anyone's pushed a cache); any other
-    failure bubbles up."""
-    res = subprocess.run(
+    """Fetch the complete UID snapshot from S3."""
+    return subprocess.run(
         ('minio-client', 'cat', uri),
         env=env,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-    )
-
-    if res.returncode == 0:
-        return res.stdout
-
-    if b'Object does not exist' in res.stderr or b'NoSuchKey' in res.stderr:
-        return b''
-
-    sys.stderr.buffer.write(res.stderr)
-    res.check_returncode()
-
-
-def update(local_path):
-    """Merge <local_path> (caller's local cache file) with the shared
-    <bucket>/complete in S3 and push the union back. Expected to be
-    run under `etcd_lock /lock/ci/cache` — no locking here.
-    Pure read-modify-write, single S3 PUT."""
-    env = mc_env_for(os.environ)
-    uri = s3_cache_uri()
-
-    with open(local_path) as f:
-        ours = f.read()
-
-    remote = mc_cat(uri, env).decode()
-
-    merged = set()
-
-    for blob in (remote, ours):
-        for line in blob.splitlines():
-            line = line.strip()
-
-            if line:
-                merged.add(line)
-
-    tmp = os.path.abspath(f'ci-complete.{os.getpid()}.tmp')
-
-    try:
-        with open(tmp, 'w') as f:
-            for line in sorted(merged):
-                f.write(line + '\n')
-
-        subprocess.run(
-            ('minio-client', 'cp', tmp, uri),
-            env=env,
-            check=True,
-        )
-    finally:
-        if os.path.exists(tmp):
-            os.remove(tmp)
-
-    log(f'ci update: local={len(ours.splitlines())} + remote={len(remote.splitlines())} → {len(merged)}')
+        check=True,
+    ).stdout
 
 
 def graph_signature(g):
@@ -211,18 +151,10 @@ def check(tier, sha):
     subprocess.run(('git', 'clone', GIT_URL, workdir), check=True)
     subprocess.run(('git', '-C', workdir, 'checkout', sha), check=True)
 
-    # ci_hook forwards two cred sets in env: AWS_ACCESS_KEY_ID/_SECRET (cix,
-    # for cache seed+merge to s3://cix/complete) and AWS_ACCESS_KEY_ID_MOLOT/
-    # _SECRET_..._MOLOT (for molot's per-node `PutObject s3://molot/<uid>/
-    # result.zstd`, gated by policy molot-rw). Override only the build env
-    # with molot creds; cix_mc_env keeps cix creds for the cache path.
-    cix_mc_env = mc_env_for(os.environ)
-
     env = os.environ.copy()
     env['IX_EXEC_KIND'] = 'molot'
-    env['AWS_ACCESS_KEY_ID'] = os.environ['AWS_ACCESS_KEY_ID_MOLOT']
-    env['AWS_SECRET_ACCESS_KEY'] = os.environ['AWS_SECRET_ACCESS_KEY_MOLOT']
     env.setdefault('S3_BUCKET', 'molot')
+    cache_mc_env = mc_env_for(env)
 
     if graph_unchanged_from_parent(workdir, tier, env, sha):
         log(f'graph unchanged from parent for tier={tier}; skipping molot run')
@@ -231,35 +163,22 @@ def check(tier, sha):
     cache_path = os.path.abspath(os.path.join(workdir, 'cache'))
     env['MOLOT_CACHE'] = cache_path
 
-    # No lock for seed; MinIO GET is atomic, missed entries land next run.
     with open(cache_path, 'wb') as f:
-        f.write(mc_cat(s3_cache_uri(), cix_mc_env))
+        f.write(mc_cat(s3_cache_uri(), cache_mc_env))
 
     log(f'seeded cache_path={cache_path} size={os.path.getsize(cache_path)}'
         f' IX_EXEC_KIND={env.get("IX_EXEC_KIND")} MOLOT_CACHE={env.get("MOLOT_CACHE")}')
 
     # New session: ./ix's execute.py SIGKILLs its pgrp; we must not be in it.
-    try:
-        res = subprocess.run(
-            ('./ix', 'build', tier, '--seed=1'),
-            cwd=workdir,
-            env=env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            start_new_session=True,
-            check=False,
-        )
-    finally:
-        # Always push additions back; RMW serialized via etcd_lock.
-        size = os.path.getsize(cache_path) if os.path.exists(cache_path) else '-'
-        log(f'merging cache_path={cache_path} size={size}')
-
-        subprocess.run(
-            ('etcd_lock', CACHE_LOCK_KEY, '--',
-             'ci', 'update', cache_path),
-            env=cix_mc_env,
-            check=True,
-        )
+    res = subprocess.run(
+        ('./ix', 'build', tier, '--seed=1'),
+        cwd=workdir,
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        start_new_session=True,
+        check=False,
+    )
 
     # Replay to stderr so gorn wrap captures it alongside result.json.
     os.write(2, res.stdout)
@@ -278,7 +197,7 @@ def check(tier, sha):
 
 def main():
     if len(sys.argv) < 2:
-        print('usage: ci {check <tier> | update}', file=sys.stderr)
+        print('usage: ci check <tier> <sha>', file=sys.stderr)
         sys.exit(2)
 
     cmd = sys.argv[1]
@@ -289,14 +208,6 @@ def main():
             sys.exit(2)
 
         check(sys.argv[2], sys.argv[3])
-        return
-
-    if cmd == 'update':
-        if len(sys.argv) != 3:
-            print('usage: ci update <local_cache_path>', file=sys.stderr)
-            sys.exit(2)
-
-        update(sys.argv[2])
         return
 
     print(f'unknown subcommand: {cmd}', file=sys.stderr)

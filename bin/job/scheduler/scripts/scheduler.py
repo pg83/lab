@@ -3,7 +3,7 @@
 """
 job_scheduler — cluster cron.
 
-Reads /etc/cron/<delay>-<name>.json every 10 seconds. Each file names
+Reads /etc/cron/<delay>-<name>.json every 5 seconds. Each file names
 a job that should run no more often than <delay> seconds. Example:
 
     /etc/cron/100-ci.json
@@ -38,7 +38,7 @@ import time
 
 
 CRON_DIR = '/etc/cron'
-POLL_INTERVAL_S = 10
+POLL_INTERVAL_S = 5
 JOB_TIMEOUT = '10s'
 
 

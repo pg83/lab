@@ -29,9 +29,6 @@ class FixerTests(unittest.TestCase):
                 'S3_ENDPOINT',
                 'AWS_ACCESS_KEY_ID',
                 'AWS_SECRET_ACCESS_KEY',
-                'AWS_ACCESS_KEY_ID_MOLOT',
-                'AWS_SECRET_ACCESS_KEY_MOLOT',
-                'ETCDCTL_ENDPOINTS',
                 'ETCD_PERSIST_ENDPOINTS',
                 'GIT_USER',
                 'IX_FIXER_CODEX_GORN_API',
@@ -97,12 +94,10 @@ class FixerTests(unittest.TestCase):
                 'node failed: root cause',
             )
 
-    def test_molot_env_uses_worker_credentials_and_cache(self):
+    def test_molot_env_keeps_molot_credentials_and_sets_cache(self):
         env = {
-            'AWS_ACCESS_KEY_ID': 'cix-key',
-            'AWS_SECRET_ACCESS_KEY': 'cix-secret',
-            'AWS_ACCESS_KEY_ID_MOLOT': 'molot-key',
-            'AWS_SECRET_ACCESS_KEY_MOLOT': 'molot-secret',
+            'AWS_ACCESS_KEY_ID': 'molot-key',
+            'AWS_SECRET_ACCESS_KEY': 'molot-secret',
             'CODEX_AUTH_B64': 'must-not-leak',
         }
 
@@ -557,7 +552,7 @@ class FixerTests(unittest.TestCase):
         with self.assertRaisesRegex(fixer.InfrastructureFailure, 'obsolete fixer generation'):
             fixer.require_env(env)
 
-    def test_green_cycle_skips_agent_and_still_merges_cache(self):
+    def test_green_cycle_skips_agent(self):
         def clone(repo, env):
             repo.mkdir()
             return 'main'
@@ -570,14 +565,12 @@ class FixerTests(unittest.TestCase):
         with mock.patch.object(fixer, 'clone_ix', side_effect=clone), \
              mock.patch.object(fixer, 'seed_cache'), \
              mock.patch.object(fixer, 'run_build', side_effect=build), \
-             mock.patch.object(fixer, 'merge_cache') as merge, \
              mock.patch.object(fixer, 'run_codex') as codex:
             fixer.run_fixer(self.run_env())
 
         codex.assert_not_called()
-        merge.assert_called_once()
 
-    def test_target_failure_starts_one_agent_then_merges_cache(self):
+    def test_target_failure_starts_one_agent(self):
         def clone(repo, env):
             repo.mkdir()
             return 'main'
@@ -590,14 +583,12 @@ class FixerTests(unittest.TestCase):
         with mock.patch.object(fixer, 'clone_ix', side_effect=clone), \
              mock.patch.object(fixer, 'seed_cache'), \
              mock.patch.object(fixer, 'run_build', side_effect=build), \
-             mock.patch.object(fixer, 'merge_cache') as merge, \
              mock.patch.object(fixer, 'run_codex', return_value='abc123') as codex, \
              mock.patch.object(fixer, 'publish_fix') as publish:
             fixer.run_fixer(self.run_env())
 
         codex.assert_called_once()
         publish.assert_called_once()
-        merge.assert_called_once()
 
 
 if __name__ == '__main__':

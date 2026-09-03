@@ -10,7 +10,6 @@ import sys
 
 BUCKETS = (
     'cas',
-    'cix',
     'etcd',
     'geesefs',
     'gorn',

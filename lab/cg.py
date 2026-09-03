@@ -1077,6 +1077,8 @@ class MolotCache:
         exec_into(
             'molot', 'cache',
             '--listen', self.listen,
+            '--index-bucket', self.s3_bucket,
+            '--index-key', 'complete',
             S3_ENDPOINT=self.s3_endpoint,
             S3_BUCKET=self.s3_bucket,
             AWS_ACCESS_KEY_ID=aws_key,
@@ -1649,7 +1651,7 @@ class JobScheduler:
 
         # Per-bucket creds — each cron file forwards the one bucket it
         # touches as AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID_<BUCKET>.
-        for bucket in ('cas', 'cix', 'gorn', 'mirror', 'molot'):
+        for bucket in ('cas', 'gorn', 'mirror', 'molot'):
             bk = get_key(f'/s3/iam/{bucket}/key').decode().strip()
             bs = get_key(f'/s3/iam/{bucket}/secret').decode().strip()
             env[f'AWS_ACCESS_KEY_ID_{bucket.upper()}'] = bk
@@ -1712,7 +1714,7 @@ class EventRunner:
             'MC_HOST_minio_root': f'{scheme}://{root_key}:{root_secret}@{host}',
         }
 
-        for bucket in ('cas', 'cix', 'gorn', 'mirror', 'molot'):
+        for bucket in ('cas', 'gorn', 'mirror', 'molot'):
             bk = get_key(f'/s3/iam/{bucket}/key').decode().strip()
             bs = get_key(f'/s3/iam/{bucket}/secret').decode().strip()
             env[f'AWS_ACCESS_KEY_ID_{bucket.upper()}'] = bk

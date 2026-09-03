@@ -8,8 +8,10 @@ bin/etcd/lock
 bin/ix/timeout
 bin/minio/patched/client
 bin/job/scheduler/scripts
+bin/molot/complete
 
 bin/ci/metrics/cron
+bin/molot/complete/cron
 bin/etcd/backup/cron
 bin/etcd/defrag/cron
 bin/ogorod/mirror/cron
@@ -25,6 +27,7 @@ bin/mc/gc/cron(root=/gorn/hf_sync,hours=2)
 bin/mc/gc/cron(root=/gorn/samogon,hours=1)
 bin/mc/gc/cron(root=/gorn/ghcr_sync,hours=2)
 bin/mc/gc/cron(root=/gorn/ci_metrics,hours=1)
+bin/mc/gc/cron(root=/gorn/molot_complete,hours=1)
 bin/mc/gc/cron(root=/gorn/etcd_defrag,hours=24)
 bin/mc/gc/cron(root=/gorn/mirror_fetch,hours=1)
 bin/mc/gc/cron(root=/gorn/ogorod_mirror,hours=1)

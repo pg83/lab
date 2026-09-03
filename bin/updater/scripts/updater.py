@@ -20,9 +20,8 @@ semantics of IX's bin/ix/tools/upver, but every build is executed by Molot:
      Deliberately do not run a third package build; CI and the repair agent
      own failures after the mechanical update.
 
-Molot's success cache is seeded from and merged into s3://cix/complete, the
-same durable cache used by CI.  ``cache-update`` is the small helper invoked
-under the shared /lock/ci/cache etcd_lock for the read-modify-write step.
+Each run seeds its disposable local Molot cache from the complete UID snapshot
+at s3://molot/complete.  A separate cluster job rebuilds that snapshot.
 """
 
 import json
@@ -49,8 +48,7 @@ REGENERATED_PATHS = (
     'pkgs/die/scripts/urls.txt',
 )
 
-CACHE_LOCK_KEY = '/lock/ci/cache'
-CACHE_S3_BUCKET = 'cix'
+CACHE_S3_BUCKET = 'molot'
 CACHE_S3_KEY = 'complete'
 MC_ALIAS = 'updater_cache'
 
@@ -402,46 +400,12 @@ def cache_uri():
 
 
 def cache_read(env):
-    res = subprocess.run(
+    return subprocess.run(
         ('minio-client', 'cat', cache_uri()),
         env=mc_env(env),
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-    )
-
-    if res.returncode == 0:
-        return res.stdout
-
-    if b'Object does not exist' in res.stderr or b'NoSuchKey' in res.stderr:
-        return b''
-
-    sys.stderr.buffer.write(res.stderr)
-    res.check_returncode()
-
-
-def cache_update(local_path, env):
-    local_lines = Path(local_path).read_text().splitlines()
-    remote_lines = cache_read(env).decode().splitlines()
-    merged = sorted({line.strip() for line in local_lines + remote_lines if line.strip()})
-
-    fd, tmp = tempfile.mkstemp(prefix='updater-cache.', dir=os.getcwd(), text=True)
-
-    try:
-        with os.fdopen(fd, 'w') as out:
-            for line in merged:
-                out.write(line + '\n')
-
-        subprocess.run(
-            ('minio-client', 'cp', tmp, cache_uri()),
-            env=mc_env(env),
-            check=True,
-        )
-    finally:
-        if os.path.exists(tmp):
-            os.remove(tmp)
-
-    log(f'cache update: local={len(local_lines)} + remote={len(remote_lines)} -> {len(merged)}')
+        check=True,
+    ).stdout
 
 
 class MolotBuilder:
@@ -449,8 +413,6 @@ class MolotBuilder:
         self.repo = Path(repo)
         self.env = dict(base_env)
         self.env['IX_EXEC_KIND'] = 'molot'
-        self.env['AWS_ACCESS_KEY_ID'] = base_env['AWS_ACCESS_KEY_ID_MOLOT']
-        self.env['AWS_SECRET_ACCESS_KEY'] = base_env['AWS_SECRET_ACCESS_KEY_MOLOT']
         self.env['S3_BUCKET'] = 'molot'
         self.env['MOLOT_CACHE'] = str(Path(cache_path).resolve())
 
@@ -701,9 +663,6 @@ def require_run_env(env):
         'S3_ENDPOINT',
         'AWS_ACCESS_KEY_ID',
         'AWS_SECRET_ACCESS_KEY',
-        'AWS_ACCESS_KEY_ID_MOLOT',
-        'AWS_SECRET_ACCESS_KEY_MOLOT',
-        'ETCDCTL_ENDPOINTS',
         'GIT_USER',
         'GIT_PASS',
     )
@@ -711,15 +670,6 @@ def require_run_env(env):
 
     if missing:
         raise InfrastructureFailure('missing required environment: ' + ', '.join(missing))
-
-
-def merge_cache(cache_path, env):
-    log(f'merge Molot cache {cache_path}')
-    subprocess.run(
-        ('etcd_lock', CACHE_LOCK_KEY, '--', 'updater', 'cache-update', str(cache_path)),
-        env=env,
-        check=True,
-    )
 
 
 def run_updater(env):
@@ -755,28 +705,25 @@ def run_updater(env):
         updated = 0
         failed = 0
 
-        try:
-            updater.restore()
+        updater.restore()
 
-            for candidate in candidates:
-                log(f'candidate {candidate.line}')
+        for candidate in candidates:
+            log(f'candidate {candidate.line}')
 
-                try:
-                    if updater.process(candidate):
-                        updated += 1
-                except CandidateFailure as exc:
-                    failed += 1
-                    log(f'FAILED {candidate.line}: {exc}')
-                finally:
-                    updater.restore()
-        finally:
-            merge_cache(cache_path, env)
+            try:
+                if updater.process(candidate):
+                    updated += 1
+            except CandidateFailure as exc:
+                failed += 1
+                log(f'FAILED {candidate.line}: {exc}')
+            finally:
+                updater.restore()
 
         log(f'updater done: candidates={len(candidates)} updated={updated} failed={failed}')
 
 
 def usage():
-    print('usage: updater {run | cache-update <local-cache>}', file=sys.stderr)
+    print('usage: updater run', file=sys.stderr)
     raise SystemExit(2)
 
 
@@ -788,10 +735,6 @@ def main():
 
     if command == 'run' and len(sys.argv) == 2:
         run_updater(os.environ.copy())
-        return
-
-    if command == 'cache-update' and len(sys.argv) == 3:
-        cache_update(sys.argv[2], os.environ.copy())
         return
 
     usage()

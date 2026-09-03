@@ -7,7 +7,7 @@ The cluster scheduler starts this command asynchronously through gorn and
 holds /lock/updater/fixer/work around the complete process.  The worker:
 
   1. clones pg83/ix at main from the local Ogorod mirror;
-  2. seeds Molot's durable success cache from cix/complete;
+  2. seeds Molot's disposable local cache from s3://molot/complete;
   3. runs ``./ix build set/ci/tier/0 --seed=1`` through Molot, deliberately
      without a keep-going flag, and stops its process group at the first
      direct ``node failed:`` marker;
@@ -66,8 +66,7 @@ CODEX_AUTH_HKDF_INFO = b'ix-updater-fixer/codex-auth/v1'
 CODEX_AUTH_AES = '-aes-256-cbc'
 GIT_MIRROR_RETRY_DELAY_S = 15
 
-CACHE_LOCK_KEY = '/lock/ci/cache'
-CACHE_S3_BUCKET = 'cix'
+CACHE_S3_BUCKET = 'molot'
 CACHE_S3_KEY = 'complete'
 MC_ALIAS = 'fixer_cache'
 
@@ -97,9 +96,6 @@ def require_env(env):
         'S3_ENDPOINT',
         'AWS_ACCESS_KEY_ID',
         'AWS_SECRET_ACCESS_KEY',
-        'AWS_ACCESS_KEY_ID_MOLOT',
-        'AWS_SECRET_ACCESS_KEY_MOLOT',
-        'ETCDCTL_ENDPOINTS',
         'ETCD_PERSIST_ENDPOINTS',
         'GIT_USER',
         'IX_FIXER_CODEX_GORN_API',
@@ -130,34 +126,12 @@ def cache_uri():
 
 def seed_cache(path, env):
     log(f'seed Molot cache {path}')
-    res = subprocess.run(
+    path.write_bytes(subprocess.run(
         ('minio-client', 'cat', cache_uri()),
         env=mc_env(env),
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-    )
-
-    if res.returncode == 0:
-        path.write_bytes(res.stdout)
-        return
-
-    if b'Object does not exist' in res.stderr or b'NoSuchKey' in res.stderr:
-        path.write_bytes(b'')
-        return
-
-    sys.stderr.buffer.write(res.stderr)
-    res.check_returncode()
-
-
-def merge_cache(path, env):
-    log(f'merge Molot cache {path}')
-    subprocess.run(
-        ('etcd_lock', CACHE_LOCK_KEY, '--',
-         'updater', 'cache-update', str(path)),
-        env=env,
         check=True,
-    )
+    ).stdout)
 
 
 def clone_ix(dst, env):
@@ -183,8 +157,8 @@ def clone_ix(dst, env):
         check=True,
     )
 
-    # The agent must be able to inspect the complete log and update Molot's
-    # cache without ever adding either scratch file to a commit.
+    # The agent must be able to inspect the complete log and use its local
+    # Molot cache without ever adding either scratch file to a commit.
     exclude = dst / '.git' / 'info' / 'exclude'
 
     with exclude.open('a') as out:
@@ -480,12 +454,10 @@ def save_codex_auth(auth, wrapping_key, seed_hash, env):
 
 def molot_env(base_env, cache_path):
     env = dict(base_env)
-    # Molot needs its own S3 credentials.  Codex auth never crosses the task
-    # environment; it is loaded from the host-only secret service just in time.
+    # Codex auth never crosses the task environment; it is loaded from the
+    # host-only secret service just in time.
     env.pop('CODEX_AUTH_B64', None)  # Do not leak payloads from obsolete tasks.
     env['IX_EXEC_KIND'] = 'molot'
-    env['AWS_ACCESS_KEY_ID'] = base_env['AWS_ACCESS_KEY_ID_MOLOT']
-    env['AWS_SECRET_ACCESS_KEY'] = base_env['AWS_SECRET_ACCESS_KEY_MOLOT']
     env['S3_BUCKET'] = 'molot'
     env['MOLOT_CACHE'] = str(cache_path.resolve())
     return env
@@ -872,25 +844,20 @@ def run_fixer(env):
         cache_path = repo / '.fixer-molot-cache'
         seed_cache(cache_path, env)
 
-        try:
-            returncode, build_log = run_build(repo, cache_path, env)
+        returncode, build_log = run_build(repo, cache_path, env)
 
-            if returncode == 0:
-                log('IX CI build is green; no agent needed')
-                return
+        if returncode == 0:
+            log('IX CI build is green; no agent needed')
+            return
 
-            if not has_target_failure(build_log):
-                raise InfrastructureFailure(
-                    f'ix build exited {returncode} without a target-failure marker'
-                )
+        if not has_target_failure(build_log):
+            raise InfrastructureFailure(
+                f'ix build exited {returncode} without a target-failure marker'
+            )
 
-            log(f'IX CI target failed (exit {returncode}); starting one Codex repair')
-            revision = run_codex(repo, cache_path, build_log, env)
-            publish_fix(repo, revision, branch, env)
-        finally:
-            # Include cache entries produced by Codex's targeted validation,
-            # not just the initial set/ci/tier/0 probe.
-            merge_cache(cache_path, env)
+        log(f'IX CI target failed (exit {returncode}); starting one Codex repair')
+        revision = run_codex(repo, cache_path, build_log, env)
+        publish_fix(repo, revision, branch, env)
 
 
 def usage():
