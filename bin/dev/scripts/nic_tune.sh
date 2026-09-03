@@ -57,6 +57,39 @@ drops_summary() {
     '
 }
 
+net_stat() {
+    stat_file="/sys/class/net/$1/statistics/$2"
+    if [ -r "$stat_file" ]; then
+        read -r stat_value < "$stat_file"
+        printf '%s' "$stat_value"
+    else
+        printf '0'
+    fi
+}
+
+link_stats() {
+    iface=$1
+
+    [ -d "/sys/class/net/$iface" ] || return 1
+
+    echo "  RX: bytes packets errors dropped missed mcast"
+    printf '      %s %s %s %s %s %s\n' \
+        "$(net_stat "$iface" rx_bytes)" \
+        "$(net_stat "$iface" rx_packets)" \
+        "$(net_stat "$iface" rx_errors)" \
+        "$(net_stat "$iface" rx_dropped)" \
+        "$(net_stat "$iface" rx_missed_errors)" \
+        "$(net_stat "$iface" multicast)"
+    echo "  TX: bytes packets errors dropped carrier collsns"
+    printf '      %s %s %s %s %s %s\n' \
+        "$(net_stat "$iface" tx_bytes)" \
+        "$(net_stat "$iface" tx_packets)" \
+        "$(net_stat "$iface" tx_errors)" \
+        "$(net_stat "$iface" tx_dropped)" \
+        "$(net_stat "$iface" tx_carrier_errors)" \
+        "$(net_stat "$iface" collisions)"
+}
+
 # Busiest RX-TxRx queues by total interrupt count.
 top_busy_queues() {
     iface=$1
@@ -185,21 +218,18 @@ echo "-- /proc/net/snmp UDP --"
 awk '/^Udp:/ {if (header) {n=split(header, h); split($0, v); for (i=2; i<=n; i++) printf "  %s=%s\n", h[i], v[i]; exit} else header=$0}' /proc/net/snmp
 
 # TUN device counters — what we really want for "is gofra dropping
-# at the TUN qdisc?". Busybox `ip` output is sparse; the full one
-# lives in /ix/realm/ip/bin/ip via bin/ip/route2. Print -s -s twice
-# to get extended counters including dropped/overrun.
+# at the TUN qdisc?". Read sysfs directly so this does not depend on
+# the full iproute2 package.
 echo
 echo "-- gofra0 (TUN) --"
-IPCMD=/ix/realm/ip/bin/ip
-[ -x "$IPCMD" ] || IPCMD=ip
-"$IPCMD" -s -s link show gofra0 2>/dev/null || echo "  gofra0 not present"
+link_stats gofra0 || echo "  gofra0 not present"
 
 # txqueuelen on gofra0 caps the qdisc depth between kernel and the
 # tunReader goroutine. Default 500-1000 = ~1.7-3ms of buffering at
 # 290K pps; bumping to 10000 gives ~30ms headroom for bursts.
-if [ "${APPLY:-0}" = "1" ] && "$IPCMD" link show gofra0 >/dev/null 2>&1; then
+if [ "${APPLY:-0}" = "1" ] && [ -d /sys/class/net/gofra0 ]; then
     echo "  applying tune:"
-    if "$IPCMD" link set gofra0 txqueuelen 10000 2>&1; then
+    if ip link set gofra0 txqueuelen 10000 2>&1; then
         echo "    txqueuelen → 10000 OK"
     else
         echo "    txqueuelen tune failed"
