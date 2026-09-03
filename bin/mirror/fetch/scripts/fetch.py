@@ -14,8 +14,9 @@ Per run:
      a 2-event buffer for missed/failed prior events; CAS-dedup
      absorbs whatever is re-fetched.
 
-  2. Sequentially curl each URL through the local SOCKS5 proxy,
-     sha256sum it, upload to CAS
+  2. Sequentially curl each URL, alternating direct and local
+     SOCKS5 routes with increasing randomized timeouts, sha256sum it,
+     upload to CAS
      via /bin/cas. Per-URL failures log and move on so a flaky
      upstream for one URL doesn't poison the rest.
 
@@ -28,15 +29,21 @@ No persistent state — each event handles its own diff window.
 import hashlib
 import json
 import os
+import random
 import shutil
 import subprocess
 import sys
+import time
 
 
 URLS_PATH = 'pkgs/die/scripts/urls.txt'
 MIRROR_GIT = 'http://127.0.0.1:8035/mirror_ix.git'
 DEPTH = 3
 EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
+SOCKS5_PROXY = '127.0.0.1:8015'
+
+
+random.seed(int(time.time() * 1000000000000))
 
 
 def log(*args):
@@ -81,6 +88,59 @@ def added_urls(sha):
     return out
 
 
+def iter_tout():
+    tout = 60
+
+    while True:
+        yield tout * (0.5 + random.random())
+        tout = min(tout * 1.5, 10000)
+
+
+def iter_routes():
+    while True:
+        yield []
+        yield ['--socks5', SOCKS5_PROXY]
+
+
+def safe_decode(data):
+    try:
+        return data.decode()
+    except Exception:
+        return str(data)
+
+
+def fetch_url(url, data):
+    for route, tout in zip(iter_routes(), iter_tout()):
+        cmd = [
+            '/bin/timeout', f'{int(tout)}s',
+            '/bin/curl',
+            '-f',
+            '--connect-timeout', str(int(0.1 * tout)),
+            '--remove-on-error',
+            '--retry', '0',
+            '-k',
+            '-L',
+            '--output', data,
+        ] + route + [url]
+
+        log('run', cmd)
+
+        try:
+            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as e:
+            message = '\n'.join([str(e), safe_decode(e.output)])
+
+            if 'error: 404' in message:
+                raise
+
+            log(f'while fetch {url}: {message}')
+            continue
+
+        sys.stderr.buffer.write(output)
+        sys.stderr.buffer.flush()
+        return
+
+
 def fetch_one(url):
     url_sha = hashlib.sha256(url.encode()).hexdigest()
     work = url_sha
@@ -91,17 +151,7 @@ def fetch_one(url):
     os.makedirs(work)
     data = os.path.join(work, 'data')
 
-    subprocess.run(
-        [
-            '/bin/curl',
-            '--fail',
-            '--location',
-            '--proxy', 'socks5h://127.0.0.1:8015',
-            '--output', data,
-            url,
-        ],
-        check=True,
-    )
+    fetch_url(url, data)
 
     res = subprocess.run(
         ['sha256sum', data],
