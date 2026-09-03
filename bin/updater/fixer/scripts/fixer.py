@@ -150,9 +150,15 @@ def clone_ix(dst, env):
         cwd=dst,
         check=True,
     )
-    subprocess.run(('git', 'config', 'user.name', 'ix fixer'), cwd=dst, check=True)
+    # GitHub attributes commits by author email; this is the noreply address
+    # of the official chatgpt-codex-connector[bot] account, so fixer commits
+    # show up as Codex itself.
+    subprocess.run(('git', 'config', 'user.name', 'Codex'), cwd=dst, check=True)
     subprocess.run(
-        ('git', 'config', 'user.email', 'ix-fixer@users.noreply.github.com'),
+        (
+            'git', 'config', 'user.email',
+            '199175422+chatgpt-codex-connector[bot]@users.noreply.github.com',
+        ),
         cwd=dst,
         check=True,
     )
