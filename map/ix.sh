@@ -30,7 +30,7 @@ bin/etcd/backup
 bin/etcd/defrag
 bin/kernel/6/14
 bin/kernel/6/16
-bin/mirror/fetch
+bin/mirror/fetch(socks5_proxy=127.0.0.1:{{(cluster_map | des).ports.socks_proxy}})
 bin/ogorod/mirror
 bin/smart/mon/tools
 bin/fixits(delay=10)
@@ -39,5 +39,5 @@ bin/auto/update(user=ix)
 bin/kernel/gengrub(kernel_boot_flags=rootdelay=20)
 
 set/fs
-set/stalix/server(fetcher_socks5_proxy=127.0.0.1:8015)
+set/stalix/server(fetcher_socks5_proxy=127.0.0.1:{{(cluster_map | des).ports.socks_proxy}})
 {% endblock %}

@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """
 cache_ix_sources — event-driven fetcher of upstream ix sources.
 Triggered by /etc/event/git/cache_ix.json on every kind=git
@@ -40,7 +38,6 @@ URLS_PATH = 'pkgs/die/scripts/urls.txt'
 MIRROR_GIT = 'http://127.0.0.1:8035/mirror_ix.git'
 DEPTH = 3
 EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
-SOCKS5_PROXY = '127.0.0.1:8015'
 
 
 random.seed(int(time.time() * 1000000000000))
@@ -99,7 +96,10 @@ def iter_tout():
 def iter_routes():
     while True:
         yield []
-        yield ['--socks5', SOCKS5_PROXY]
+
+        for proxy in P.strip().split(';'):
+            if proxy := proxy.strip():
+                yield ['--socks5', proxy]
 
 
 def safe_decode(data):
