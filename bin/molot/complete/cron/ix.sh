@@ -13,7 +13,7 @@ cat << 'EOF' > ${out}/etc/cron/15-molot-complete.json
         "gorn", "ignite",
         "--root", "molot_complete",
         "--descr", "rebuild molot complete index",
-        "--env", "MC_HOST_minio=$MC_HOST_minio_MOLOT",
+        "--env", "MC_HOST_minio=$MC_HOST_minio_molot",
         "--env", "ETCDCTL_ENDPOINTS=$ETCDCTL_ENDPOINTS",
         "--",
         "/bin/env", "PATH=/bin",
