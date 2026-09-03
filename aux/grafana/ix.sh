@@ -73,10 +73,6 @@ base64 -d << EOF > ${out}/share/grafana-provisioning/dashboards-json/nebula.json
 {% include 'nebula.json/base64' %}
 EOF
 
-base64 -d << EOF > ${out}/share/grafana-provisioning/dashboards-json/ci.json
-{% include 'ci.json/base64' %}
-EOF
-
 {# Per-service deploy convergence: distinct run_sh paths per svc → 1. #}
 {% set svc_list = (services_b64 | b64d).split('\n') | reject('equalto', '') | list %}
 cat > ${out}/share/grafana-provisioning/dashboards-json/deploy.json <<'JSON'

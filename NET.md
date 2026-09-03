@@ -1,4 +1,4 @@
-# gorn endpoint IP concentration (CI/dispatch ingress)
+# gorn endpoint IP concentration (build/dispatch ingress)
 
 Observed 2026-04-24 after investigating a nebula packet-drop burst
 (lab1 udp_0_drops peaked at 194/s, 217k drops over 1h). Not a nebula
@@ -7,7 +7,7 @@ siblings idle.
 
 ## Symptom
 
-Snapshot of physical-NIC bandwidth, steady-state CI load:
+Snapshot of physical-NIC bandwidth, steady-state worker load:
 
 | host | RX hot NIC         | RX siblings (Mbit/s)   |
 |------|--------------------|------------------------|
@@ -35,7 +35,7 @@ $ curl -s http://lab1.nebula:8027/v1/endpoints | jq '[.endpoints[].host] | group
 
 22 lab1 workers, all behind `100.16`. That IP lives on exactly one
 physical NIC per host (eth0 on lab1/lab2, eth1 on lab3 — the
-layout is asymmetric). All CI/molot SSH dispatch, stdin upload,
+layout is asymmetric). All Gorn/Molot SSH dispatch, stdin upload,
 stdout download traffic lands on that single NIC. The other three
 NICs per host do nothing on RX.
 

@@ -2826,7 +2826,6 @@ def do(code):
         'sftp_d': 1005,
         'balancer_http': 1006,
         'git_lab': 1007,
-        'git_ci': 1008,
         'h_z': 1009,
         'i_perf': 1011,
         'i_perf_3': 1029,

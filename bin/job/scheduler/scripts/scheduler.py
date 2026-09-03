@@ -6,7 +6,7 @@ job_scheduler — cluster cron.
 Reads /etc/cron/<delay>-<name>.json every 5 seconds. Each file names
 a job that should run no more often than <delay> seconds. Example:
 
-    /etc/cron/100-ci.json
+    /etc/cron/300-updater-fixer.json
         {"cmd": ["gorn", "ignite", "--env", "A=$B", ...]}
 
 $VAR / ${VAR} in cmd args are expanded from job_scheduler's own
@@ -47,7 +47,7 @@ def log(*args):
 
 
 def parse_delay(fn):
-    # '100-ci.json' → 100; fail-loud on mis-named file.
+    # '300-updater-fixer.json' → 300; fail-loud on mis-named file.
     head = fn.split('-', 1)[0]
     return int(head)
 

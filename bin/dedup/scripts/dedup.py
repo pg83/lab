@@ -19,10 +19,10 @@ check, no S3 fallback, no root needed. dedup only cares about
 Usage in practice — cron-file `cmd` array, under etcd_lock so
 two schedulers can't race the read-check-write:
 
-    etcd_lock /lock/ci/tier_0 -- \\
-        dedup /ci/tier_0 -- \\
-            gorn ignite --root ci --env AWS_ACCESS_KEY_ID=$... \\
-                -- /bin/env PATH=/bin ci check set/ci/tier/0
+    etcd_lock /lock/molot/complete/schedule -- \\
+        dedup /molot/complete/v1 -- \\
+            gorn ignite --root molot_complete -- \\
+                /bin/env PATH=/bin molot_complete
 
 Exit policy:
   - previous guid still queued → exit 0, skip.

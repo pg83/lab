@@ -1,7 +1,7 @@
 #!/bin/sh
 
-# Survey gorn / ci / molot state across the lab. Prints:
-#   - per-host: runit status of gorn_*, ci, gorn_ctl; busy gorn_N endpoints
+# Survey gorn / molot state across the lab. Prints:
+#   - per-host: busy gorn_N endpoints
 #     (active overlay mounts + wrap/molot/unshare/tar/make processes),
 #     tail of service logs.
 #   - cluster-wide: gorn leader, queue size, per-task descr/slots/age,
@@ -171,8 +171,5 @@ echo '-- gorn leader dispatch activity (last 10 dispatch/scheduler lines) --'
 grep -aE 'dispatch:|scheduler|task [a-z0-9-]+ on ' /var/run/gorn/std/current 2>/dev/null \
     | tail -n 10 || echo "  (no dispatch lines)"
 
-echo
-echo '-- ci current (tail) --'
-tail -n 15 /var/run/ci/std/current 2>/dev/null || echo "  (no ci on this host)"
 REMOTE
 done
