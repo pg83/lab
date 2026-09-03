@@ -82,10 +82,10 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_http,runsh_script=sha256:db8927e645ff4f0d,srv_user=event_http,extra_deps=YmluL2V2ZW50)",
                 "bin/event(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=event_dispatch)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_dispatch,runsh_script=sha256:9c673e19392bd7c3,srv_user=event_dispatch,extra_deps=YmluL2V2ZW50)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_dispatch,runsh_script=sha256:45c79a239441ea37,srv_user=event_dispatch,extra_deps=YmluL2V2ZW50)",
                 "bin/event(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=event_retry)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_retry,runsh_script=sha256:e50eab4599b55c6a,srv_user=event_retry,extra_deps=YmluL2V2ZW50)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_retry,runsh_script=sha256:67485ce3706e49dc,srv_user=event_retry,extra_deps=YmluL2V2ZW50)",
                 "bin/secrets/v2(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=secrets_v2)",
@@ -270,7 +270,7 @@
                 "bin/molot(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=molot_cache)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=molot_cache,runsh_script=sha256:34d934eae259b03a,srv_user=molot_cache,extra_deps=YmluL21vbG90)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:f9ffc572298c656d)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:2e7e9d7b2a5c2a1c)"
             ],
             "gofra": {
                 "hostname": "lab1.gofra",
@@ -397,10 +397,10 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_http,runsh_script=sha256:db8927e645ff4f0d,srv_user=event_http,extra_deps=YmluL2V2ZW50)",
                 "bin/event(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=event_dispatch)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_dispatch,runsh_script=sha256:9c673e19392bd7c3,srv_user=event_dispatch,extra_deps=YmluL2V2ZW50)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_dispatch,runsh_script=sha256:45c79a239441ea37,srv_user=event_dispatch,extra_deps=YmluL2V2ZW50)",
                 "bin/event(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=event_retry)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_retry,runsh_script=sha256:e50eab4599b55c6a,srv_user=event_retry,extra_deps=YmluL2V2ZW50)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_retry,runsh_script=sha256:67485ce3706e49dc,srv_user=event_retry,extra_deps=YmluL2V2ZW50)",
                 "bin/secrets/v2(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=secrets_v2)",
@@ -575,7 +575,7 @@
                 "bin/molot(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=molot_cache)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=molot_cache,runsh_script=sha256:34d934eae259b03a,srv_user=molot_cache,extra_deps=YmluL21vbG90)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:f9ffc572298c656d)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:2e7e9d7b2a5c2a1c)"
             ],
             "gofra": {
                 "hostname": "lab2.gofra",
@@ -702,10 +702,10 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_http,runsh_script=sha256:db8927e645ff4f0d,srv_user=event_http,extra_deps=YmluL2V2ZW50)",
                 "bin/event(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=event_dispatch)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_dispatch,runsh_script=sha256:9c673e19392bd7c3,srv_user=event_dispatch,extra_deps=YmluL2V2ZW50)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_dispatch,runsh_script=sha256:45c79a239441ea37,srv_user=event_dispatch,extra_deps=YmluL2V2ZW50)",
                 "bin/event(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=event_retry)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_retry,runsh_script=sha256:e50eab4599b55c6a,srv_user=event_retry,extra_deps=YmluL2V2ZW50)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_retry,runsh_script=sha256:67485ce3706e49dc,srv_user=event_retry,extra_deps=YmluL2V2ZW50)",
                 "bin/secrets/v2(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=secrets_v2)",
@@ -850,7 +850,7 @@
                 "bin/molot(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=molot_cache)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=molot_cache,runsh_script=sha256:34d934eae259b03a,srv_user=molot_cache,extra_deps=YmluL21vbG90)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:f9ffc572298c656d)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:2e7e9d7b2a5c2a1c)"
             ],
             "gofra": {
                 "hostname": "lab3.gofra",
@@ -979,10 +979,10 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_http,runsh_script=sha256:db8927e645ff4f0d,srv_user=event_http,extra_deps=YmluL2V2ZW50)",
                 "bin/event(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=event_dispatch)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_dispatch,runsh_script=sha256:9c673e19392bd7c3,srv_user=event_dispatch,extra_deps=YmluL2V2ZW50)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_dispatch,runsh_script=sha256:45c79a239441ea37,srv_user=event_dispatch,extra_deps=YmluL2V2ZW50)",
                 "bin/event(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=event_retry)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_retry,runsh_script=sha256:e50eab4599b55c6a,srv_user=event_retry,extra_deps=YmluL2V2ZW50)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_retry,runsh_script=sha256:67485ce3706e49dc,srv_user=event_retry,extra_deps=YmluL2V2ZW50)",
                 "bin/secrets/v2(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=secrets_v2)",
@@ -1167,7 +1167,7 @@
                 "bin/molot(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=molot_cache)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=molot_cache,runsh_script=sha256:34d934eae259b03a,srv_user=molot_cache,extra_deps=YmluL21vbG90)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:f9ffc572298c656d)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:2e7e9d7b2a5c2a1c)"
             ],
             "gofra": {
                 "hostname": "lab1.gofra",
@@ -1294,10 +1294,10 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_http,runsh_script=sha256:db8927e645ff4f0d,srv_user=event_http,extra_deps=YmluL2V2ZW50)",
                 "bin/event(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=event_dispatch)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_dispatch,runsh_script=sha256:9c673e19392bd7c3,srv_user=event_dispatch,extra_deps=YmluL2V2ZW50)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_dispatch,runsh_script=sha256:45c79a239441ea37,srv_user=event_dispatch,extra_deps=YmluL2V2ZW50)",
                 "bin/event(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=event_retry)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_retry,runsh_script=sha256:e50eab4599b55c6a,srv_user=event_retry,extra_deps=YmluL2V2ZW50)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_retry,runsh_script=sha256:67485ce3706e49dc,srv_user=event_retry,extra_deps=YmluL2V2ZW50)",
                 "bin/secrets/v2(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=secrets_v2)",
@@ -1472,7 +1472,7 @@
                 "bin/molot(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=molot_cache)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=molot_cache,runsh_script=sha256:34d934eae259b03a,srv_user=molot_cache,extra_deps=YmluL21vbG90)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:f9ffc572298c656d)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:2e7e9d7b2a5c2a1c)"
             ],
             "gofra": {
                 "hostname": "lab2.gofra",
@@ -1599,10 +1599,10 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_http,runsh_script=sha256:db8927e645ff4f0d,srv_user=event_http,extra_deps=YmluL2V2ZW50)",
                 "bin/event(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=event_dispatch)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_dispatch,runsh_script=sha256:9c673e19392bd7c3,srv_user=event_dispatch,extra_deps=YmluL2V2ZW50)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_dispatch,runsh_script=sha256:45c79a239441ea37,srv_user=event_dispatch,extra_deps=YmluL2V2ZW50)",
                 "bin/event(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=event_retry)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_retry,runsh_script=sha256:e50eab4599b55c6a,srv_user=event_retry,extra_deps=YmluL2V2ZW50)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_retry,runsh_script=sha256:67485ce3706e49dc,srv_user=event_retry,extra_deps=YmluL2V2ZW50)",
                 "bin/secrets/v2(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=secrets_v2)",
@@ -1747,7 +1747,7 @@
                 "bin/molot(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=molot_cache)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=molot_cache,runsh_script=sha256:34d934eae259b03a,srv_user=molot_cache,extra_deps=YmluL21vbG90)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:f9ffc572298c656d)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:2e7e9d7b2a5c2a1c)"
             ],
             "gofra": {
                 "hostname": "lab3.gofra",
@@ -2038,9 +2038,6 @@
         "job_scheduler": 2005,
         "loki": 2002,
         "minio": 1017,
-        "minio_1": 1013,
-        "minio_2": 1014,
-        "minio_3": 1015,
         "minio_console": 1018,
         "mirror": 1016,
         "molot_cache": 1027,
