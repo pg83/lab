@@ -1083,6 +1083,7 @@ class MolotCache:
             S3_BUCKET=self.s3_bucket,
             AWS_ACCESS_KEY_ID=aws_key,
             AWS_SECRET_ACCESS_KEY=aws_secret,
+            TMPDIR=os.getcwd(),
             PATH='/bin',
         )
 
