@@ -9,7 +9,6 @@ etc/arp
 etc/keys
 etc/hosts
 etc/sysctl
-etc/multihome
 etc/tun
 
 {% for d in hm.disabled %}
