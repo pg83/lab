@@ -5,7 +5,7 @@
 {% block install %}
 mkdir -p ${out}/etc/cron
 
-cat << 'EOF' > ${out}/etc/cron/15-molot-complete.json
+cat << 'EOF' > ${out}/etc/cron/300-molot-complete.json
 {
     "cmd": [
         "etcd_lock", "/lock/molot/complete/schedule", "--",
