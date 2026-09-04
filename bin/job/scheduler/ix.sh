@@ -11,6 +11,7 @@ bin/job/scheduler/scripts
 bin/molot/complete
 
 bin/molot/complete/cron
+bin/molot/stats/cron
 bin/etcd/backup/cron
 bin/etcd/defrag/cron
 bin/ogorod/mirror/cron
@@ -25,6 +26,7 @@ bin/mc/gc/cron(root=/gorn/hf_sync,hours=2)
 bin/mc/gc/cron(root=/gorn/samogon,hours=1)
 bin/mc/gc/cron(root=/gorn/ghcr_sync,hours=2)
 bin/mc/gc/cron(root=/gorn/molot_complete,hours=1)
+bin/mc/gc/cron(root=/gorn/molot_stats,hours=24)
 bin/mc/gc/cron(root=/gorn/etcd_defrag,hours=24)
 bin/mc/gc/cron(root=/gorn/mirror_fetch,hours=1)
 bin/mc/gc/cron(root=/gorn/ogorod_mirror,hours=1)
