@@ -7,7 +7,6 @@ bin/molot
 bin/etcd/lock
 bin/git/unwrap
 bin/git/passenv
-bin/minio/patched/client
 bin/ix/tools/regen
 bin/updater/scripts
 bin/updater/fixer

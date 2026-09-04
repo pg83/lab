@@ -94,21 +94,20 @@ class FixerTests(unittest.TestCase):
                 'node failed: root cause',
             )
 
-    def test_molot_env_keeps_molot_credentials_and_sets_cache(self):
+    def test_molot_env_keeps_molot_credentials(self):
         env = {
             'AWS_ACCESS_KEY_ID': 'molot-key',
             'AWS_SECRET_ACCESS_KEY': 'molot-secret',
             'CODEX_AUTH_B64': 'must-not-leak',
         }
 
-        with tempfile.TemporaryDirectory() as td:
-            got = fixer.molot_env(env, Path(td) / 'cache')
+        got = fixer.molot_env(env)
 
         self.assertEqual(got['IX_EXEC_KIND'], 'molot')
         self.assertEqual(got['AWS_ACCESS_KEY_ID'], 'molot-key')
         self.assertEqual(got['AWS_SECRET_ACCESS_KEY'], 'molot-secret')
         self.assertEqual(got['S3_BUCKET'], 'molot')
-        self.assertTrue(got['MOLOT_CACHE'].endswith('/cache'))
+        self.assertNotIn('MOLOT_CACHE', got)
         self.assertNotIn('CODEX_AUTH_B64', got)
 
     def test_prompt_asks_for_one_local_commit_without_publication(self):
@@ -145,7 +144,7 @@ class FixerTests(unittest.TestCase):
             repo = Path(td)
             env = self.run_env()
             env['IX_FIXER_TARGET'] = 'set/ci'
-            fixer.run_build(repo, repo / 'cache', env)
+            fixer.run_build(repo, env)
 
         self.assertEqual(
             popen.call_args.args[0],
@@ -165,7 +164,7 @@ class FixerTests(unittest.TestCase):
              mock.patch.object(fixer, 'stop_build_process_group', return_value=-15) as stop, \
              mock.patch.object(fixer, 'stream_file'):
             repo = Path(td)
-            returncode, build_log = fixer.run_build(repo, repo / 'cache', self.run_env())
+            returncode, build_log = fixer.run_build(repo, self.run_env())
             build_log_bytes = build_log.read_bytes()
 
         self.assertEqual(returncode, -15)
@@ -310,7 +309,7 @@ class FixerTests(unittest.TestCase):
                 side_effect=fixer.subprocess.CalledProcessError(1, 'codex'),
             ), mock.patch.object(fixer, 'save_codex_auth') as save:
                 with self.assertRaises(fixer.subprocess.CalledProcessError):
-                    fixer.run_codex(repo, repo / 'cache', build_log, self.run_env())
+                    fixer.run_codex(repo, build_log, self.run_env())
 
             save.assert_called_once()
             self.assertEqual(save.call_args.args[0], auth)
@@ -323,11 +322,7 @@ class FixerTests(unittest.TestCase):
         env['IX_FIXER_CODEX_S3_ENDPOINT'] = 'http://192.168.103.16:8012'
 
         with tempfile.TemporaryDirectory() as td:
-            got = fixer.codex_agent_env(
-                env,
-                Path(td) / 'cache',
-                Path(td) / 'codex-home',
-            )
+            got = fixer.codex_agent_env(env, Path(td) / 'codex-home')
 
         self.assertEqual(got['GORN_API'], 'http://192.168.100.16:8027')
         self.assertEqual(got['S3_ENDPOINT'], 'http://192.168.103.16:8012')
@@ -557,13 +552,12 @@ class FixerTests(unittest.TestCase):
             repo.mkdir()
             return 'main'
 
-        def build(repo, cache, env):
+        def build(repo, env):
             path = repo / '.fixer-build.log'
             path.write_text('green\n')
             return 0, path
 
         with mock.patch.object(fixer, 'clone_ix', side_effect=clone), \
-             mock.patch.object(fixer, 'seed_cache'), \
              mock.patch.object(fixer, 'run_build', side_effect=build), \
              mock.patch.object(fixer, 'run_codex') as codex:
             fixer.run_fixer(self.run_env())
@@ -575,13 +569,12 @@ class FixerTests(unittest.TestCase):
             repo.mkdir()
             return 'main'
 
-        def build(repo, cache, env):
+        def build(repo, env):
             path = repo / '.fixer-build.log'
             path.write_text('node failed: root cause\n')
             return 2, path
 
         with mock.patch.object(fixer, 'clone_ix', side_effect=clone), \
-             mock.patch.object(fixer, 'seed_cache'), \
              mock.patch.object(fixer, 'run_build', side_effect=build), \
              mock.patch.object(fixer, 'run_codex', return_value='abc123') as codex, \
              mock.patch.object(fixer, 'publish_fix') as publish:

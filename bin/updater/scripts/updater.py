@@ -23,8 +23,9 @@ semantics of IX's bin/ix/tools/upver, but every build is executed by Molot:
      Deliberately do not run a third package build; CI and the repair agent
      own failures after the mechanical update.
 
-Each run seeds its disposable local Molot cache from the complete UID snapshot
-at s3://molot/complete.  A separate cluster job rebuilds that snapshot.
+Molot itself batch-resolves completed uids against the molot cache service
+(MOLOT_RESOLVE / IX_PACKAGE_CACHE endpoints) and backstops misses with
+per-node S3 stats; this script does not manage any local cache snapshot.
 """
 
 import json
@@ -50,10 +51,6 @@ REGENERATED_PATHS = (
     'pkgs/die/scripts/dump.json',
     'pkgs/die/scripts/urls.txt',
 )
-
-CACHE_S3_BUCKET = 'molot'
-CACHE_S3_KEY = 'complete'
-MC_ALIAS = 'updater_cache'
 
 GOOD_SHA_CHARS = frozenset('0123456789abcdef')
 BUILD_FLAGS = ('--opengl=fake', '--vulkan=fake', '--seed=1')
@@ -398,35 +395,12 @@ def extract_reported_sha(output, probe_sha):
     return unique.pop()
 
 
-def mc_env(base_env):
-    scheme, host = base_env['S3_ENDPOINT'].split('://', 1)
-    key = base_env['AWS_ACCESS_KEY_ID']
-    secret = base_env['AWS_SECRET_ACCESS_KEY']
-    env = dict(base_env)
-    env[f'MC_HOST_{MC_ALIAS}'] = f'{scheme}://{key}:{secret}@{host}'
-    return env
-
-
-def cache_uri():
-    return f'{MC_ALIAS}/{CACHE_S3_BUCKET}/{CACHE_S3_KEY}'
-
-
-def cache_read(env):
-    return subprocess.run(
-        ('minio-client', 'cat', cache_uri()),
-        env=mc_env(env),
-        stdout=subprocess.PIPE,
-        check=True,
-    ).stdout
-
-
 class MolotBuilder:
-    def __init__(self, repo, cache_path, base_env):
+    def __init__(self, repo, base_env):
         self.repo = Path(repo)
         self.env = dict(base_env)
         self.env['IX_EXEC_KIND'] = 'molot'
         self.env['S3_BUCKET'] = 'molot'
-        self.env['MOLOT_CACHE'] = str(Path(cache_path).resolve())
 
     def build(self, packages):
         cmd = ('./ix', 'build', *BUILD_FLAGS, *packages)
@@ -731,9 +705,6 @@ def run_updater(env):
     with tempfile.TemporaryDirectory(prefix='updater.', dir=os.getcwd()) as work:
         work = Path(work).resolve()
         repo = work / 'ix'
-        cache_path = work / 'molot-cache'
-        cache_path.write_bytes(cache_read(env))
-        log(f'seeded Molot cache: {cache_path.stat().st_size} bytes')
 
         branch = clone_ix(repo, env)
         source_revision = subprocess.check_output(
@@ -743,7 +714,7 @@ def run_updater(env):
             text=True,
         ).strip()
         log(f'pinned IX source revision {source_revision}')
-        builder = MolotBuilder(repo, cache_path, env)
+        builder = MolotBuilder(repo, env)
         updater = PackageUpdater(
             repo,
             builder,

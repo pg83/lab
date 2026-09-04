@@ -7,12 +7,11 @@ The cluster scheduler starts this command asynchronously through gorn and
 holds /lock/updater/fixer/work around the complete process.  The worker:
 
   1. clones pg83/ix at main from the local Ogorod mirror;
-  2. seeds Molot's disposable local cache from s3://molot/complete;
-  3. runs ``./ix build set/ci/tier/0 --seed=1`` through Molot, deliberately
+  2. runs ``./ix build set/ci/tier/0 --seed=1`` through Molot, deliberately
      without a keep-going flag, and stops its process group at the first
      direct ``node failed:`` marker;
-  4. exits when the build is green;
-  5. on a real target failure, invokes one non-interactive Codex agent and
+  3. exits when the build is green;
+  4. on a real target failure, invokes one non-interactive Codex agent and
      gives it the checkout plus the complete log.
 
 Infrastructure failures do not spend an agent run.  The next cron cycle will
@@ -66,10 +65,6 @@ CODEX_AUTH_HKDF_INFO = b'ix-updater-fixer/codex-auth/v1'
 CODEX_AUTH_AES = '-aes-256-cbc'
 GIT_MIRROR_RETRY_DELAY_S = 15
 
-CACHE_S3_BUCKET = 'molot'
-CACHE_S3_KEY = 'complete'
-MC_ALIAS = 'fixer_cache'
-
 ANSI_RE = re.compile(rb'\x1b\[[0-9;?]*[ -/]*[@-~]')
 DIRECT_FAIL_MARKER = b'node failed: '
 BUILD_STOP_TIMEOUT_S = 10
@@ -111,29 +106,6 @@ def require_env(env):
         raise InfrastructureFailure('obsolete fixer generation')
 
 
-def mc_env(base_env):
-    scheme, host = base_env['S3_ENDPOINT'].split('://', 1)
-    key = base_env['AWS_ACCESS_KEY_ID']
-    secret = base_env['AWS_SECRET_ACCESS_KEY']
-    env = dict(base_env)
-    env[f'MC_HOST_{MC_ALIAS}'] = f'{scheme}://{key}:{secret}@{host}'
-    return env
-
-
-def cache_uri():
-    return f'{MC_ALIAS}/{CACHE_S3_BUCKET}/{CACHE_S3_KEY}'
-
-
-def seed_cache(path, env):
-    log(f'seed Molot cache {path}')
-    path.write_bytes(subprocess.run(
-        ('minio-client', 'cat', cache_uri()),
-        env=mc_env(env),
-        stdout=subprocess.PIPE,
-        check=True,
-    ).stdout)
-
-
 def clone_ix(dst, env):
     read_url = env.get('IX_FIXER_GIT_READ_URL', IX_GIT_READ_URL)
     push_url = env.get('IX_FIXER_GIT_PUSH_URL', IX_GIT_PUSH_URL)
@@ -163,12 +135,12 @@ def clone_ix(dst, env):
         check=True,
     )
 
-    # The agent must be able to inspect the complete log and use its local
-    # Molot cache without ever adding either scratch file to a commit.
+    # The agent must be able to inspect the complete log without ever
+    # adding the scratch file to a commit.
     exclude = dst / '.git' / 'info' / 'exclude'
 
     with exclude.open('a') as out:
-        out.write('\n/.fixer-build.log\n/.fixer-molot-cache\n')
+        out.write('\n/.fixer-build.log\n')
 
     return branch
 
@@ -458,14 +430,13 @@ def save_codex_auth(auth, wrapping_key, seed_hash, env):
         raise InfrastructureFailure('cannot save encrypted CODEX auth to etcd')
 
 
-def molot_env(base_env, cache_path):
+def molot_env(base_env):
     env = dict(base_env)
     # Codex auth never crosses the task environment; it is loaded from the
     # host-only secret service just in time.
     env.pop('CODEX_AUTH_B64', None)  # Do not leak payloads from obsolete tasks.
     env['IX_EXEC_KIND'] = 'molot'
     env['S3_BUCKET'] = 'molot'
-    env['MOLOT_CACHE'] = str(cache_path.resolve())
     return env
 
 
@@ -480,7 +451,7 @@ def materialize_codex_home(work, auth):
     # A login shell sources /etc/profile and overwrites the supervisor's
     # IX_EXEC_KIND=molot with IX_EXEC_KIND=system.  Keep agent commands in a
     # regular shell and let them inherit the supervisor's curated environment,
-    # including Molot's endpoints/cache.  Repository credentials and the auth
+    # including Molot's endpoints.  Repository credentials and the auth
     # payload have already been removed.
     config_path = home / 'config.toml'
     config_path.write_text(
@@ -493,8 +464,8 @@ def materialize_codex_home(work, auth):
     return home
 
 
-def codex_agent_env(base_env, cache_path, codex_home):
-    env = molot_env(base_env, cache_path)
+def codex_agent_env(base_env, codex_home):
+    env = molot_env(base_env)
     # The supervisor needs persistent etcd for auth state.  The repair agent
     # only needs Molot/Gorn and must not receive the durable etcd endpoint.
     env.pop('ETCD_PERSIST_ENDPOINTS', None)
@@ -564,7 +535,7 @@ def stop_build_process_group(proc):
         return proc.wait()
 
 
-def run_build(repo, cache_path, env):
+def run_build(repo, env):
     target = IX_TARGET
     build_log = repo / '.fixer-build.log'
     cmd = ('./ix', 'build', target, '--seed=1')
@@ -573,7 +544,7 @@ def run_build(repo, cache_path, env):
     proc = subprocess.Popen(
         cmd,
         cwd=repo,
-        env=molot_env(env, cache_path),
+        env=molot_env(env),
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         start_new_session=True,
@@ -650,7 +621,7 @@ def codex_command(repo, prompt):
     )
 
 
-def run_codex(repo, cache_path, build_log, env):
+def run_codex(repo, build_log, env):
     target = IX_TARGET
     revision = subprocess.check_output(
         ('git', 'rev-parse', 'HEAD'), cwd=repo, text=True,
@@ -658,7 +629,7 @@ def run_codex(repo, cache_path, build_log, env):
     prompt = codex_prompt(target, failure_summary(build_log))
     auth, wrapping_key, seed_hash = load_codex_auth(env)
     codex_home = materialize_codex_home(repo.parent, auth)
-    agent_env = codex_agent_env(env, cache_path, codex_home)
+    agent_env = codex_agent_env(env, codex_home)
     cmd = codex_command(repo, prompt)
     log(f'run codex target={target}')
 
@@ -765,7 +736,7 @@ def validate_agent_commit(repo, revision):
         repo,
         'diff-tree', '--no-commit-id', '--name-only', '-r', head,
     ).splitlines()
-    forbidden = {'.fixer-build.log', '.fixer-molot-cache'}
+    forbidden = {'.fixer-build.log'}
 
     if not changed:
         raise InfrastructureFailure('Codex left an empty repair commit')
@@ -847,10 +818,8 @@ def run_fixer(env):
         work = Path(work).resolve()
         repo = work / 'ix'
         branch = clone_ix(repo, env)
-        cache_path = repo / '.fixer-molot-cache'
-        seed_cache(cache_path, env)
 
-        returncode, build_log = run_build(repo, cache_path, env)
+        returncode, build_log = run_build(repo, env)
 
         if returncode == 0:
             log('IX CI build is green; no agent needed')
@@ -862,7 +831,7 @@ def run_fixer(env):
             )
 
         log(f'IX CI target failed (exit {returncode}); starting one Codex repair')
-        revision = run_codex(repo, cache_path, build_log, env)
+        revision = run_codex(repo, build_log, env)
         publish_fix(repo, revision, branch, env)
 
 
