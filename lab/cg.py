@@ -1089,30 +1089,55 @@ class MolotCache:
 
 
 class CloudflaredTunnel:
-    # Outbound-only replica of the shared Cloudflare tunnel publishing
-    # molot cache over TLS+CDN. All three hosts run the same token, so
-    # the edge balances and survives host loss. http2 transport instead
-    # of QUIC: DPI en route throttles UDP unpredictably. The upstream
-    # mapping (hostname -> localhost:8054) lives in the tunnel's remote
-    # config on the Cloudflare side.
+    # Outbound-only replica of the locally-managed Cloudflare tunnel
+    # publishing molot cache over TLS+CDN. All three hosts run the same
+    # credentials, so the edge balances and survives host loss. http2
+    # transport instead of QUIC: DPI en route throttles UDP
+    # unpredictably. Routing lives here, not in the CF dashboard.
+    TUNNEL_ID = '4b335fae-9cd1-40bb-9868-08deb4a23cb7'
+
+    def __init__(self, hostname, upstream_port):
+        self.hostname = hostname
+        self.upstream_port = upstream_port
+
     def name(self):
         return 'cloudflared'
 
     def pkgs(self):
         yield {'pkg': 'bin/cloudflared'}
 
-    def run(self):
-        token = get_key('/cloudflare/tunnel/token').decode().strip()
+    def config(self, creds_path):
+        return json.dumps({
+            'tunnel': self.TUNNEL_ID,
+            'credentials-file': creds_path,
+            'ingress': [
+                {
+                    'hostname': self.hostname,
+                    'service': f'http://127.0.0.1:{self.upstream_port}',
+                },
+                {'service': 'http_status:404'},
+            ],
+        })
 
-        exec_into(
-            'cloudflared',
-            'tunnel',
-            '--no-autoupdate',
-            '--protocol', 'http2',
-            'run',
-            TUNNEL_TOKEN=token,
-            PATH='/bin',
-        )
+    def run(self):
+        creds = get_key('/cloudflare/tunnel/creds')
+
+        with multi(memfd('creds.json'), memfd('config.yml')) as (creds_path, conf_path):
+            with open(creds_path, 'wb') as f:
+                f.write(creds)
+
+            with open(conf_path, 'w') as f:
+                f.write(self.config(creds_path))
+
+            exec_into(
+                'cloudflared',
+                '--config', conf_path,
+                'tunnel',
+                '--no-autoupdate',
+                '--protocol', 'http2',
+                'run',
+                PATH='/bin',
+            )
 
 
 SECOND_IP = '''
@@ -2506,7 +2531,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': CloudflaredTunnel(),
+                'serv': CloudflaredTunnel('cache.homelab.cam', p['molot_cache']),
             }
 
 
