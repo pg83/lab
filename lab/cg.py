@@ -1096,15 +1096,14 @@ class CloudflaredTunnel:
     # (198.41.128.0/17:7844 passes ~16KB, then dies), so the connector
     # runs inside wirez and reaches the edge through the ssh socks
     # exits, same as codex. QUIC stays off: ssh -D has no UDP. The
-    # origin hop goes over the -B direct route to the host NIC, since
+    # origin hop rides a -L forward onto the host loopback, since
     # netns loopback is not the host loopback.
     # Routing lives here, not in the CF dashboard.
     TUNNEL_ID = '4b335fae-9cd1-40bb-9868-08deb4a23cb7'
 
-    def __init__(self, hostname, upstream_port, upstream_ip, socks, nick):
+    def __init__(self, hostname, upstream_port, socks, nick):
         self.hostname = hostname
         self.upstream_port = upstream_port
-        self.upstream_ip = upstream_ip
         self.socks = socks
         self.nick = nick
 
@@ -1125,7 +1124,7 @@ class CloudflaredTunnel:
             'ingress': [
                 {
                     'hostname': self.hostname,
-                    'service': f'http://{self.upstream_ip}:{self.upstream_port}',
+                    'service': f'http://10.10.0.1:{self.upstream_port}',
                 },
                 {'service': 'http_status:404'},
             ],
@@ -1145,7 +1144,7 @@ class CloudflaredTunnel:
                 'wirez', '-q',
                 '-D', '127.0.0.1',
                 '-F', self.socks,
-                '-B', '10.0.0.0/24',
+                '-L', f'10.10.0.1:{self.upstream_port}:127.0.0.1:{self.upstream_port}',
                 '--',
                 'cloudflared',
                 '--config', conf_path,
@@ -2560,7 +2559,6 @@ class ClusterMap:
                     'serv': CloudflaredTunnel(
                         'cache.homelab.cam',
                         p['molot_cache'],
-                        h['net'][0]['ip'],
                         '127.0.0.1:' + str(p[k]),
                         k.removeprefix('ssh_').removesuffix('_tunnel'),
                     ),
