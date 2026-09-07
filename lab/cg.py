@@ -1089,7 +1089,7 @@ class MolotCache:
 
 
 class CloudflaredTunnel:
-    # Outbound-only replica of the locally-managed Cloudflare tunnel
+    # Outbound-only replicas of the locally-managed Cloudflare tunnel
     # publishing molot cache over TLS+CDN. All three hosts run the same
     # credentials, so the edge balances and survives host loss.
     # protocol auto: QUIC first - its keepalives detect DPI-killed paths
