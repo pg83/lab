@@ -1101,13 +1101,15 @@ class CloudflaredTunnel:
     # Routing lives here, not in the CF dashboard.
     TUNNEL_ID = '4b335fae-9cd1-40bb-9868-08deb4a23cb7'
 
-    def __init__(self, hostname, upstream_port, upstream_ip):
+    def __init__(self, hostname, upstream_port, upstream_ip, socks, nick):
         self.hostname = hostname
         self.upstream_port = upstream_port
         self.upstream_ip = upstream_ip
+        self.socks = socks
+        self.nick = nick
 
     def name(self):
-        return 'cloudflared'
+        return f'cloudflared_{self.nick}'
 
     def user(self):
         return 'cloudflared'
@@ -1142,7 +1144,7 @@ class CloudflaredTunnel:
             exec_into(
                 'wirez', '-q',
                 '-D', '127.0.0.1',
-                '-F', '127.0.0.1:8015',
+                '-F', self.socks,
                 '-B', '10.0.0.0/24',
                 '--',
                 'cloudflared',
@@ -2548,16 +2550,21 @@ class ClusterMap:
                 'serv': MolotCache(f"0.0.0.0:{p['molot_cache']}", f"http://127.0.0.1:{p['minio']}", 'molot'),
             }
 
-            # One connector per host; egress rides the socks exits, so
-            # per-NIC replicas would all share the same path anyway.
-            yield {
-                'host': hn,
-                'serv': CloudflaredTunnel(
-                    'cache.homelab.cam',
-                    p['molot_cache'],
-                    h['net'][0]['ip'],
-                ),
-            }
+            # One connector per socks exit, pinned directly to its ssh
+            # tunnel port: an exit death takes down only its connector.
+            for tun in SSH_TUNNELS:
+                k = tun['key']
+
+                yield {
+                    'host': hn,
+                    'serv': CloudflaredTunnel(
+                        'cache.homelab.cam',
+                        p['molot_cache'],
+                        h['net'][0]['ip'],
+                        '127.0.0.1:' + str(p[k]),
+                        k.removeprefix('ssh_').removesuffix('_tunnel'),
+                    ),
+                }
 
 
 def exec_into(*args, user=None, **kwargs):
