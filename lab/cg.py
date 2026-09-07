@@ -1088,6 +1088,33 @@ class MolotCache:
         )
 
 
+class CloudflaredTunnel:
+    # Outbound-only replica of the shared Cloudflare tunnel publishing
+    # molot cache over TLS+CDN. All three hosts run the same token, so
+    # the edge balances and survives host loss. http2 transport instead
+    # of QUIC: DPI en route throttles UDP unpredictably. The upstream
+    # mapping (hostname -> localhost:8054) lives in the tunnel's remote
+    # config on the Cloudflare side.
+    def name(self):
+        return 'cloudflared'
+
+    def pkgs(self):
+        yield {'pkg': 'bin/cloudflared'}
+
+    def run(self):
+        token = get_key('/cloudflare/tunnel/token').decode().strip()
+
+        exec_into(
+            'cloudflared',
+            'tunnel',
+            '--no-autoupdate',
+            '--protocol', 'http2',
+            'run',
+            TUNNEL_TOKEN=token,
+            PATH='/bin',
+        )
+
+
 SECOND_IP = '''
 set -x
 ip addr del {addr} dev eth0
@@ -2477,6 +2504,11 @@ class ClusterMap:
                 'serv': MolotCache(f"0.0.0.0:{p['molot_cache']}", f"http://127.0.0.1:{p['minio']}", 'molot'),
             }
 
+            yield {
+                'host': hn,
+                'serv': CloudflaredTunnel(),
+            }
+
 
 def exec_into(*args, user=None, **kwargs):
     args = [str(x) for x in args]
@@ -2863,6 +2895,7 @@ def do(code):
     users['gorn_prom'] = 1095
     users['molot_web'] = 1026
     users['molot_cache'] = 1027
+    users['cloudflared'] = 1028
     users['gofra'] = 1094
     ports['gorn_ctl'] = 8025
     ports['gorn_web'] = 8026
