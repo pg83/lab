@@ -272,8 +272,8 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=molot_cache,runsh_script=sha256:bb4b92497736b687,srv_user=molot_cache,extra_deps=YmluL21vbG90)",
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=cloudflared)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cloudflared,runsh_script=sha256:d96c55276e76d9bb,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:473d4227d98737fb)"
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cloudflared,runsh_script=sha256:e5cb0de7a28cccaf,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:5ade8853efa94e34)"
             ],
             "gofra": {
                 "hostname": "lab1.gofra",
@@ -580,8 +580,8 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=molot_cache,runsh_script=sha256:bb4b92497736b687,srv_user=molot_cache,extra_deps=YmluL21vbG90)",
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=cloudflared)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cloudflared,runsh_script=sha256:d96c55276e76d9bb,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:473d4227d98737fb)"
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cloudflared,runsh_script=sha256:e5cb0de7a28cccaf,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:5ade8853efa94e34)"
             ],
             "gofra": {
                 "hostname": "lab2.gofra",
@@ -858,8 +858,8 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=molot_cache,runsh_script=sha256:bb4b92497736b687,srv_user=molot_cache,extra_deps=YmluL21vbG90)",
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=cloudflared)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cloudflared,runsh_script=sha256:d96c55276e76d9bb,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:473d4227d98737fb)"
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cloudflared,runsh_script=sha256:e5cb0de7a28cccaf,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:5ade8853efa94e34)"
             ],
             "gofra": {
                 "hostname": "lab3.gofra",
@@ -1178,8 +1178,8 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=molot_cache,runsh_script=sha256:bb4b92497736b687,srv_user=molot_cache,extra_deps=YmluL21vbG90)",
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=cloudflared)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cloudflared,runsh_script=sha256:d96c55276e76d9bb,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:473d4227d98737fb)"
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cloudflared,runsh_script=sha256:e5cb0de7a28cccaf,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:5ade8853efa94e34)"
             ],
             "gofra": {
                 "hostname": "lab1.gofra",
@@ -1486,8 +1486,8 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=molot_cache,runsh_script=sha256:bb4b92497736b687,srv_user=molot_cache,extra_deps=YmluL21vbG90)",
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=cloudflared)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cloudflared,runsh_script=sha256:d96c55276e76d9bb,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:473d4227d98737fb)"
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cloudflared,runsh_script=sha256:e5cb0de7a28cccaf,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:5ade8853efa94e34)"
             ],
             "gofra": {
                 "hostname": "lab2.gofra",
@@ -1764,8 +1764,8 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=molot_cache,runsh_script=sha256:bb4b92497736b687,srv_user=molot_cache,extra_deps=YmluL21vbG90)",
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=cloudflared)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cloudflared,runsh_script=sha256:d96c55276e76d9bb,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:473d4227d98737fb)"
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cloudflared,runsh_script=sha256:e5cb0de7a28cccaf,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:5ade8853efa94e34)"
             ],
             "gofra": {
                 "hostname": "lab3.gofra",

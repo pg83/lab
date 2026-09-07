@@ -1091,9 +1091,11 @@ class MolotCache:
 class CloudflaredTunnel:
     # Outbound-only replica of the locally-managed Cloudflare tunnel
     # publishing molot cache over TLS+CDN. All three hosts run the same
-    # credentials, so the edge balances and survives host loss. http2
-    # transport instead of QUIC: DPI en route throttles UDP
-    # unpredictably. Routing lives here, not in the CF dashboard.
+    # credentials, so the edge balances and survives host loss.
+    # protocol auto: QUIC first - its keepalives detect DPI-killed paths
+    # in seconds, while http2 sat on half-open TCP for 15+ minutes and
+    # the edge served 1033; http2 stays as the fallback when UDP is
+    # throttled. Routing lives here, not in the CF dashboard.
     TUNNEL_ID = '4b335fae-9cd1-40bb-9868-08deb4a23cb7'
 
     def __init__(self, hostname, upstream_port):
@@ -1134,7 +1136,7 @@ class CloudflaredTunnel:
                 '--config', conf_path,
                 'tunnel',
                 '--no-autoupdate',
-                '--protocol', 'http2',
+                '--protocol', 'auto',
                 'run',
                 PATH='/bin',
             )
