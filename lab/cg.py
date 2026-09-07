@@ -1098,11 +1098,12 @@ class CloudflaredTunnel:
     # throttled. Routing lives here, not in the CF dashboard.
     TUNNEL_ID = '4b335fae-9cd1-40bb-9868-08deb4a23cb7'
 
-    def __init__(self, hostname, upstream_port, nic, bind_ip):
+    def __init__(self, hostname, upstream_port, nic, bind_ip, protocol):
         self.hostname = hostname
         self.upstream_port = upstream_port
         self.nic = nic
         self.bind_ip = bind_ip
+        self.protocol = protocol
 
     def name(self):
         return f'cloudflared_{self.nic}'
@@ -1141,7 +1142,7 @@ class CloudflaredTunnel:
                 '--config', conf_path,
                 'tunnel',
                 '--no-autoupdate',
-                '--protocol', 'auto',
+                '--protocol', self.protocol,
                 '--edge-bind-address', self.bind_ip,
                 'run',
                 PATH='/bin',
@@ -2540,10 +2541,19 @@ class ClusterMap:
             # One connector per physical NIC: --edge-bind-address plus the
             # per-NIC multihome tables give each replica its own wire, so
             # a DPI state drop on one path leaves the others serving.
-            for net in h['net']:
+            # Protocols alternate: DPI throttles UDP (quic dial timeouts)
+            # and silently kills idle TCP (http2 half-opens) in different
+            # weather; half the fleet stays on whichever works today.
+            for i, net in enumerate(h['net']):
                 yield {
                     'host': hn,
-                    'serv': CloudflaredTunnel('cache.homelab.cam', p['molot_cache'], net['if'], net['ip']),
+                    'serv': CloudflaredTunnel(
+                        'cache.homelab.cam',
+                        p['molot_cache'],
+                        net['if'],
+                        net['ip'],
+                        'http2' if i % 2 == 0 else 'quic',
+                    ),
                 }
 
 
