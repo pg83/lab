@@ -1092,18 +1092,19 @@ class CloudflaredTunnel:
     # Outbound-only replicas of the locally-managed Cloudflare tunnel
     # publishing molot cache over TLS+CDN. All three hosts run the same
     # credentials, so the edge balances and survives host loss.
-    # protocol auto: QUIC first - its keepalives detect DPI-killed paths
-    # in seconds, while http2 sat on half-open TCP for 15+ minutes and
-    # the edge served 1033; http2 stays as the fallback when UDP is
-    # throttled. Routing lives here, not in the CF dashboard.
+    # http2 only: QUIC to the edge is fully blackholed here (every quic
+    # connector spent an hour in dial timeouts, zero registrations).
+    # http2 conns silently die every 2-10 min and the edge keeps routing
+    # into the stale registrations (502), so each connector holds extra
+    # HA conns to raise the odds of a live target at any moment.
+    # Routing lives here, not in the CF dashboard.
     TUNNEL_ID = '4b335fae-9cd1-40bb-9868-08deb4a23cb7'
 
-    def __init__(self, hostname, upstream_port, nic, bind_ip, protocol):
+    def __init__(self, hostname, upstream_port, nic, bind_ip):
         self.hostname = hostname
         self.upstream_port = upstream_port
         self.nic = nic
         self.bind_ip = bind_ip
-        self.protocol = protocol
 
     def name(self):
         return f'cloudflared_{self.nic}'
@@ -1142,7 +1143,8 @@ class CloudflaredTunnel:
                 '--config', conf_path,
                 'tunnel',
                 '--no-autoupdate',
-                '--protocol', self.protocol,
+                '--protocol', 'http2',
+                '--ha-connections', '8',
                 '--edge-bind-address', self.bind_ip,
                 'run',
                 PATH='/bin',
@@ -2541,10 +2543,7 @@ class ClusterMap:
             # One connector per physical NIC: --edge-bind-address plus the
             # per-NIC multihome tables give each replica its own wire, so
             # a DPI state drop on one path leaves the others serving.
-            # Protocols alternate: DPI throttles UDP (quic dial timeouts)
-            # and silently kills idle TCP (http2 half-opens) in different
-            # weather; half the fleet stays on whichever works today.
-            for i, net in enumerate(h['net']):
+            for net in h['net']:
                 yield {
                     'host': hn,
                     'serv': CloudflaredTunnel(
@@ -2552,7 +2551,6 @@ class ClusterMap:
                         p['molot_cache'],
                         net['if'],
                         net['ip'],
-                        'http2' if i % 2 == 0 else 'quic',
                     ),
                 }
 
