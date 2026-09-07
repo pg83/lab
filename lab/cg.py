@@ -1092,28 +1092,29 @@ class CloudflaredTunnel:
     # Outbound-only replicas of the locally-managed Cloudflare tunnel
     # publishing molot cache over TLS+CDN. All three hosts run the same
     # credentials, so the edge balances and survives host loss.
-    # http2 only: QUIC to the edge is fully blackholed here (every quic
-    # connector spent an hour in dial timeouts, zero registrations).
-    # http2 conns silently die every 2-10 min and the edge keeps routing
-    # into the stale registrations (502), so each connector holds extra
-    # HA conns to raise the odds of a live target at any moment.
+    # TSPU strangles direct TCP to the tunnel ingest range
+    # (198.41.128.0/17:7844 passes ~16KB, then dies), so the connector
+    # runs inside wirez and reaches the edge through the ssh socks
+    # exits, same as codex. QUIC stays off: ssh -D has no UDP. The
+    # origin hop goes over the -B direct route to the host NIC, since
+    # netns loopback is not the host loopback.
     # Routing lives here, not in the CF dashboard.
     TUNNEL_ID = '4b335fae-9cd1-40bb-9868-08deb4a23cb7'
 
-    def __init__(self, hostname, upstream_port, nic, bind_ip):
+    def __init__(self, hostname, upstream_port, upstream_ip):
         self.hostname = hostname
         self.upstream_port = upstream_port
-        self.nic = nic
-        self.bind_ip = bind_ip
+        self.upstream_ip = upstream_ip
 
     def name(self):
-        return f'cloudflared_{self.nic}'
+        return 'cloudflared'
 
     def user(self):
         return 'cloudflared'
 
     def pkgs(self):
         yield {'pkg': 'bin/cloudflared'}
+        yield {'pkg': 'bin/wirez'}
 
     def config(self, creds_path):
         return json.dumps({
@@ -1122,7 +1123,7 @@ class CloudflaredTunnel:
             'ingress': [
                 {
                     'hostname': self.hostname,
-                    'service': f'http://127.0.0.1:{self.upstream_port}',
+                    'service': f'http://{self.upstream_ip}:{self.upstream_port}',
                 },
                 {'service': 'http_status:404'},
             ],
@@ -1139,15 +1140,22 @@ class CloudflaredTunnel:
                 f.write(self.config(creds_path))
 
             exec_into(
+                'wirez', '-q',
+                '-D', '127.0.0.1',
+                '-F', '127.0.0.1:8015',
+                '-B', '10.0.0.0/24',
+                '--',
                 'cloudflared',
                 '--config', conf_path,
                 'tunnel',
                 '--no-autoupdate',
                 '--protocol', 'http2',
                 '--ha-connections', '8',
-                '--edge-bind-address', self.bind_ip,
+                # default metrics address does not bind inside the netns
+                '--metrics', '127.0.0.1:20999',
                 'run',
                 PATH='/bin',
+                TMPDIR=os.getcwd(),
             )
 
 
@@ -2540,19 +2548,16 @@ class ClusterMap:
                 'serv': MolotCache(f"0.0.0.0:{p['molot_cache']}", f"http://127.0.0.1:{p['minio']}", 'molot'),
             }
 
-            # One connector per physical NIC: --edge-bind-address plus the
-            # per-NIC multihome tables give each replica its own wire, so
-            # a DPI state drop on one path leaves the others serving.
-            for net in h['net']:
-                yield {
-                    'host': hn,
-                    'serv': CloudflaredTunnel(
-                        'cache.homelab.cam',
-                        p['molot_cache'],
-                        net['if'],
-                        net['ip'],
-                    ),
-                }
+            # One connector per host; egress rides the socks exits, so
+            # per-NIC replicas would all share the same path anyway.
+            yield {
+                'host': hn,
+                'serv': CloudflaredTunnel(
+                    'cache.homelab.cam',
+                    p['molot_cache'],
+                    h['net'][0]['ip'],
+                ),
+            }
 
 
 def exec_into(*args, user=None, **kwargs):
