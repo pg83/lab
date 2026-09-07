@@ -1098,11 +1098,16 @@ class CloudflaredTunnel:
     # throttled. Routing lives here, not in the CF dashboard.
     TUNNEL_ID = '4b335fae-9cd1-40bb-9868-08deb4a23cb7'
 
-    def __init__(self, hostname, upstream_port):
+    def __init__(self, hostname, upstream_port, nic, bind_ip):
         self.hostname = hostname
         self.upstream_port = upstream_port
+        self.nic = nic
+        self.bind_ip = bind_ip
 
     def name(self):
+        return f'cloudflared_{self.nic}'
+
+    def user(self):
         return 'cloudflared'
 
     def pkgs(self):
@@ -1137,6 +1142,7 @@ class CloudflaredTunnel:
                 'tunnel',
                 '--no-autoupdate',
                 '--protocol', 'auto',
+                '--edge-bind-address', self.bind_ip,
                 'run',
                 PATH='/bin',
             )
@@ -2531,10 +2537,14 @@ class ClusterMap:
                 'serv': MolotCache(f"0.0.0.0:{p['molot_cache']}", f"http://127.0.0.1:{p['minio']}", 'molot'),
             }
 
-            yield {
-                'host': hn,
-                'serv': CloudflaredTunnel('cache.homelab.cam', p['molot_cache']),
-            }
+            # One connector per physical NIC: --edge-bind-address plus the
+            # per-NIC multihome tables give each replica its own wire, so
+            # a DPI state drop on one path leaves the others serving.
+            for net in h['net']:
+                yield {
+                    'host': hn,
+                    'serv': CloudflaredTunnel('cache.homelab.cam', p['molot_cache'], net['if'], net['ip']),
+                }
 
 
 def exec_into(*args, user=None, **kwargs):
