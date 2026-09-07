@@ -9,8 +9,10 @@ One autoupdate tick:
   3. Probe github via ls-remote (one round-trip). If HEAD matches
      the local ix/ checkout, stop — no work to do.
   4. Stage the upgrade in ix1/: copy current ix/ aside, pull there,
-     run `ix mut system` + `ix mut $(ix list)` against the staged
-     tree. On any failure: leave ix/ at the previous (deployed)
+     warm the package cache with a best-effort `ix build system`
+     through Molot (the cluster compiles missing nodes once; failures
+     only degrade to a plain local build), then run `ix mut system` +
+     `ix mut $(ix list)` against the staged tree. On any failure: leave ix/ at the previous (deployed)
      ref so the next cycle tries again. Without staging, a failed
      mutation would leave ix/ at the new ref, the ls-remote probe
      would now match, and the cycle would think "nothing to do" —
@@ -26,6 +28,7 @@ import shutil
 import subprocess
 import sys
 import time
+import urllib.request
 
 
 URL = 'https://github.com/pg83/lab'
@@ -69,10 +72,36 @@ def local_head(dst):
     return run('git', 'rev-parse', 'HEAD', cwd=dst, capture=True).stdout.strip()
 
 
+def secret(key):
+    with urllib.request.urlopen('http://localhost:8022' + key, timeout=10) as resp:
+        return resp.read().decode().strip()
+
+
+def warm_cache(ix):
+    """Build the system realm through Molot so the cluster compiles every
+    missing node once and the local mut below only fetches ready blobs
+    from the cache.  Strictly best-effort: any failure here must degrade
+    to the plain local build, never block the update."""
+    try:
+        env = dict(os.environ)
+        env['IX_EXEC_KIND'] = 'molot'
+        env['S3_BUCKET'] = 'molot'
+        env['S3_ENDPOINT'] = 'http://127.0.0.1:8012'
+        env['MOLOT_QUIET'] = '1'
+        env['AWS_ACCESS_KEY_ID'] = secret('/s3/iam/molot/key')
+        env['AWS_SECRET_ACCESS_KEY'] = secret('/s3/iam/molot/secret')
+
+        log(ix, 'build', 'system', '(molot warm-up)')
+        subprocess.run((ix, 'build', 'system'), env=env, check=True)
+    except Exception as exc:
+        log(f'molot warm-up failed, falling back to local build: {exc}')
+
+
 def build(checkout):
     # Use staged tree's own ./ix; /bin/ix is pinned to DST.
     ix = os.path.abspath(os.path.join(checkout, 'ix'))
 
+    warm_cache(ix)
     run(ix, 'mut', 'system')
 
     pkgs = run(ix, 'list', capture=True).stdout.split()
