@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 
-"""Rebuild s3://molot/complete from the UID prefixes in MinIO."""
+"""Rebuild s3://molot/complete from the result objects in MinIO.
+
+Each line is "uid <md5>": the recursive listing hands us every
+result.zstd ETag for free, and single-part uploads make ETag == MD5,
+which molot cache serves via /v2/resolve for client-side blob
+verification.  Objects without a usable ETag land as a bare uid."""
 
 import json
 import os
@@ -19,20 +24,30 @@ def copy_uids(lines, out):
     for line in lines:
         record = json.loads(line)
 
-        if record.get('status') != 'success' or record.get('type') != 'folder':
+        if record.get('status') != 'success':
             raise RuntimeError(f'unexpected minio ls record: {record!r}')
 
+        if record.get('type') != 'file':
+            continue
+
         key = record.get('key', '')
+        parts = key.split('/')
 
-        if not key.endswith('/'):
-            raise RuntimeError(f'unexpected UID prefix: {key!r}')
+        if len(parts) != 2 or parts[1] != 'result.zstd':
+            continue
 
-        uid = key[:-1]
+        uid = parts[0]
 
-        if not uid or '/' in uid or '\\' in uid:
-            raise RuntimeError(f'invalid UID prefix: {key!r}')
+        if not uid or '\\' in uid:
+            raise RuntimeError(f'invalid result key: {key!r}')
 
-        out.write(uid + '\n')
+        etag = record.get('etag', '').strip('"')
+
+        if etag and '-' not in etag:
+            out.write(f'{uid} {etag}\n')
+        else:
+            out.write(uid + '\n')
+
         count += 1
 
     return count
@@ -48,7 +63,7 @@ def main():
     try:
         with os.fdopen(fd, 'w') as out:
             proc = subprocess.Popen(
-                ('minio-client', 'ls', '--json', SOURCE),
+                ('minio-client', 'ls', '--json', '--recursive', SOURCE),
                 stdout=subprocess.PIPE,
                 text=True,
             )
