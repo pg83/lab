@@ -1093,11 +1093,9 @@ class CloudflaredTunnel:
     # publishing molot cache over TLS+CDN. All three hosts run the same
     # credentials, so the edge balances and survives host loss.
     # TSPU strangles direct TCP to the tunnel ingest range
-    # (198.41.128.0/17:7844 passes ~16KB, then dies), so the connector
-    # runs inside wirez and reaches the edge through the ssh socks
-    # exits, same as codex. QUIC stays off: ssh -D has no UDP. The
-    # origin hop rides a -L forward onto the host loopback, since
-    # netns loopback is not the host loopback.
+    # (198.41.128.0/17:7844 passes ~16KB, then dies), so the edge dial
+    # goes through the ssh socks exits: bin/cloudflared is patched to
+    # honor TUNNEL_EDGE_SOCKS5. QUIC stays off: ssh -D has no UDP.
     # Routing lives here, not in the CF dashboard.
     TUNNEL_ID = '4b335fae-9cd1-40bb-9868-08deb4a23cb7'
 
@@ -1115,7 +1113,6 @@ class CloudflaredTunnel:
 
     def pkgs(self):
         yield {'pkg': 'bin/cloudflared'}
-        yield {'pkg': 'bin/wirez'}
 
     def config(self, creds_path):
         return json.dumps({
@@ -1124,7 +1121,7 @@ class CloudflaredTunnel:
             'ingress': [
                 {
                     'hostname': self.hostname,
-                    'service': f'http://10.10.0.1:{self.upstream_port}',
+                    'service': f'http://127.0.0.1:{self.upstream_port}',
                 },
                 {'service': 'http_status:404'},
             ],
@@ -1141,22 +1138,15 @@ class CloudflaredTunnel:
                 f.write(self.config(creds_path))
 
             exec_into(
-                'wirez', '-q',
-                '-D', '127.0.0.1',
-                '-F', self.socks,
-                '-L', f'10.10.0.1:{self.upstream_port}:127.0.0.1:{self.upstream_port}',
-                '--',
                 'cloudflared',
                 '--config', conf_path,
                 'tunnel',
                 '--no-autoupdate',
                 '--protocol', 'http2',
                 '--ha-connections', '8',
-                # default metrics address does not bind inside the netns
-                '--metrics', '127.0.0.1:20999',
                 'run',
                 PATH='/bin',
-                TMPDIR=os.getcwd(),
+                TUNNEL_EDGE_SOCKS5=self.socks,
             )
 
 
