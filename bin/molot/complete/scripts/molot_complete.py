@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 
-"""Rebuild s3://molot/complete from the result objects in MinIO.
+"""Remove artifacts unused for 30 days and rebuild s3://molot/complete.
+
+Use the last request recorded in stats, or the result object's modification
+time when the uid has no stats entry. Delete the entire expired uid prefix.
 
 Each line is "uid <md5>": the recursive listing hands us every
 result.zstd ETag for free, and single-part uploads make ETag == MD5,
 which molot cache serves via /v2/resolve for client-side blob
 verification.  Objects without a usable ETag land as a bare uid."""
 
+from datetime import datetime
 import json
 import os
 import subprocess
@@ -16,9 +20,11 @@ import time
 
 SOURCE = 'minio/molot/molot/'
 DESTINATION = 'minio/molot/complete'
+STATS = 'minio/molot/stats'
+RETENTION = 30 * 24 * 60 * 60
 
 
-def copy_uids(lines, out):
+def copy_uids(lines, out, stats, cutoff):
     count = 0
 
     for line in lines:
@@ -38,8 +44,26 @@ def copy_uids(lines, out):
 
         uid = parts[0]
 
-        if not uid or '\\' in uid:
+        if not uid or uid in ('.', '..') or '\\' in uid:
             raise RuntimeError(f'invalid result key: {key!r}')
+
+        last_used = stats.get(uid)
+
+        if last_used is None:
+            modified = datetime.fromisoformat(record['lastModified'].replace('Z', '+00:00'))
+
+            if modified.tzinfo is None:
+                raise ValueError(f'missing timezone in lastModified: {key!r}')
+
+            last_used = modified.timestamp()
+
+        if last_used < cutoff:
+            subprocess.run(
+                ('minio-client', 'rm', '--recursive', '--force', SOURCE + uid + '/'),
+                check=True,
+            )
+            print(f'molot complete: removed {uid}')
+            continue
 
         etag = record.get('etag', '').strip('"')
 
@@ -58,6 +82,12 @@ def main():
         raise SystemExit('MC_HOST_minio is required')
 
     started = time.monotonic()
+    stats = json.loads(subprocess.check_output(('minio-client', 'cat', STATS), text=True))
+
+    if not isinstance(stats, dict) or any(type(ts) is not int for ts in stats.values()):
+        raise ValueError('invalid molot stats: expected UID -> unix timestamp')
+
+    cutoff = time.time() - RETENTION
     fd, path = tempfile.mkstemp(prefix='molot-complete.', dir=os.getcwd(), text=True)
 
     try:
@@ -69,7 +99,7 @@ def main():
             )
 
             try:
-                count = copy_uids(proc.stdout, out)
+                count = copy_uids(proc.stdout, out, stats, cutoff)
             except BaseException:
                 proc.kill()
                 proc.wait()
