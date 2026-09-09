@@ -115,7 +115,10 @@ class Store:
         return proc
 
     def put(self, sha, file):
-        file.seek(0)
+        # subprocess reads the OS descriptor, not Python's buffered position.
+        # zipfile validation may leave that descriptor at EOF despite seek(0).
+        file.flush()
+        os.lseek(file.fileno(), 0, os.SEEK_SET)
         # Same key always gets the exact same bytes: idempotent CAS publication.
         self.mc('pipe', 'view/view/' + sha, stdin=file, stdout=subprocess.DEVNULL)
 

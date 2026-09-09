@@ -4,6 +4,7 @@ import http.client
 import importlib.util
 import io
 import json
+import os
 import stat
 import tempfile
 import threading
@@ -43,6 +44,18 @@ class MemoryStore:
 
 
 class ValidationTests(unittest.TestCase):
+    def test_upload_subprocess_reads_from_start_after_validation(self):
+        data = bundle()
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryFile() as file:
+            file.write(data)
+            file.seek(0)
+            app.validate_zip(file)
+            store = app.Store(tmp)
+            def child_read(*args, stdin, **kwargs):
+                self.assertEqual(os.read(stdin.fileno(), len(data) + 1), data)
+            with patch.object(store, 'mc', side_effect=child_read):
+                store.put(hashlib.sha256(data).hexdigest(), file)
+
     def test_valid_archive(self):
         src = io.BytesIO(bundle())
         app.validate_zip(src)
