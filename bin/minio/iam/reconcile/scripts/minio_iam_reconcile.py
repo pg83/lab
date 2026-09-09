@@ -9,6 +9,7 @@ import sys
 
 
 BUCKETS = (
+    'view',
     'cas',
     'etcd',
     'geesefs',
@@ -35,9 +36,8 @@ def bucket_policy(bucket):
                     's3:ListBucketMultipartUploads',
                     's3:ListMultipartUploadParts',
                 ],
-                'Resource': [
-                    'arn:aws:s3:::*',
-                ],
+                'Resource': ([f'arn:aws:s3:::{bucket}', f'arn:aws:s3:::{bucket}/*']
+                             if bucket == 'view' else ['arn:aws:s3:::*']),
             },
             {
                 'Sid': 'WriteOwn',

@@ -1088,6 +1088,28 @@ class MolotCache:
         )
 
 
+class Artifacts:
+    def __init__(self, nebula_ip, port, upload_port, s3_endpoint):
+        self.nebula_ip = nebula_ip
+        self.port = port
+        self.upload_port = upload_port
+        self.s3_endpoint = s3_endpoint
+
+    def pkgs(self):
+        yield {'pkg': 'bin/artifacts'}
+
+    def run(self):
+        from urllib.parse import quote
+        key = quote(get_key('/s3/iam/view/key').decode().strip(), safe='')
+        secret = quote(get_key('/s3/iam/view/secret').decode().strip(), safe='')
+        scheme, host = self.s3_endpoint.split('://', 1)
+        exec_into(
+            'artifacts', '--port', self.port,
+            '--upload-bind', self.nebula_ip, '--upload-port', self.upload_port,
+            PATH='/bin', MC_HOST_view=f'{scheme}://{key}:{secret}@{host}',
+        )
+
+
 class CloudflaredTunnel:
     # Outbound-only replicas of the locally-managed Cloudflare tunnel
     # publishing molot cache over TLS+CDN. All three hosts run the same
@@ -1099,11 +1121,12 @@ class CloudflaredTunnel:
     # Routing lives here, not in the CF dashboard.
     TUNNEL_ID = '4b335fae-9cd1-40bb-9868-08deb4a23cb7'
 
-    def __init__(self, hostname, upstream_port, socks, nick):
+    def __init__(self, hostname, upstream_port, socks, nick, view_port):
         self.hostname = hostname
         self.upstream_port = upstream_port
         self.socks = socks
         self.nick = nick
+        self.view_port = view_port
 
     def name(self):
         return f'cloudflared_{self.nick}'
@@ -1119,6 +1142,11 @@ class CloudflaredTunnel:
             'tunnel': self.TUNNEL_ID,
             'credentials-file': creds_path,
             'ingress': [
+                {
+                    'hostname': 'view.homelab.cam',
+                    'path': '/view/.*',
+                    'service': f'http://127.0.0.1:{self.view_port}',
+                },
                 {
                     'hostname': self.hostname,
                     'service': f'http://127.0.0.1:{self.upstream_port}',
@@ -2541,6 +2569,12 @@ class ClusterMap:
 
             # One connector per socks exit, pinned directly to its ssh
             # tunnel port: an exit death takes down only its connector.
+            yield {
+                'host': hn,
+                'serv': Artifacts(h['nebula']['ip'], p['artifacts'], p['artifacts_upload'],
+                                  f"http://127.0.0.1:{p['minio']}"),
+            }
+
             for tun in SSH_TUNNELS:
                 k = tun['key']
 
@@ -2551,6 +2585,7 @@ class ClusterMap:
                         p['molot_cache'],
                         '127.0.0.1:' + str(p[k]),
                         k.removeprefix('ssh_').removesuffix('_tunnel'),
+                        p['artifacts'],
                     ),
                 }
 
@@ -2894,6 +2929,8 @@ def do(code):
         'ogorod_serve': 8035,
         'gofra': 8050,
         'event_http': 8053,
+        'artifacts_upload': 8055,
+        'artifacts': 8056,
     }
 
     users = {
@@ -2914,6 +2951,7 @@ def do(code):
         'event_http': 1020,
         'event_dispatch': 1022,
         'event_retry': 1025,
+        'artifacts': 2009,
         'socks_proxy': 1021,
         'ssh_cz_tunnel': 1023,
         'ssh_jopa_tunnel': 1024,
