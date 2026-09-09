@@ -1106,7 +1106,8 @@ class Artifacts:
         exec_into(
             'artifacts', '--port', self.port,
             '--upload-bind', self.nebula_ip, '--upload-port', self.upload_port,
-            PATH='/bin', MC_HOST_view=f'{scheme}://{key}:{secret}@{host}',
+            PATH='/bin', HOME=os.getcwd(), TMPDIR=os.getcwd(),
+            MC_HOST_view=f'{scheme}://{key}:{secret}@{host}',
         )
 
 
