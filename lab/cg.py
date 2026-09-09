@@ -900,6 +900,9 @@ class GornBase:
 
         return {
             'endpoints': eps,
+            # serve binds this; control takes the port off it to reach
+            # whichever host holds the election lock.
+            'serve': {'listen': self.serve_listen},
             'hosts': {
                 ep['host']: {'cpus_per_slot': CPUS_PER_SLOT}
                 for ep in self.endpoints
@@ -933,10 +936,11 @@ class GornBase:
 
 
 class Gorn(GornBase):
-    def __init__(self, endpoints, s3, etcd_endpoints):
+    def __init__(self, endpoints, s3, etcd_endpoints, serve_listen):
         self.endpoints = endpoints
         self.s3 = s3
         self.etcd_endpoints = list(etcd_endpoints)
+        self.serve_listen = serve_listen
 
     def name(self):
         return 'gorn'
@@ -949,11 +953,12 @@ class Gorn(GornBase):
 
 
 class GornCtl(GornBase):
-    def __init__(self, endpoints, s3, listen, etcd_endpoints):
+    def __init__(self, endpoints, s3, listen, etcd_endpoints, serve_listen):
         self.endpoints = endpoints
         self.s3 = s3
         self.listen = listen
         self.etcd_endpoints = list(etcd_endpoints)
+        self.serve_listen = serve_listen
 
     def name(self):
         return 'gorn_ctl'
@@ -973,11 +978,12 @@ class GornCtlNebula(GornCtl):
 
 
 class GornProm(GornBase):
-    def __init__(self, endpoints, s3, port, etcd_endpoints):
+    def __init__(self, endpoints, s3, port, etcd_endpoints, serve_listen):
         self.endpoints = endpoints
         self.s3 = s3
         self.port = port
         self.etcd_endpoints = list(etcd_endpoints)
+        self.serve_listen = serve_listen
 
     def name(self):
         return 'gorn_prom'
@@ -2533,19 +2539,23 @@ class ClusterMap:
                 'use_path_style': True,
             }
 
+            # Concrete overlay address, not a wildcard: serve campaigns
+            # under it, so the election value tells control where to dial.
+            gorn_inflight = f"{h['gofra']['ip']}:{p['gorn_inflight']}"
+
             yield {
                 'host': hn,
-                'serv': Gorn(gorn_endpoints, s3, gorn_etcd),
+                'serv': Gorn(gorn_endpoints, s3, gorn_etcd, gorn_inflight),
             }
 
             yield {
                 'host': hn,
-                'serv': GornCtl(gorn_endpoints, s3, f"127.0.0.1:{p['gorn_ctl']}", gorn_etcd),
+                'serv': GornCtl(gorn_endpoints, s3, f"127.0.0.1:{p['gorn_ctl']}", gorn_etcd, gorn_inflight),
             }
 
             yield {
                 'host': hn,
-                'serv': GornCtlNebula(gorn_endpoints, s3, f"{h['nebula']['ip']}:{p['gorn_ctl_nb']}", gorn_etcd),
+                'serv': GornCtlNebula(gorn_endpoints, s3, f"{h['nebula']['ip']}:{p['gorn_ctl_nb']}", gorn_etcd, gorn_inflight),
             }
 
             yield {
@@ -2555,7 +2565,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': GornProm(gorn_endpoints, s3, p['gorn_prom'], gorn_etcd),
+                'serv': GornProm(gorn_endpoints, s3, p['gorn_prom'], gorn_etcd, gorn_inflight),
             }
 
             yield {
@@ -2985,6 +2995,7 @@ def do(code):
     ports['gorn_web'] = 8026
     ports['gorn_ctl_nb'] = 8027
     ports['gorn_prom'] = 8028
+    ports['gorn_inflight'] = 8029
     ports['molot_web'] = 8052
     ports['molot_cache'] = 8054
 
