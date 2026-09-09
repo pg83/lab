@@ -208,8 +208,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     def reply(self, status, body=b'', content_type='text/plain; charset=utf-8', headers=None):
         self.send_response(status)
-        self.send_header('Content-Type', content_type)
-        self.send_header('Content-Length', str(len(body)))
+        if status != 304:
+            self.send_header('Content-Type', content_type)
+            self.send_header('Content-Length', str(len(body)))
         self.send_header('X-Content-Type-Options', 'nosniff')
         self.send_header('Referrer-Policy', 'no-referrer')
         self.send_header('Cache-Control', (headers or {}).get('Cache-Control', 'no-store'))
