@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Remove artifacts unused for 30 days and rebuild s3://molot/complete.
+"""Remove artifacts unused for 15 days and rebuild s3://molot/complete.
 
 Use the last request recorded in stats, or the result object's modification
 time when the uid has no stats entry. Delete the entire expired uid prefix.
@@ -21,7 +21,7 @@ import time
 SOURCE = 'minio/molot/molot/'
 DESTINATION = 'minio/molot/complete'
 STATS = 'minio/molot/stats'
-RETENTION = 30 * 24 * 60 * 60
+RETENTION = 15 * 24 * 60 * 60
 
 
 def copy_uids(lines, out, stats, cutoff):
