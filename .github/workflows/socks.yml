@@ -1,0 +1,35 @@
+name: SOCKS runners
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 */3 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: socks-runners
+  cancel-in-progress: true
+
+jobs:
+  sshd:
+    name: ${{ matrix.lab }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        lab: [lab1, lab2, lab3]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install SSH and socat
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq openssh-server socat
+
+      - name: Connect to lab
+        run: sudo python3 -u .github/s5/runner.py "${{ matrix.lab }}"
