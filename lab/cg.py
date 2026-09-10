@@ -66,6 +66,11 @@ SSH_TUNNELS = [
         'port': 22,
         'tout': 600,
     },
+    {
+        'key': 'ssh_github_tunnel',
+        'keyn': '/tunnel/ssh_github_tunnel',
+        'reverse': True,
+    },
 ]
 
 
@@ -554,6 +559,40 @@ class SshTunnel:
         ]
 
         exec_into(*args)
+
+
+class ReverseSshTunnel(SshTunnel):
+    def __init__(self, port, keyn, user, bind, ingress):
+        self.port = port
+        self.keyn = keyn
+        self._usr = user
+        self.bind = bind
+        self.ingress = ingress
+
+    def pkgs(self):
+        yield from super().pkgs()
+        yield {'pkg': 'bin/socat'}
+
+    def run(self):
+        with memfd('ssh-key') as key:
+            with open(key, 'wb') as f:
+                f.write(get_key(self.keyn))
+
+            os.chmod(key, 0o400)
+            # ssh closes fd > 2 on startup; -N leaves stdin available.
+            os.dup2(int(key.rsplit('/', 1)[1]), 0)
+            exec_into(
+                'ssh', '-N', '-D', self.port, '-i', '/proc/self/fd/0',
+                '-o', 'IdentitiesOnly=yes',
+                '-o', 'StrictHostKeyChecking=no',
+                '-o', 'UserKnownHostsFile=/dev/null',
+                '-o', 'ExitOnForwardFailure=yes',
+                '-o', 'ConnectTimeout=30',
+                '-o', 'ServerAliveInterval=15',
+                '-o', 'ServerAliveCountMax=3',
+                '-o', f'ProxyCommand=socat STDIO TCP4-LISTEN:{self.ingress},bind={self.bind},reuseaddr',
+                's5@github-runner',
+            )
 
 
 class SftpD:
@@ -2352,18 +2391,18 @@ class ClusterMap:
 
             for tun in SSH_TUNNELS:
                 k = tun['key']
+                if tun.get('reverse'):
+                    srv = ReverseSshTunnel(
+                        '127.0.0.1:' + str(p[k]), tun['keyn'], k,
+                        h['net'][0]['ip'], p['ssh_github_ingress'],
+                    )
+                else:
+                    srv = SshTunnel(
+                        '127.0.0.1:' + str(p[k]), tun['addr'], tun['keyn'],
+                        k, tun['port'], tun['tout'],
+                    )
 
-                yield {
-                    'host': hn,
-                    'serv': SshTunnel(
-                        '127.0.0.1:' + str(p[k]),
-                        tun['addr'],
-                        tun['keyn'],
-                        k,
-                        tun['port'],
-                        tun['tout'],
-                    ),
-                }
+                yield {'host': hn, 'serv': srv}
 
                 all_s5s.append('127.0.0.1:' + str(p[k]))
 
@@ -2832,6 +2871,8 @@ def do(code):
         'socks_proxy': 8015,
         'ssh_cz_tunnel': 8017,
         'ssh_jopa_tunnel': 8018,
+        'ssh_github_tunnel': 8057,
+        'ssh_github_ingress': 8058,
         'co2_mon': 8019,
         'etcd_1_client': 8020,
         'etcd_1_peer': 8021,
@@ -2873,6 +2914,7 @@ def do(code):
         'socks_proxy': 1021,
         'ssh_cz_tunnel': 1023,
         'ssh_jopa_tunnel': 1024,
+        'ssh_github_tunnel': 2003,
         'etcd_1': 2010,
         'etcd_3': 2011,
         'samogon_bot': 2004,
