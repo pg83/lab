@@ -15,7 +15,7 @@ jobs:
       - run:
           name: Connect to three labs
           no_output_timeout: 60m
-          command: python3 -u .github/s5/runner.py all --port-offset 4 --duration 3300
+          command: python3 -u .github/s5/runner.py all --port-offset 4 --duration 2400
 
 workflows:
   socks:
