@@ -68,6 +68,10 @@ SSH_TUNNELS = [
     },
 ]
 
+# Relay forwarding both TCP and UDP to a Warsaw edge; reachable from the
+# labs without the socks detour, which is what puts QUIC back on the table.
+SEAL_EDGE = '109.71.247.130:14880'
+
 
 @contextlib.contextmanager
 def memfd(name):
@@ -1124,16 +1128,21 @@ class CloudflaredTunnel:
     # TSPU strangles direct TCP to the tunnel ingest range
     # (198.41.128.0/17:7844 passes ~16KB, then dies), so the edge dial
     # goes through the ssh socks exits: bin/cloudflared is patched to
-    # honor TUNNEL_EDGE_SOCKS5. QUIC stays off: ssh -D has no UDP.
+    # honor TUNNEL_EDGE_SOCKS5. Over socks QUIC stays off, ssh -D has
+    # no UDP; replicas pinned to an unfiltered edge relay via --edge
+    # dial it directly and can run either transport.
     # Routing lives here, not in the CF dashboard.
     TUNNEL_ID = '4b335fae-9cd1-40bb-9868-08deb4a23cb7'
 
-    def __init__(self, hostname, upstream_port, socks, nick, view_port):
+    def __init__(self, hostname, upstream_port, socks, nick, view_port,
+                 edge=None, protocol='http2'):
         self.hostname = hostname
         self.upstream_port = upstream_port
         self.socks = socks
         self.nick = nick
         self.view_port = view_port
+        self.edge = edge
+        self.protocol = protocol
 
     def name(self):
         return f'cloudflared_{self.nick}'
@@ -1172,17 +1181,24 @@ class CloudflaredTunnel:
             with open(conf_path, 'w') as f:
                 f.write(self.config(creds_path))
 
-            exec_into(
+            args = [
                 'cloudflared',
                 '--config', conf_path,
                 'tunnel',
                 '--no-autoupdate',
-                '--protocol', 'http2',
+                '--protocol', self.protocol,
                 '--ha-connections', '8',
-                'run',
-                PATH='/bin',
-                TUNNEL_EDGE_SOCKS5=self.socks,
-            )
+            ]
+
+            if self.edge:
+                args += ['--edge', self.edge]
+
+            env = {'PATH': '/bin'}
+
+            if self.socks:
+                env['TUNNEL_EDGE_SOCKS5'] = self.socks
+
+            exec_into(*args, 'run', **env)
 
 
 def it_nebula_reals(lh, h, port):
@@ -2514,6 +2530,22 @@ class ClusterMap:
                         '127.0.0.1:' + str(p[k]),
                         k.removeprefix('ssh_').removesuffix('_tunnel'),
                         p['artifacts'],
+                    ),
+                }
+
+            # Socks-free replicas: the relay is unfiltered, so each
+            # transport gets its own connector and they fail apart.
+            for proto in ('http2', 'quic'):
+                yield {
+                    'host': hn,
+                    'serv': CloudflaredTunnel(
+                        'cache.homelab.cam',
+                        p['molot_cache'],
+                        None,
+                        f'seal_{proto}',
+                        p['artifacts'],
+                        edge=SEAL_EDGE,
+                        protocol=proto,
                     ),
                 }
 
