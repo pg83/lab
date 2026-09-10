@@ -14,7 +14,7 @@ https://github.com/ProtonVPN/wireguard-go/archive/8338bafb983efb9c2541eb5b68537f
 {% endblock %}
 
 {% block go_sha %}
-448f01e134c879d226ccc8bbcbe8bb41890b5130a29ff43b2f62ee5a9b93df26
+71474c026b8c446297bb81e9cb90b17f05c26c0af80b64b7be694f9682868246
 {% endblock %}
 
 {% block step_setup %}
