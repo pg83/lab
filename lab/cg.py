@@ -2995,7 +2995,7 @@ def do(code):
     ports['gorn_web'] = 8026
     ports['gorn_ctl_nb'] = 8027
     ports['gorn_prom'] = 8028
-    ports['gorn_inflight'] = 8029
+    ports['gorn_inflight'] = 8024
     ports['molot_web'] = 8052
     ports['molot_cache'] = 8054
 
