@@ -1215,73 +1215,6 @@ class CloudflaredTunnel:
             )
 
 
-SECOND_IP = '''
-set -x
-ip addr del {addr} dev eth0
-exec etcd_lock /lock/{name} -- /bin/sh -c "set -xue; ip addr add {addr} dev eth0; sleep 1000"
-'''
-
-
-class SecondIP:
-    def __init__(self, addr, etcd_endpoints):
-        self.addr = addr
-        self.etcd_endpoints = list(etcd_endpoints)
-        self.script = SECOND_IP
-
-    def name(self):
-        return 'ip_' + self.addr.replace('.', '_').replace('/', '_')
-
-    def user(self):
-        return 'root'
-
-    def pkgs(self):
-        yield {'pkg': 'bin/etcd/lock'}
-
-    def run(self):
-        s = self.script
-        s = s.replace('{addr}', self.addr)
-        s = s.replace('{name}', self.name())
-
-        with memfd('script') as fn:
-            with open(fn, 'w') as f:
-                f.write(s)
-
-            exec_into(
-                '/bin/sh', fn,
-                ETCDCTL_ENDPOINTS=','.join(self.etcd_endpoints),
-            )
-
-
-class BalancerHttp:
-    def __init__(self, port, mgmt_port, real):
-        self.port = port
-        self.mgmt_port = mgmt_port
-        self.real = real
-
-    def pkgs(self):
-        yield {
-            'pkg': 'bin/reproxy',
-        }
-
-    def prom_port(self):
-        return self.mgmt_port
-
-    def it_args(self):
-        yield 'reproxy'
-        yield f'--listen=0.0.0.0:{self.port}'
-        yield '--mgmt.enabled'
-        yield f'--mgmt.listen=127.0.0.1:{self.mgmt_port}'
-        yield '--static.enabled'
-        yield '--logger.enabled'
-        yield '--logger.stdout'
-
-        for x in self.real:
-            yield f'--static.rule={x["server"]},{x["source"]},{x["dest"]}'
-
-    def run(self):
-        exec_into(*list(self.it_args()))
-
-
 def it_nebula_reals(lh, h, port):
     yield lh['ip'], lh['port']
 
@@ -2214,7 +2147,6 @@ class ClusterMap:
         p = self.conf['ports']
 
         neb_map = {}
-        bal_map = []
         all_etc_1 = []
         all_etc_3 = []
 
@@ -2437,21 +2369,6 @@ class ClusterMap:
             yield {
                 'host': hn,
                 'serv': SecretsV2(p['secrets'], etcd_endpoints=[f"127.0.0.1:{p['etcd_1_client']}"]),
-            }
-
-            yield {
-                'host': hn,
-                'serv': BalancerHttp(p['proxy_http'], p['proxy_http_mgmt'], bal_map),
-            }
-
-            yield {
-                'host': hn,
-                'serv': SecondIP('10.0.0.32/24', etcd_endpoints=[f"127.0.0.1:{p['etcd_3_client']}"]),
-            }
-
-            yield {
-                'host': hn,
-                'serv': SecondIP('10.0.0.33/24', etcd_endpoints=[f"127.0.0.1:{p['etcd_3_client']}"]),
             }
 
             nb = h['nebula']
@@ -2730,12 +2647,6 @@ class Service:
         except AttributeError:
             return f'/home/{self.user()}'
 
-    def l7_balancer(self):
-        try:
-            yield from self.srv.l7_balancer()
-        except AttributeError:
-            pass
-
     def prom_ports(self):
         try:
             yield self.srv.prom_port()
@@ -2974,9 +2885,6 @@ def do(code):
         'ssh_cz_tunnel': 8017,
         'ssh_jopa_tunnel': 8018,
         'co2_mon': 8019,
-        'proxy_http': 8080,
-        'proxy_http_mgmt': 8081,
-        'proxy_https': 8090,
         'etcd_1_client': 8020,
         'etcd_1_peer': 8021,
         'etcd_3_client': 8042,
@@ -3002,7 +2910,6 @@ def do(code):
         'node_exporter': 1003,
         'torrent': 1004,
         'sftp_d': 1005,
-        'balancer_http': 1006,
         'git_lab': 1007,
         'h_z': 1009,
         'i_perf': 1011,
@@ -3111,19 +3018,6 @@ def do(code):
         if tail_log_key in by_addr:
             for src in hndl.iter_log_sources():
                 by_addr[tail_log_key].srv.paths.append(src['path'])
-
-        for bal in hndl.l7_balancer():
-            proto = bal['proto']
-            srv = by_addr[f'{host}:balancer_{proto}'].srv
-
-            for net in by_name[host]['net']:
-                rec = {
-                    'server': bal['server'],
-                    'source': bal['source'],
-                    'dest': 'http://' + net['ip'] + bal['dest'],
-                }
-
-                srv.real.append(rec)
 
     py_modules = list(sorted(frozenset(py_modules)))
 
