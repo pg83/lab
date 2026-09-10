@@ -70,6 +70,13 @@ SSH_TUNNELS = [
         'key': 'ssh_github_tunnel',
         'keyn': '/tunnel/ssh_github_tunnel',
         'reverse': True,
+        'ingress': 'ssh_github_ingress',
+    },
+    {
+        'key': 'ssh_circle_tunnel',
+        'keyn': '/tunnel/ssh_github_tunnel',
+        'reverse': True,
+        'ingress': 'ssh_circle_ingress',
     },
 ]
 
@@ -2394,7 +2401,7 @@ class ClusterMap:
                 if tun.get('reverse'):
                     srv = ReverseSshTunnel(
                         '127.0.0.1:' + str(p[k]), tun['keyn'], k,
-                        h['net'][0]['ip'], p['ssh_github_ingress'],
+                        h['net'][0]['ip'], p[tun['ingress']],
                     )
                 else:
                     srv = SshTunnel(
@@ -2873,6 +2880,8 @@ def do(code):
         'ssh_jopa_tunnel': 8018,
         'ssh_github_tunnel': 8057,
         'ssh_github_ingress': 8058,
+        'ssh_circle_tunnel': 8061,
+        'ssh_circle_ingress': 8062,
         'co2_mon': 8019,
         'etcd_1_client': 8020,
         'etcd_1_peer': 8021,
@@ -2915,6 +2924,7 @@ def do(code):
         'ssh_cz_tunnel': 1023,
         'ssh_jopa_tunnel': 1024,
         'ssh_github_tunnel': 2003,
+        'ssh_circle_tunnel': 2012,
         'etcd_1': 2010,
         'etcd_3': 2011,
         'samogon_bot': 2004,

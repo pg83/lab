@@ -91,22 +91,29 @@ async def connect(name, host, port, config):
         await asyncio.sleep(5)
 
 
-async def run(config, lab):
+async def run(config, lab, port_offset=0, duration=0):
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, stop.set)
 
     async with asyncio.TaskGroup() as group:
-        host, port = LABS[lab]
-        task = group.create_task(connect(lab, host, port, config))
-        await stop.wait()
-        task.cancel()
+        labs = LABS if lab == 'all' else {lab: LABS[lab]}
+        tasks = [group.create_task(connect(name, host, port + port_offset, config))
+                 for name, (host, port) in labs.items()]
+        with contextlib.suppress(asyncio.TimeoutError):
+            await asyncio.wait_for(stop.wait(), timeout=duration or None)
+        for task in tasks:
+            task.cancel()
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Connect one lab to this runner over SSH.')
-    parser.add_argument('lab', choices=LABS)
+    parser = argparse.ArgumentParser(description='Connect labs to this runner over SSH.')
+    parser.add_argument('lab', choices=[*LABS, 'all'])
+    parser.add_argument('--port-offset', type=int, default=0)
+    parser.add_argument('--duration', type=int, default=0, help='Stop after this many seconds; 0 runs until cancelled.')
     args = parser.parse_args()
+    if args.duration < 0 or any(not 1 <= port + args.port_offset <= 65535 for _, port in LABS.values()):
+        parser.error('invalid duration or port offset')
     with tempfile.TemporaryDirectory(prefix='s5-') as directory:
-        asyncio.run(run(setup(Path(directory)), args.lab))
+        asyncio.run(run(setup(Path(directory)), args.lab, args.port_offset, args.duration))
