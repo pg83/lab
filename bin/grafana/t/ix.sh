@@ -13,7 +13,7 @@ https://github.com/grafana/grafana/archive/refs/tags/v{{self.version().strip()}}
 {% endblock %}
 
 {% block go_sha %}
-cf8e1f22704605a25b79629691cbeaa3124cd474167eca4c9665b1301b5a1a84
+d045ab7d0eadd902da01841e8f93a23587b3a8c006aa52c0a54094dd512ffede
 {% endblock %}
 
 {% block go_tool %}
