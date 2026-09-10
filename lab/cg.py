@@ -1117,6 +1117,36 @@ class Artifacts:
         )
 
 
+class ProtonStealth:
+    def __init__(self, port, keyn, endpoint, nick='nl'):
+        self.port = port
+        self.keyn = keyn
+        self.endpoint = endpoint
+        self.nick = nick
+
+    def name(self):
+        return f'proton_stealth_{self.nick}'
+
+    def user(self):
+        # The binary creates its own netns and TUN, then reexecs in place.
+        return 'root'
+
+    def pkgs(self):
+        yield {'pkg': 'bin/proton/stealth'}
+
+    def run(self):
+        with memfd('proton.conf') as conf:
+            with open(conf, 'wb') as f:
+                f.write(get_key(self.keyn))
+            exec_into(
+                'proton-stealth',
+                '-config', conf,
+                '-endpoint', self.endpoint,
+                '-socks', f'127.0.0.1:{self.port}',
+                PATH='/bin',
+            )
+
+
 class CloudflaredTunnel:
     # Outbound-only replicas of the locally-managed Cloudflare tunnel
     # publishing molot cache over TLS+CDN. All three hosts run the same
@@ -2433,6 +2463,16 @@ class ClusterMap:
 
             all_s5s = []
 
+            if hn == 'lab1':
+                yield {
+                    'host': hn,
+                    'serv': ProtonStealth(
+                        p['proton_stealth'],
+                        '/proton/stealth/nl-free-243',
+                        '185.185.50.91:443',
+                    ),
+                }
+
             for tun in SSH_TUNNELS:
                 k = tun['key']
 
@@ -2596,6 +2636,18 @@ class ClusterMap:
                         p['molot_cache'],
                         '127.0.0.1:' + str(p[k]),
                         k.removeprefix('ssh_').removesuffix('_tunnel'),
+                        p['artifacts'],
+                    ),
+                }
+
+            if hn == 'lab1':
+                yield {
+                    'host': hn,
+                    'serv': CloudflaredTunnel(
+                        'cache.homelab.cam',
+                        p['molot_cache'],
+                        '127.0.0.1:' + str(p['proton_stealth']),
+                        'proton_nl',
                         p['artifacts'],
                     ),
                 }
@@ -2942,6 +2994,7 @@ def do(code):
         'event_http': 8053,
         'artifacts_upload': 8055,
         'artifacts': 8056,
+        'proton_stealth': 8057,
     }
 
     users = {
