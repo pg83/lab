@@ -10,6 +10,7 @@ cat << EOF > ${out}/etc/hosts.d/01-locals
 {{x.ip}} {{x.hostname}}
 {{x.nebula.ip}} {{x.hostname}}.nebula
 {{x.gofra.ip}} {{x.gofra.hostname}}
+{{x.mesh.ip}} {{x.mesh.hostname}}
 {% for h in x.net %}
 {{h.ip}} {{x.hostname}}.{{h.if}}
 {% endfor %}

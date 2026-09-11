@@ -393,6 +393,40 @@ class NebulaLh(Nebula):
         return cfg
 
 
+class Mesh:
+    def __init__(self, host, peers):
+        self.host = host
+        self.peers = peers
+
+    def user(self):
+        return 'root'
+
+    def pkgs(self):
+        yield {'pkg': 'bin/mesh'}
+
+    def config(self):
+        keys = json.loads(get_key('/mesh/registry'))
+
+        return {
+            'index': self.peers[self.host]['index'],
+            'key': get_key(f'/mesh/{self.host}.key').decode().strip(),
+            'subnet': '192.168.104.0/24',
+            'tun': 'mesh0',
+            'status': '/var/run/mesh/status.sock',
+            'registry': [
+                dict(peer, pub=keys[host]['pub'], sig=keys[host]['sig'])
+                for host, peer in self.peers.items()
+            ],
+        }
+
+    def run(self):
+        with memfd('mesh.json') as conf:
+            with open(conf, 'w') as f:
+                json.dump(self.config(), f)
+
+            exec_into('mesh', 'run', '-c', conf)
+
+
 class Gofra:
     # Multipath UDP encap. Overlay 192.168.103.0/24, TUN gofra0.
     def __init__(self, host, port, hosts, vip):
@@ -2138,12 +2172,21 @@ class ClusterMap:
 
         # gofra peer table: VIP → underlay IPs. 103/24 prod overlay.
         gofra_hosts = {}
+        mesh_hosts = {}
 
         for hn in ['lab1', 'lab2', 'lab3']:
             h = self.conf['by_host'][hn]
             n = int(hn[-1])
             underlay = [net['ip'] for net in h['net']]
             gofra_hosts[f'192.168.103.{15 + n}'] = underlay
+            mesh_hosts[hn] = {
+                'index': n,
+                'intip': h['mesh']['ip'],
+                'endpoint': [
+                    {'proto': 'udp', 'addr': addr, 'port': p['mesh']}
+                    for addr in underlay + [h['gofra']['ip']]
+                ],
+            }
 
         for hn in ['lab1', 'lab2', 'lab3']:
             h = self.conf['by_host'][hn]
@@ -2416,6 +2459,11 @@ class ClusterMap:
             yield {
                 'host': hn,
                 'serv': Gofra(hn, p['gofra'], gofra_hosts, h['gofra']['ip'] + '/24'),
+            }
+
+            yield {
+                'host': hn,
+                'serv': Mesh(hn, mesh_hosts),
             }
 
             if lh := h.get('nebula', {}).get('lh', None):
@@ -2778,6 +2826,10 @@ def gen_host(n):
     return {
         'disabled': ['dhcpcd'],
         'hostname': f'lab{n}',
+        'mesh': {
+            'hostname': f'lab{n}.mesh',
+            'ip': f'192.168.104.{15 + n}',
+        },
         'nebula': {
             'hostname': f'lab{n}.nebula',
             'ip': '192.168.100.' + str(15 + n),
@@ -2879,6 +2931,7 @@ def do(code):
         'tail_log': 8040,
         'ogorod_serve': 8035,
         'gofra': 8050,
+        'mesh': 8057,
         'event_http': 8053,
         'artifacts_upload': 8055,
         'artifacts': 8056,
