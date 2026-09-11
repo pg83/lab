@@ -121,7 +121,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gofra,runsh_script=sha256:04eb0f52b378cdf9,srv_user=root,extra_deps=YmluL2dvZnJhLzIKYmluL3NjaGVkL2h1Z2VwYWdlcyhkZWxheT0xMCk=)",
                 "bin/mesh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=mesh,runsh_script=sha256:8308375b37d00f62,srv_user=root,extra_deps=YmluL21lc2g=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=mesh,runsh_script=sha256:01d71880c03a7fdf,srv_user=root,extra_deps=YmluL21lc2g=)",
                 "bin/nebula/daemon(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=nebula_lh)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=nebula_lh,runsh_script=sha256:c8779ed0a11dd237,srv_user=nebula_lh,extra_deps=YmluL25lYnVsYS9kYWVtb24=)",
@@ -279,7 +279,7 @@
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=cloudflared)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cloudflared_seal_quic,runsh_script=sha256:08f62e71590a642c,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:8887769edfff3e18)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:bbefc1c3989add54)"
             ],
             "gofra": {
                 "hostname": "lab1.gofra",
@@ -449,7 +449,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gofra,runsh_script=sha256:b195d625ec087542,srv_user=root,extra_deps=YmluL2dvZnJhLzIKYmluL3NjaGVkL2h1Z2VwYWdlcyhkZWxheT0xMCk=)",
                 "bin/mesh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=mesh,runsh_script=sha256:c5c26852cc40a810,srv_user=root,extra_deps=YmluL21lc2g=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=mesh,runsh_script=sha256:c2c198ece2504633,srv_user=root,extra_deps=YmluL21lc2g=)",
                 "bin/nebula/daemon(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=nebula_lh)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=nebula_lh,runsh_script=sha256:fbd970609296eb60,srv_user=nebula_lh,extra_deps=YmluL25lYnVsYS9kYWVtb24=)",
@@ -597,7 +597,7 @@
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=cloudflared)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cloudflared_seal_quic,runsh_script=sha256:08f62e71590a642c,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:8887769edfff3e18)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:bbefc1c3989add54)"
             ],
             "gofra": {
                 "hostname": "lab2.gofra",
@@ -767,7 +767,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gofra,runsh_script=sha256:8203cca6a429cb55,srv_user=root,extra_deps=YmluL2dvZnJhLzIKYmluL3NjaGVkL2h1Z2VwYWdlcyhkZWxheT0xMCk=)",
                 "bin/mesh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=mesh,runsh_script=sha256:45536f63549f290a,srv_user=root,extra_deps=YmluL21lc2g=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=mesh,runsh_script=sha256:2ad476d4423b6b84,srv_user=root,extra_deps=YmluL21lc2g=)",
                 "bin/nebula/daemon(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=nebula_lh)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=nebula_lh,runsh_script=sha256:d8b5cc7fc985aba8,srv_user=nebula_lh,extra_deps=YmluL25lYnVsYS9kYWVtb24=)",
@@ -885,7 +885,7 @@
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=cloudflared)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cloudflared_seal_quic,runsh_script=sha256:08f62e71590a642c,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:8887769edfff3e18)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:bbefc1c3989add54)"
             ],
             "gofra": {
                 "hostname": "lab3.gofra",
@@ -1057,7 +1057,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gofra,runsh_script=sha256:04eb0f52b378cdf9,srv_user=root,extra_deps=YmluL2dvZnJhLzIKYmluL3NjaGVkL2h1Z2VwYWdlcyhkZWxheT0xMCk=)",
                 "bin/mesh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=mesh,runsh_script=sha256:8308375b37d00f62,srv_user=root,extra_deps=YmluL21lc2g=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=mesh,runsh_script=sha256:01d71880c03a7fdf,srv_user=root,extra_deps=YmluL21lc2g=)",
                 "bin/nebula/daemon(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=nebula_lh)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=nebula_lh,runsh_script=sha256:c8779ed0a11dd237,srv_user=nebula_lh,extra_deps=YmluL25lYnVsYS9kYWVtb24=)",
@@ -1215,7 +1215,7 @@
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=cloudflared)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cloudflared_seal_quic,runsh_script=sha256:08f62e71590a642c,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:8887769edfff3e18)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:bbefc1c3989add54)"
             ],
             "gofra": {
                 "hostname": "lab1.gofra",
@@ -1385,7 +1385,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gofra,runsh_script=sha256:b195d625ec087542,srv_user=root,extra_deps=YmluL2dvZnJhLzIKYmluL3NjaGVkL2h1Z2VwYWdlcyhkZWxheT0xMCk=)",
                 "bin/mesh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=mesh,runsh_script=sha256:c5c26852cc40a810,srv_user=root,extra_deps=YmluL21lc2g=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=mesh,runsh_script=sha256:c2c198ece2504633,srv_user=root,extra_deps=YmluL21lc2g=)",
                 "bin/nebula/daemon(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=nebula_lh)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=nebula_lh,runsh_script=sha256:fbd970609296eb60,srv_user=nebula_lh,extra_deps=YmluL25lYnVsYS9kYWVtb24=)",
@@ -1533,7 +1533,7 @@
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=cloudflared)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cloudflared_seal_quic,runsh_script=sha256:08f62e71590a642c,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:8887769edfff3e18)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:bbefc1c3989add54)"
             ],
             "gofra": {
                 "hostname": "lab2.gofra",
@@ -1703,7 +1703,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=gofra,runsh_script=sha256:8203cca6a429cb55,srv_user=root,extra_deps=YmluL2dvZnJhLzIKYmluL3NjaGVkL2h1Z2VwYWdlcyhkZWxheT0xMCk=)",
                 "bin/mesh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=mesh,runsh_script=sha256:45536f63549f290a,srv_user=root,extra_deps=YmluL21lc2g=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=mesh,runsh_script=sha256:2ad476d4423b6b84,srv_user=root,extra_deps=YmluL21lc2g=)",
                 "bin/nebula/daemon(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=nebula_lh)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=nebula_lh,runsh_script=sha256:d8b5cc7fc985aba8,srv_user=nebula_lh,extra_deps=YmluL25lYnVsYS9kYWVtb24=)",
@@ -1821,7 +1821,7 @@
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=cloudflared)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cloudflared_seal_quic,runsh_script=sha256:08f62e71590a642c,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:8887769edfff3e18)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:bbefc1c3989add54)"
             ],
             "gofra": {
                 "hostname": "lab3.gofra",

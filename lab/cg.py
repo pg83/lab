@@ -72,6 +72,12 @@ SSH_TUNNELS = [
 # labs without the socks detour, which is what puts QUIC back on the table.
 SEAL_EDGE = '109.71.247.130:14880'
 
+MESH_HOSTS = [
+    'home ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIL2LO6DTXKzm7TDERJPj64WemRc6rrcAzNelywzTdGjH pg@stalix',
+    'mini ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOR+Eb+hIcvatbPs/OtGW6cqcHIhGx5vrrxOelsDti09 pg@SamokhvlovsMini',
+    'work ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJXSN89veSBcurZJq1gZGynE/uzCj5a5J/1oFVi+YnqO pg@pg-osx',
+]
+
 
 @contextlib.contextmanager
 def memfd(name):
@@ -406,6 +412,13 @@ class Mesh:
 
     def config(self):
         keys = json.loads(get_key('/mesh/registry'))
+        registry = []
+
+        for host, peer in self.peers.items():
+            if 'pub' not in peer:
+                peer = dict(peer, **keys[host])
+
+            registry.append(peer)
 
         return {
             'index': self.peers[self.host]['index'],
@@ -413,10 +426,7 @@ class Mesh:
             'subnet': '192.168.104.0/24',
             'tun': 'mesh0',
             'status': '/var/run/mesh/status.sock',
-            'registry': [
-                dict(peer, pub=keys[host]['pub'], sig=keys[host]['sig'])
-                for host, peer in self.peers.items()
-            ],
+            'registry': registry,
         }
 
     def run(self):
@@ -2186,6 +2196,15 @@ class ClusterMap:
                     {'proto': 'udp', 'addr': addr, 'port': p['mesh']}
                     for addr in underlay + [h['gofra']['ip']]
                 ],
+            }
+
+        for index, line in enumerate(MESH_HOSTS, 64):
+            host, pub = line.split(' ', 1)
+            mesh_hosts[host] = {
+                'index': index,
+                'pub': pub,
+                'intip': f'192.168.104.{index}',
+                'endpoint': [],
             }
 
         for hn in ['lab1', 'lab2', 'lab3']:
