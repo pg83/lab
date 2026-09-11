@@ -22,7 +22,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio_console,runsh_script=sha256:4ae39edcdd7c28cc,srv_user=minio_console,extra_deps=YmluL21pbmlvL2NvbnNvbGU=)",
                 "bin/dropbear/2024(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=drop_bear_2,runsh_script=sha256:e2c65f1997945ae0,srv_user=root,extra_deps=YmluL2Ryb3BiZWFyLzIwMjQ=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=drop_bear_2,runsh_script=sha256:f54e5e6effead407,srv_user=root,extra_deps=YmluL2Ryb3BiZWFyLzIwMjQ=)",
                 "bin/sftp/go/patched(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=sftp_d)",
@@ -279,7 +279,7 @@
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=cloudflared)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cloudflared_seal_quic,runsh_script=sha256:08f62e71590a642c,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:bbefc1c3989add54)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:9f688d453da06e50)"
             ],
             "gofra": {
                 "hostname": "lab1.gofra",
@@ -350,7 +350,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio_console,runsh_script=sha256:1c02c27ca1dddb06,srv_user=minio_console,extra_deps=YmluL21pbmlvL2NvbnNvbGU=)",
                 "bin/dropbear/2024(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=drop_bear_2,runsh_script=sha256:e2c65f1997945ae0,srv_user=root,extra_deps=YmluL2Ryb3BiZWFyLzIwMjQ=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=drop_bear_2,runsh_script=sha256:e48aff8fc5b4e733,srv_user=root,extra_deps=YmluL2Ryb3BiZWFyLzIwMjQ=)",
                 "bin/sftp/go/patched(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=sftp_d)",
@@ -597,7 +597,7 @@
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=cloudflared)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cloudflared_seal_quic,runsh_script=sha256:08f62e71590a642c,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:bbefc1c3989add54)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:9f688d453da06e50)"
             ],
             "gofra": {
                 "hostname": "lab2.gofra",
@@ -668,7 +668,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio_console,runsh_script=sha256:7769f156bdd6075b,srv_user=minio_console,extra_deps=YmluL21pbmlvL2NvbnNvbGU=)",
                 "bin/dropbear/2024(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=drop_bear_2,runsh_script=sha256:e2c65f1997945ae0,srv_user=root,extra_deps=YmluL2Ryb3BiZWFyLzIwMjQ=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=drop_bear_2,runsh_script=sha256:598d2cab60dbdb12,srv_user=root,extra_deps=YmluL2Ryb3BiZWFyLzIwMjQ=)",
                 "bin/sftp/go/patched(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=sftp_d)",
@@ -885,7 +885,7 @@
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=cloudflared)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cloudflared_seal_quic,runsh_script=sha256:08f62e71590a642c,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:bbefc1c3989add54)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:9f688d453da06e50)"
             ],
             "gofra": {
                 "hostname": "lab3.gofra",
@@ -958,7 +958,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio_console,runsh_script=sha256:4ae39edcdd7c28cc,srv_user=minio_console,extra_deps=YmluL21pbmlvL2NvbnNvbGU=)",
                 "bin/dropbear/2024(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=drop_bear_2,runsh_script=sha256:e2c65f1997945ae0,srv_user=root,extra_deps=YmluL2Ryb3BiZWFyLzIwMjQ=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=drop_bear_2,runsh_script=sha256:f54e5e6effead407,srv_user=root,extra_deps=YmluL2Ryb3BiZWFyLzIwMjQ=)",
                 "bin/sftp/go/patched(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=sftp_d)",
@@ -1215,7 +1215,7 @@
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=cloudflared)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cloudflared_seal_quic,runsh_script=sha256:08f62e71590a642c,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:bbefc1c3989add54)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:9f688d453da06e50)"
             ],
             "gofra": {
                 "hostname": "lab1.gofra",
@@ -1286,7 +1286,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio_console,runsh_script=sha256:1c02c27ca1dddb06,srv_user=minio_console,extra_deps=YmluL21pbmlvL2NvbnNvbGU=)",
                 "bin/dropbear/2024(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=drop_bear_2,runsh_script=sha256:e2c65f1997945ae0,srv_user=root,extra_deps=YmluL2Ryb3BiZWFyLzIwMjQ=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=drop_bear_2,runsh_script=sha256:e48aff8fc5b4e733,srv_user=root,extra_deps=YmluL2Ryb3BiZWFyLzIwMjQ=)",
                 "bin/sftp/go/patched(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=sftp_d)",
@@ -1533,7 +1533,7 @@
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=cloudflared)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cloudflared_seal_quic,runsh_script=sha256:08f62e71590a642c,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:bbefc1c3989add54)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:9f688d453da06e50)"
             ],
             "gofra": {
                 "hostname": "lab2.gofra",
@@ -1604,7 +1604,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio_console,runsh_script=sha256:7769f156bdd6075b,srv_user=minio_console,extra_deps=YmluL21pbmlvL2NvbnNvbGU=)",
                 "bin/dropbear/2024(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=drop_bear_2,runsh_script=sha256:e2c65f1997945ae0,srv_user=root,extra_deps=YmluL2Ryb3BiZWFyLzIwMjQ=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=drop_bear_2,runsh_script=sha256:598d2cab60dbdb12,srv_user=root,extra_deps=YmluL2Ryb3BiZWFyLzIwMjQ=)",
                 "bin/sftp/go/patched(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=sftp_d)",
@@ -1821,7 +1821,7 @@
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=cloudflared)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cloudflared_seal_quic,runsh_script=sha256:08f62e71590a642c,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:bbefc1c3989add54)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:9f688d453da06e50)"
             ],
             "gofra": {
                 "hostname": "lab3.gofra",
@@ -1937,7 +1937,6 @@
         "ssh_cz_tunnel": 8017,
         "ssh_jopa_tunnel": 8018,
         "sshd": 22,
-        "sshd_rec": 8023,
         "tail_log": 8040,
         "torrent_webui": 8000
     },

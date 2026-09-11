@@ -802,8 +802,7 @@ class DropBear:
 
 
 class DropBear2(DropBear):
-    def __init__(self, port):
-        DropBear.__init__(self, '0.0.0.0', port)
+    pass
 
 
 class GornSsh:
@@ -2292,7 +2291,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': DropBear2(p['sshd_rec']),
+                'serv': DropBear2(h['mesh']['ip'], p['sshd']),
             }
 
             yield {
@@ -2941,7 +2940,6 @@ def do(code):
         'etcd_3_client': 8042,
         'etcd_3_peer': 8043,
         'secrets': 8022,
-        'sshd_rec': 8023,
         'grafana': 8029,
         'federator': 8030,
         'samogon': 8031,
