@@ -416,7 +416,7 @@ class Mesh:
 
         for host, peer in self.peers.items():
             if 'pub' not in peer:
-                peer = dict(peer, **keys[host])
+                peer = dict(peer, pub=keys[host]['pub'])
 
             registry.append(peer)
 
