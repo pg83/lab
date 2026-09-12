@@ -8,7 +8,7 @@ HTTP readback. Intended as a loki-independent way to see what
 happened on each host when loki's ring is split.
 
 Argv:
-    1. bind host (nebula IP)
+    1. bind host (mesh IP)
     2. listen port
     3..N. paths to tail -F
 

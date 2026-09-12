@@ -6,7 +6,7 @@ computed by the upload server. No listing, mutable aliases, or deletion API.
 
 ## Publish
 
-Put `index.html` at the ZIP root; use relative asset URLs. Upload from Nebula:
+Put `index.html` at the ZIP root; use relative asset URLs. Upload from mesh:
 
 ```sh
 cd site
@@ -23,7 +23,7 @@ of the hash; independently repacked ZIPs need not have the same hash.
 
 `GET /view/<sha>/` serves `index.html`; nested paths read individual ZIP
 members without extraction. `/view/<sha>` redirects to its trailing-slash
-form so relative links work. Direct Nebula reads work on port 8055 too.
+form so relative links work. Direct mesh reads work on port 8055 too.
 Port 8056 listens only on loopback and is the Cloudflare tunnel origin.
 Only `/view/.*` is routed publicly; the upload API is not exposed.
 

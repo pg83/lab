@@ -1,3 +1,5 @@
+> Historical investigation. The Nebula service has been removed; current access uses mesh on 192.168.100.0/24.
+
 # gorn endpoint IP concentration (build/dispatch ingress)
 
 Observed 2026-04-24 after investigating a nebula packet-drop burst
@@ -27,7 +29,7 @@ and that's a single NIC per host.
 Every gorn endpoint is registered with **one** destination IP:
 
 ```
-$ curl -s http://lab1.nebula:8027/v1/endpoints | jq '[.endpoints[].host] | group_by(.) | map({ip:.[0], n:length})'
+$ curl -s http://lab1.mesh:8027/v1/endpoints | jq '[.endpoints[].host] | group_by(.) | map({ip:.[0], n:length})'
 [ {ip:"192.168.100.16", n:22},
   {ip:"192.168.100.17", n:20},
   {ip:"192.168.100.18", n:14} ]

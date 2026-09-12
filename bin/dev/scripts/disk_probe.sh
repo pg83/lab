@@ -12,7 +12,7 @@
 #   ./disk_probe.sh                 # default hosts lab1 lab2 lab3
 #   ./disk_probe.sh lab3            # single host
 #
-# Assumes key-based ssh as root@<host>.nebula works.
+# Assumes key-based ssh as root@<host>.mesh works.
 
 set -eu
 
@@ -25,7 +25,7 @@ fi
 for h in $HOSTS; do
     printf '\n====================  %s  ====================\n' "$h"
 
-    ssh -o ConnectTimeout=5 "root@${h}.nebula" '
+    ssh -o ConnectTimeout=5 "root@${h}.mesh" '
         set -u
 
         echo

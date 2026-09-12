@@ -17,7 +17,7 @@ exec timeout -s KILL 10s sh -c '
         fi
     }
 
-    for dev in gofra0 nebula1; do
+    for dev in gofra0 mesh0; do
         [ -d "/sys/class/net/$dev" ] || continue
 
         printf "dev=%s dir=rx bytes=%s packets=%s errors=%s dropped=%s missed=%s mcast=%s\n" \

@@ -206,197 +206,8 @@ class Collector:
             exec_into(*args)
 
 
-NEBULA = {
-    'punchy': {
-        'punch': True,
-    },
-    'relay': {
-        'am_relay': False,
-        'use_relays': False,
-    },
-    'logging': {
-        'level': 'info',
-        'format': 'text',
-    },
-    'firewall': {
-        'outbound_action': 'drop',
-        'inbound_action': 'drop',
-        'conntrack': {
-            'tcp_timeout': '12m',
-            'udp_timeout': '3m',
-            'default_timeout': '10m',
-        },
-        'outbound': [
-            {
-                'port': 'any',
-                'proto': 'any',
-                'host': 'any',
-            },
-        ],
-        'inbound': [
-            {
-                'port': 'any',
-                'proto': 'any',
-                'host': 'any',
-            },
-        ],
-    },
-    'stats': {
-        'type': 'prometheus',
-        'path': '/metrics',
-        'namespace': 'nebula',
-        'subsystem': 'nebula',
-        'interval': '10s',
-        'message_metrics': True,
-        'lighthouse_metrics': True,
-    },
-}
-
-
 def get_key(k):
     return ur.urlopen('http://localhost:8022' + k).read()
-
-
-class Nebula:
-    def pkgs(self):
-        yield {
-            'pkg': 'bin/nebula/daemon',
-        }
-
-    def run(self):
-        with multi(memfd("conf"), memfd("ca"), memfd("cert"), memfd("key")) as (conf, ca, cert, key):
-            cfg = self.config()
-
-            cfg['static_host_map'] = self.smap
-
-            # 8MB sock bufs need net.core.{r,w}mem_max≥8M or clamps silently.
-            cfg['listen'] = {
-                'host': '0.0.0.0',
-                'port': self.port,
-                'read_buffer': 8 * 1024 * 1024,
-                'write_buffer': 8 * 1024 * 1024,
-                'routines': 2,
-                'batch': 128,
-            }
-
-            cfg['pki'] = {
-                'ca': ca,
-                'cert': cert,
-                'key': key,
-            }
-
-            cfg['stats']['listen'] = '127.0.0.1:' + str(self.prom_port())
-
-            with open(conf, "w") as f:
-                f.write(json.dumps(cfg, indent=4, sort_keys=True))
-
-            with open(ca, 'wb') as f:
-                f.write(get_key('/nebula/ca.crt'))
-
-            with open(cert, 'wb') as f:
-                f.write(get_key(f'/nebula/{self.host}.crt'))
-
-            with open(key, 'wb') as f:
-                f.write(get_key(f'/nebula/{self.host}.key'))
-
-            exec_into('nebula', '--config', conf)
-
-
-class NebulaNode(Nebula):
-    def __init__(self, host, port, smap, prom, advr, self_vip):
-        self.host = host
-        self.port = port
-        self.smap = smap
-        self.prom = prom
-        self.advr = advr
-        self.self_vip = self_vip
-
-    def run(self):
-        # Strip self-entry; run-time filter so smap is fully populated.
-        self.smap = {k: v for k, v in self.smap.items() if k != self.self_vip}
-        super().run()
-
-    def prom_port(self):
-        return self.prom
-
-    def user(self):
-        return 'root'
-
-    def iter_upnp(self):
-        for h, p, ep in self.iter_upnp_3():
-            yield {
-                'addr': h,
-                'port': p,
-                'ext_port': ep,
-                'proto': 'UDP',
-            }
-
-    def iter_upnp_3(self):
-        for r in self.advr:
-            h, p = r.split(':')
-
-            yield (h, int(p), int(p) + int(h.split('.')[-1]))
-
-    def extra_advr(self):
-        return [f'5.188.103.251:{ep}' for h, p, ep in self.iter_upnp_3()]
-
-    def config(self):
-        cfg = json.loads(json.dumps(NEBULA))
-
-        cfg['tun'] = {
-            'disabled': False,
-            'dev': 'nebula0',
-            'drop_local_broadcast': False,
-            'drop_multicast': False,
-            'tx_queue': 500,
-            'mtu': 1300,
-        }
-
-        cfg['lighthouse'] = {
-            'am_lighthouse': False,
-            'interval': 60,
-            'hosts': list(self.smap.keys()),
-            'advertise_addrs': self.advr + self.extra_advr(),
-        }
-
-        return cfg
-
-
-class NebulaLh(Nebula):
-    def __init__(self, host, port, smap, prom, pmap):
-        self.host = host
-        self.port = port
-        self.smap = smap
-        self.prom = prom
-        self.pmap = pmap
-
-    def iter_upnp_3(self):
-        yield self.pmap
-
-    def iter_upnp(self):
-        for h, p, ep in self.iter_upnp_3():
-            yield {
-                'addr': h,
-                'port': p,
-                'ext_port': ep,
-                'proto': 'UDP',
-            }
-
-    def prom_port(self):
-        return self.prom;
-
-    def config(self):
-        cfg = json.loads(json.dumps(NEBULA))
-
-        cfg['tun'] = {
-            'disabled': True,
-        }
-
-        cfg['lighthouse'] = {
-            'am_lighthouse': True,
-        }
-
-        return cfg
 
 
 class Mesh:
@@ -423,13 +234,17 @@ class Mesh:
         return {
             'index': self.peers[self.host]['index'],
             'key': get_key(f'/mesh/{self.host}.key').decode().strip(),
-            'subnet': '192.168.104.0/24',
+            'subnet': '192.168.100.0/24',
             'tun': 'mesh0',
             'status': '/var/run/mesh/status.sock',
             'registry': registry,
         }
 
     def run(self):
+        # The TUN persists across restarts; replace the previous address set.
+        if os.path.exists('/sys/class/net/mesh0'):
+            subprocess.run(['ip', '-f', 'inet', 'addr', 'flush', 'dev', 'mesh0'], check=True)
+
         with memfd('mesh.json') as conf:
             with open(conf, 'w') as f:
                 json.dump(self.config(), f)
@@ -1019,9 +834,9 @@ class GornCtl(GornBase):
         return cfg
 
 
-class GornCtlNebula(GornCtl):
+class GornCtlMesh(GornCtl):
     def name(self):
-        return 'gorn_ctl_nb'
+        return 'gorn_ctl_mesh'
 
 
 class GornProm(GornBase):
@@ -1076,7 +891,7 @@ class GornWeb:
 
 
 class MolotWeb:
-    # Per-run ledger browser. One per host; reach via <host>.nebula:port.
+    # Per-run ledger browser. One per host; reach via <host>.mesh:port.
     def __init__(self, listen, gorn_api, s3_endpoint, s3_bucket):
         self.listen = listen
         self.gorn_api = gorn_api
@@ -1142,8 +957,8 @@ class MolotCache:
 
 
 class Artifacts:
-    def __init__(self, nebula_ip, port, upload_port, s3_endpoint):
-        self.nebula_ip = nebula_ip
+    def __init__(self, bind_addr, port, upload_port, s3_endpoint):
+        self.bind_addr = bind_addr
         self.port = port
         self.upload_port = upload_port
         self.s3_endpoint = s3_endpoint
@@ -1158,7 +973,7 @@ class Artifacts:
         scheme, host = self.s3_endpoint.split('://', 1)
         exec_into(
             'artifacts', '--port', self.port,
-            '--upload-bind', self.nebula_ip, '--upload-port', self.upload_port,
+            '--upload-bind', self.bind_addr, '--upload-port', self.upload_port,
             PATH='/bin', HOME=os.getcwd(), TMPDIR=os.getcwd(),
             MC_HOST_view=f'{scheme}://{key}:{secret}@{host}',
         )
@@ -1242,13 +1057,6 @@ class CloudflaredTunnel:
                 env['TUNNEL_EDGE_SOCKS5'] = self.socks
 
             exec_into(*args, 'run', **env)
-
-
-def it_nebula_reals(lh, h, port):
-    yield lh['ip'], lh['port']
-
-    for n in h['net']:
-        yield n['ip'], port
 
 
 class EtcdPrivate:
@@ -1540,7 +1348,7 @@ class Grafana:
 
         return (
             '[server]\n'
-            # 0.0.0.0: nebula-only bind broke local scrape (see Federator).
+            # 0.0.0.0: overlay-only bind broke local scrape (see Federator).
             'http_addr = 0.0.0.0\n'
             f'http_port = {self.port}\n'
             '[paths]\n'
@@ -1921,7 +1729,7 @@ class Loki:
             },
             'distributor': {
                 'rate_store': {
-                    # 2s absorbs nebula jitter; default 500ms times out.
+                    # 2s absorbs network jitter; default 500ms times out.
                     'ingester_request_timeout': '2s',
                 },
             },
@@ -2024,10 +1832,10 @@ class TailLog:
         'syslogd',
     )
 
-    def __init__(self, port, me, me_nebula_ip):
+    def __init__(self, port, me, bind_addr):
         self.port = port
         self.me = me
-        self.me_nebula_ip = me_nebula_ip
+        self.bind_addr = bind_addr
         self.paths = []
 
     def name(self):
@@ -2050,7 +1858,7 @@ class TailLog:
     def run(self):
         exec_into(
             'ix_tail_log',
-            self.me_nebula_ip,
+            self.bind_addr,
             str(self.port),
             *sorted(set(self.paths)),
         )
@@ -2116,8 +1924,8 @@ class OgorodServe:
 
 
 class SecretsV2:
-    # Git-shipped encrypted store + etcd fallback. Static keys (nebula
-    # certs, master tokens) come from the encrypted file; everything
+    # Git-shipped encrypted store + etcd fallback. Static keys and
+    # master tokens come from the encrypted file; everything
     # else (per-bucket S3 IAM creds reconciled by minio_iam_reconcile,
     # /tunnel/*, etc.) falls through to etcdctl get against etcd_1.
     # Passphrase from /master.key in EFI vars.
@@ -2175,7 +1983,6 @@ class ClusterMap:
     def it_cluster(self):
         p = self.conf['ports']
 
-        neb_map = {}
         all_etc_1 = []
         all_etc_3 = []
 
@@ -2202,7 +2009,7 @@ class ClusterMap:
             mesh_hosts[host] = {
                 'index': index,
                 'pub': pub,
-                'intip': f'192.168.104.{index}',
+                'intip': f'192.168.100.{index}',
                 'endpoint': [],
             }
 
@@ -2260,7 +2067,7 @@ class ClusterMap:
 
         for hn in ['lab1', 'lab2', 'lab3']:
             h = self.conf['by_host'][hn]
-            nb = h['nebula']
+            mesh = h['mesh']
             mio_cmap = 'http://lab{1...3}.gofra:' + str(p['minio']) + '/var/mnt/minio/{1...3}/data'
 
             minio = MinIO(h['gofra']['ip'], p['minio'], mio_cmap)
@@ -2270,7 +2077,7 @@ class ClusterMap:
                 'serv': minio,
             }
 
-            mc_host = nb['ip']
+            mc_host = mesh['ip']
             mc_port = p['minio_web']
             mc_serv = 'http://' + minio.addr
 
@@ -2339,7 +2146,7 @@ class ClusterMap:
                 'serv': TailLog(
                     port=p['tail_log'],
                     me=hn,
-                    me_nebula_ip=h['nebula']['ip'],
+                    bind_addr=h['mesh']['ip'],
                 ),
             }
 
@@ -2388,7 +2195,7 @@ class ClusterMap:
                     s3_endpoint=f"http://127.0.0.1:{p['minio']}",
                     etcd_endpoints=[f"127.0.0.1:{p['etcd_3_client']}"],
                     etcd_persist_endpoints=[f"127.0.0.1:{p['etcd_1_client']}"],
-                    codex_gorn_api=f"http://{h['nebula']['ip']}:{p['gorn_ctl_nb']}",
+                    codex_gorn_api=f"http://{h['mesh']['ip']}:{p['gorn_ctl_mesh']}",
                     codex_s3_endpoint=f"http://{h['gofra']['ip']}:{p['minio']}",
                 ),
             }
@@ -2416,13 +2223,6 @@ class ClusterMap:
             yield {
                 'host': hn,
                 'serv': SecretsV2(p['secrets'], etcd_endpoints=[f"127.0.0.1:{p['etcd_1_client']}"]),
-            }
-
-            nb = h['nebula']
-
-            yield {
-                'host': hn,
-                'serv': DropBear(nb['ip'], p['sshd']),
             }
 
             all_s5s = []
@@ -2464,16 +2264,6 @@ class ClusterMap:
                 'serv': NodeExporter(p['node_exporter']),
             }
 
-            nn_port = p['nebula_node']
-            nn_adv = [x['ip'] + f':{nn_port}' for x in h['net']]
-            # smap pinned to gofra overlay so peer traffic stripes via TUN.
-            neb_map[nb['ip']] = [h['gofra']['ip'] + f':{nn_port}']
-
-            yield {
-                'host': hn,
-                'serv': NebulaNode(hn, nn_port, neb_map, p['nebula_node_prom'], nn_adv, nb['ip']),
-            }
-
             yield {
                 'host': hn,
                 'serv': Gofra(hn, p['gofra'], gofra_hosts, h['gofra']['ip'] + '/24'),
@@ -2484,28 +2274,18 @@ class ClusterMap:
                 'serv': Mesh(hn, mesh_hosts),
             }
 
-            if lh := h.get('nebula', {}).get('lh', None):
-                lh_port = p['nebula_lh']
-                pm = (h['ip'], lh_port, int(lh['port']))
-                neb_reals = list(it_nebula_reals(lh, h, lh_port))
-                neb_map[lh['vip']] = list(f'{h}:{p}' for h, p in neb_reals)
-
-                yield {
-                    'host': hn,
-                    'serv': NebulaLh(lh['name'], lh_port, neb_map, p['nebula_lh_prom'], pm),
-                }
-
         gorn_endpoints = []
 
         for hn, n in GORN_N.items():
             h = self.conf['by_host'][hn]
-            nb = h['nebula']
             gofra_ip = h['gofra']['ip']
+            key_host = f'{hn}.nebula'
 
             for i in range(n):
                 port = p[f'gorn_{i}']
                 user = f'gorn_{i}'
-                serv = GornSsh(i, gofra_ip, port, nb['hostname'])
+                # Legacy key namespace; SSH itself uses gofra_ip.
+                serv = GornSsh(i, gofra_ip, port, key_host)
 
                 if nonce := GORN_RESTART_NONCE.get((hn, i)):
                     serv.restart_nonce = nonce
@@ -2522,7 +2302,7 @@ class ClusterMap:
                     # work/ is per-task scratch; gorn wrap mounts tmpfs on top.
                     'path': f'/var/run/{user}/work',
                     'log_path': f'/var/run/{user}/home/gorn-wrap.log',
-                    'nebula_host': nb['hostname'],
+                    'nebula_host': key_host,
                 })
 
         # gorn → etcd_3 (tmpfs); avoids etcd_1 slow-fsync killing keepalive.
@@ -2554,12 +2334,12 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': GornCtlNebula(gorn_endpoints, s3, f"{h['nebula']['ip']}:{p['gorn_ctl_nb']}", gorn_etcd, gorn_inflight),
+                'serv': GornCtlMesh(gorn_endpoints, s3, f"{h['mesh']['ip']}:{p['gorn_ctl_mesh']}", gorn_etcd, gorn_inflight),
             }
 
             yield {
                 'host': hn,
-                'serv': GornWeb(f"http://127.0.0.1:{p['gorn_ctl']}", f"{h['nebula']['ip']}:{p['gorn_web']}"),
+                'serv': GornWeb(f"http://127.0.0.1:{p['gorn_ctl']}", f"{h['mesh']['ip']}:{p['gorn_web']}"),
             }
 
             yield {
@@ -2569,7 +2349,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': MolotWeb(f"{h['nebula']['ip']}:{p['molot_web']}", f"http://127.0.0.1:{p['gorn_ctl']}", f"http://127.0.0.1:{p['minio']}", 'molot'),
+                'serv': MolotWeb(f"{h['mesh']['ip']}:{p['molot_web']}", f"http://127.0.0.1:{p['gorn_ctl']}", f"http://127.0.0.1:{p['minio']}", 'molot'),
             }
 
             yield {
@@ -2581,7 +2361,7 @@ class ClusterMap:
             # tunnel port: an exit death takes down only its connector.
             yield {
                 'host': hn,
-                'serv': Artifacts(h['nebula']['ip'], p['artifacts'], p['artifacts_upload'],
+                'serv': Artifacts(h['mesh']['ip'], p['artifacts'], p['artifacts_upload'],
                                   f"http://127.0.0.1:{p['minio']}"),
             }
 
@@ -2678,12 +2458,6 @@ class Service:
     def iter_py_modules(self):
         try:
             return self.srv.py_modules()
-        except AttributeError:
-            return []
-
-    def iter_upnp(self):
-        try:
-            return self.srv.iter_upnp()
         except AttributeError:
             return []
 
@@ -2804,22 +2578,6 @@ class Service:
                 'user': user,
             }
 
-        # Disabled: empty xiaomi_passwd collapses argv, xapi.py crashes.
-        if False:
-            for rec in self.iter_upnp():
-                yield {
-                    'pkg': 'bin/xiaomi',
-                    'upnp_ip': rec['addr'],
-                    'upnp_port': rec['port'],
-                    'upnp_ext_port': rec['ext_port'],
-                    'upnp_proto': rec['proto'],
-                    'xiaomi_gw': '10.0.0.1',
-                    'xiaomi_passwd': '', # get_key('/xiaomi/passwd').decode().strip(),
-                    'xiaomi_name': str(rec['ext_port']) + '_' + rec['proto'],
-                    'xiaomi_proto': {'TCP': 1, 'UDP': 2}[rec['proto']],
-                    'delay': 100,
-                }
-
         # extra_deps bakes runtime pkg uids; bumps trigger pid1 restart.
         yield {
             'pkg': 'bin/run/sh',
@@ -2846,17 +2604,7 @@ def gen_host(n):
         'hostname': f'lab{n}',
         'mesh': {
             'hostname': f'lab{n}.mesh',
-            'ip': f'192.168.104.{15 + n}',
-        },
-        'nebula': {
-            'hostname': f'lab{n}.nebula',
-            'ip': '192.168.100.' + str(15 + n),
-            'lh': {
-                'name': f'lh{n}',
-                'vip': f'192.168.100.{n}',
-                'ip': '5.188.103.251',
-                'port': '424' + str(n + 1),
-            },
+            'ip': f'192.168.100.{15 + n}',
         },
         'net': [gen_net(j) for j in (0, 1, 2, 3)],
     }
@@ -2915,8 +2663,6 @@ def do(code):
 
     ports = {
         'sshd': 22,
-        'nebula_lh': 4242,
-        'nebula_node': 4243,
         'torrent_webui': 8000,
         'ftpd': 8001,
         'sftp_d': 8002,
@@ -2926,8 +2672,6 @@ def do(code):
         'i_perf_3': 8049,
         'node_exporter': 8007,
         'collector': 8008,
-        'nebula_node_prom': 8009,
-        'nebula_lh_prom': 8010,
         'ssh_3': 8011,
         'minio': 8012,
         'minio_web': 8013,
@@ -2963,7 +2707,6 @@ def do(code):
         'h_z': 1009,
         'i_perf': 1011,
         'i_perf_3': 1029,
-        'nebula_lh': 1012,
         'mirror': 1016,
         'minio': 1017,
         'minio_console': 1018,
@@ -2994,7 +2737,7 @@ def do(code):
     users['gorn'] = 1099
     users['gorn_ctl'] = 1098
     users['gorn_web'] = 1097
-    users['gorn_ctl_nb'] = 1096
+    users['gorn_ctl_mesh'] = 1096
     users['gorn_prom'] = 1095
     users['molot_web'] = 1026
     users['molot_cache'] = 1027
@@ -3002,7 +2745,7 @@ def do(code):
     users['gofra'] = 1094
     ports['gorn_ctl'] = 8025
     ports['gorn_web'] = 8026
-    ports['gorn_ctl_nb'] = 8027
+    ports['gorn_ctl_mesh'] = 8027
     ports['gorn_prom'] = 8028
     ports['gorn_inflight'] = 8024
     ports['molot_web'] = 8052

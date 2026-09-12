@@ -3,7 +3,7 @@
 """
 Cluster log follower.
 
-Polls each tail_log endpoint (http://lab{1,2,3}.nebula:8040) once
+Polls each tail_log endpoint (http://lab{1,2,3}.mesh:8040) once
 per second, detects what's new since the last poll via md5-of-line
 uids kept per-endpoint, merges the union across endpoints, sorts by
 ts, prints each uid at most once. Override endpoints via
@@ -28,9 +28,9 @@ import urllib.request
 
 
 DEFAULT_EPS = ','.join([
-    'http://lab1.nebula:8040',
-    'http://lab2.nebula:8040',
-    'http://lab3.nebula:8040',
+    'http://lab1.mesh:8040',
+    'http://lab2.mesh:8040',
+    'http://lab3.mesh:8040',
 ])
 
 ENDPOINTS = os.environ.get('LOG_FOLLOW_ENDPOINTS', DEFAULT_EPS).split(',')
@@ -48,8 +48,8 @@ def label_of(ep):
     hostport = ep.split('://', 1)[-1]
     host = hostport.rsplit(':', 1)[0]
 
-    if host.endswith('.nebula'):
-        host = host[:-len('.nebula')]
+    if host.endswith('.mesh'):
+        host = host[:-len('.mesh')]
 
     return host
 

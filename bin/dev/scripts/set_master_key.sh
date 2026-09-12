@@ -10,7 +10,7 @@
 #   ./set_master_key.sh <passphrase>            # default hosts lab{1,2,3}
 #   ./set_master_key.sh <passphrase> lab1 lab2  # explicit subset
 #
-# Assumes key-based ssh as root@<host>.nebula works.
+# Assumes key-based ssh as root@<host>.mesh works.
 
 set -eu
 
@@ -30,7 +30,7 @@ fi
 
 for h in $HOSTS; do
     echo "=== $h ==="
-    ssh "root@${h}.nebula" "
+    ssh "root@${h}.mesh" "
         set -eu
         umask 077
         printf '%s' '$PP' > /master.key

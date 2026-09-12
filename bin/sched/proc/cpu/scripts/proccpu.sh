@@ -1,5 +1,5 @@
 #!/bin/sh
-# Per-thread CPU% snapshot for tagged processes (gofra, nebula).
+# Per-thread CPU% snapshot for tagged processes (gofra, mesh).
 # Takes two /proc/PID/task/*/stat samples 1s apart, computes utime+
 # stime delta per thread, converts to CPU%, emits one line per
 # thread plus a per-process summary.
@@ -41,14 +41,14 @@ exec timeout -s KILL 10s sh -c '
 
     {
         snap gofra T0
-        snap nebula T0
+        snap mesh T0
     } > /tmp/proccpu.before
 
     sleep $SECS
 
     {
         snap gofra T1
-        snap nebula T1
+        snap mesh T1
     } > /tmp/proccpu.after
 
     awk -v hz="$HZ" -v secs="$SECS" "

@@ -19,10 +19,6 @@ base64 -d << EOF > ${out}/bin/set_master_key
 {% include 'set_master_key.sh/base64' %}
 EOF
 
-base64 -d << EOF > ${out}/bin/extract_nebula_secrets
-{% include 'extract_nebula_secrets.py/base64' %}
-EOF
-
 base64 -d << EOF > ${out}/bin/log_follow
 {% include 'log_follow.py/base64' %}
 EOF

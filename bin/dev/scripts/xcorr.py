@@ -15,7 +15,7 @@ Pure stdlib — urllib + math. No pandas/scipy dependency.
 
 Example:
   xcorr --since=3h \\
-    'rate(nebula_nebula_udp_0_drops{job="nebula_node"}[5m])' \\
+    'rate(node_network_receive_drop_total{device="mesh0"}[5m])' \\
     'changes(etcd_server_leader_changes_seen_total{job="etcd_private"}[5m])'
 """
 

@@ -3,11 +3,11 @@
 """
 Dump / restore etcd keyspace as jsonlines.
 
-Used to migrate `etcd_private` (peer URLs on nebula, client on lab*.nebula:8020)
+Used to migrate `etcd_private` (the old overlay-based instance)
 to `etcd_1` (peer URLs on gofra, client on 127.0.0.1:8020) by:
 
     # 1. dump live keys from old cluster
-    etcd_migrate dump --endpoints lab1.nebula:8020,lab2.nebula:8020,lab3.nebula:8020 > snap.jsonl
+    etcd_migrate dump --endpoints 127.0.0.1:8020 > snap.jsonl
 
     # 2. roll out config: etcd_private → DISABLE_ALL, etcd_1 starts fresh
 

@@ -13,7 +13,7 @@
 #   nic_tune.sh lab2               inspect just lab2
 #   nic_tune.sh --apply lab2 lab3  inspect AND bump rings on those
 #
-# Assumes root@<host>.nebula ssh works (key-based).
+# Assumes root@<host>.mesh ssh works (key-based).
 
 set -eu
 
@@ -40,7 +40,7 @@ hdr() {
 for h in $HOSTS; do
     hdr "$h"
 
-    ssh -o BatchMode=yes -o ConnectTimeout=5 "root@$h.nebula" \
+    ssh -o BatchMode=yes -o ConnectTimeout=5 "root@$h.mesh" \
         APPLY="$APPLY" 'sh -s' <<'REMOTE' || echo "  ssh $h failed"
 set -u
 

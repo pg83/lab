@@ -7,7 +7,7 @@
 #   - cluster-wide: gorn leader, queue size, per-task descr/slots/age,
 #     endpoint count.
 #
-# Assumes root@<host>.nebula ssh works (key-based). Queries etcd and the
+# Assumes root@<host>.mesh ssh works (key-based). Queries etcd and the
 # gorn control API directly from the invoking machine; one of the labs'
 # control endpoints needs to be reachable.
 #
@@ -73,9 +73,9 @@ for h, us in sorted(by.items()):
 PY
 
 HOSTS="${*:-lab1 lab2 lab3}"
-# gorn_ctl (8025) binds to 127.0.0.1; gorn_ctl_nb (8027) is the nebula
-# sibling exposed on the host's nebula IP.
-GORN_API="${GORN_API:-http://lab1.nebula:8027}"
+# gorn_ctl (8025) binds to 127.0.0.1; gorn_ctl_mesh (8027) is the mesh
+# sibling exposed on the host's mesh IP.
+GORN_API="${GORN_API:-http://lab1.mesh:8027}"
 ETCDCTL_ENDPOINTS="${ETCDCTL_ENDPOINTS:-127.0.0.1:8020}"
 export ETCDCTL_ENDPOINTS
 
@@ -113,7 +113,7 @@ fi
 
 for h in $HOSTS; do
     hdr "$h"
-    ssh -o BatchMode=yes -o ConnectTimeout=5 "root@$h.nebula" 'sh -s' <<'REMOTE' || echo "  ssh $h failed"
+    ssh -o BatchMode=yes -o ConnectTimeout=5 "root@$h.mesh" 'sh -s' <<'REMOTE' || echo "  ssh $h failed"
 set -u
 
 # /bin/runpy is the generated pickled service runner — its content
