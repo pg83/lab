@@ -66,6 +66,13 @@ SSH_TUNNELS = [
         'port': 22,
         'tout': 600,
     },
+    {
+        'key': 'ssh_oracle_tunnel',
+        'keyn': '/tunnel/ssh_ampere_tunnel',
+        'addr': 'ubuntu@o3pg.7mind.io',
+        'port': 22,
+        'tout': 600,
+    },
 ]
 
 # Relay forwarding both TCP and UDP to a Warsaw edge; reachable from the
@@ -2777,6 +2784,7 @@ def do(code):
         'mesh': 8057,
         'mesh_control': 8058,
         'mesh_web': 8059,
+        'ssh_oracle_tunnel': 8060,
         'event_http': 8053,
         'artifacts_upload': 8055,
         'artifacts': 8056,
@@ -2805,6 +2813,7 @@ def do(code):
         'etcd_1': 2010,
         'etcd_3': 2011,
         'mesh_web': 2012,
+        'ssh_oracle_tunnel': 2013,
         'samogon_bot': 2004,
         'job_scheduler': 2005,
         'secrets_v2': 1028,
