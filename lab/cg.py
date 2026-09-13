@@ -76,6 +76,7 @@ MESH_HOSTS = [
     'home ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIL2LO6DTXKzm7TDERJPj64WemRc6rrcAzNelywzTdGjH pg@stalix',
     'mini ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOR+Eb+hIcvatbPs/OtGW6cqcHIhGx5vrrxOelsDti09 pg@SamokhvlovsMini',
     'work ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJXSN89veSBcurZJq1gZGynE/uzCj5a5J/1oFVi+YnqO pg@pg-osx',
+    'note ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEPQ2JSZXM6trgJoh93LxFrVML/6IK7EyJ2UYeh2Bf+w note',
 ]
 
 
