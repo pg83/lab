@@ -211,9 +211,10 @@ def get_key(k):
 
 
 class Mesh:
-    def __init__(self, host, peers):
+    def __init__(self, host, peers, control):
         self.host = host
         self.peers = peers
+        self.control = control
 
     def user(self):
         return 'root'
@@ -236,7 +237,7 @@ class Mesh:
             'key': get_key(f'/mesh/{self.host}.key').decode().strip(),
             'subnet': '192.168.100.0/24',
             'tun': 'mesh0',
-            'status': '/var/run/mesh/status.sock',
+            'control': self.control,
             'registry': registry,
         }
 
@@ -250,6 +251,21 @@ class Mesh:
                 json.dump(self.config(), f)
 
             exec_into('mesh', 'run', '-c', conf)
+
+
+class MeshWeb:
+    def __init__(self, control, listen):
+        self.control = control
+        self.listen = listen
+
+    def name(self):
+        return 'mesh_web'
+
+    def pkgs(self):
+        yield {'pkg': 'bin/mesh'}
+
+    def run(self):
+        exec_into('mesh', 'web', '-control', self.control, '-listen', self.listen)
 
 
 class Gofra:
@@ -1996,6 +2012,7 @@ class ClusterMap:
             underlay = [net['ip'] for net in h['net']]
             gofra_hosts[f'192.168.103.{15 + n}'] = underlay
             mesh_hosts[hn] = {
+                'name': hn,
                 'index': n,
                 'intip': h['mesh']['ip'],
                 'endpoint': [
@@ -2007,6 +2024,7 @@ class ClusterMap:
         for index, line in enumerate(MESH_HOSTS, 64):
             host, pub = line.split(' ', 1)
             mesh_hosts[host] = {
+                'name': host,
                 'index': index,
                 'pub': pub,
                 'intip': f'192.168.100.{index}',
@@ -2271,7 +2289,12 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': Mesh(hn, mesh_hosts),
+                'serv': Mesh(hn, mesh_hosts, f"127.0.0.1:{p['mesh_control']}"),
+            }
+
+            yield {
+                'host': hn,
+                'serv': MeshWeb(f"127.0.0.1:{p['mesh_control']}", f"0.0.0.0:{p['mesh_web']}"),
             }
 
         gorn_endpoints = []
@@ -2693,6 +2716,8 @@ def do(code):
         'ogorod_serve': 8035,
         'gofra': 8050,
         'mesh': 8057,
+        'mesh_control': 8058,
+        'mesh_web': 8059,
         'event_http': 8053,
         'artifacts_upload': 8055,
         'artifacts': 8056,
@@ -2720,6 +2745,7 @@ def do(code):
         'ssh_jopa_tunnel': 1024,
         'etcd_1': 2010,
         'etcd_3': 2011,
+        'mesh_web': 2012,
         'samogon_bot': 2004,
         'job_scheduler': 2005,
         'secrets_v2': 1028,
