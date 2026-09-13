@@ -235,6 +235,7 @@ class Mesh:
         return {
             'index': self.peers[self.host]['index'],
             'key': get_key(f'/mesh/{self.host}.key').decode().strip(),
+            'endpoint': [{'proto': 'udp', 'addr': '::', 'port': 8057}],
             'subnet': '192.168.100.0/24',
             'tun': 'mesh0',
             'control': self.control,
