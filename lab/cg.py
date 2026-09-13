@@ -212,10 +212,11 @@ def get_key(k):
 
 
 class Mesh:
-    def __init__(self, host, peers, control):
+    def __init__(self, host, peers, control, no_dial):
         self.host = host
         self.peers = peers
         self.control = control
+        self.no_dial = no_dial
 
     def user(self):
         return 'root'
@@ -242,6 +243,7 @@ class Mesh:
             'tun': 'mesh0',
             'control': self.control,
             'registry': registry,
+            'no_dial': self.no_dial,
         }
 
     def run(self):
@@ -2326,7 +2328,12 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': Mesh(hn, mesh_hosts, f"127.0.0.1:{p['mesh_control']}"),
+                'serv': Mesh(hn, mesh_hosts, f"127.0.0.1:{p['mesh_control']}", [
+                    {'from': src['ip'], 'to': dst['ip']}
+                    for other in ['lab1', 'lab2', 'lab3'] if other != hn
+                    for src in h['net']
+                    for dst in self.conf['by_host'][other]['net']
+                ]),
             }
 
             yield {
