@@ -235,7 +235,7 @@ class Mesh:
 
         return {
             'index': self.peers[self.host]['index'],
-            'registry_version': 2,
+            'registry_version': 3,
             'key': get_key(f'/mesh/{self.host}.key').decode().strip(),
             'endpoint': [{'proto': 'udp', 'addr': '::', 'port': 8057}],
             'subnet': '192.168.100.0/24',
@@ -1048,8 +1048,11 @@ class CloudflaredTunnel:
             ],
         })
 
+    def credentials(self):
+        return get_key('/cloudflare/tunnel/creds')
+
     def run(self):
-        creds = get_key('/cloudflare/tunnel/creds')
+        creds = self.credentials()
 
         with multi(memfd('creds.json'), memfd('config.yml')) as (creds_path, conf_path):
             with open(creds_path, 'wb') as f:
@@ -1076,6 +1079,33 @@ class CloudflaredTunnel:
                 env['TUNNEL_EDGE_SOCKS5'] = self.socks
 
             exec_into(*args, 'run', **env)
+
+
+class CloudflaredHost(CloudflaredTunnel):
+    TUNNELS = {
+        'lab1': 'b7af97cc-e1cb-46b2-9d7a-94a4aa04ebc0',
+        'lab2': '265ec709-9e78-4f1e-87af-acfef28c4066',
+        'lab3': '719df32f-c247-44c9-b5c3-a3b71936422b',
+    }
+
+    def __init__(self, host, mesh_port, socks, nick, edge=None, protocol='http2'):
+        super().__init__(f'{host}.homelab.cam', mesh_port, socks,
+                         f'{host}_{nick}', None, edge=edge, protocol=protocol)
+        self.host = host
+
+    def credentials(self):
+        return get_key(f'/cloudflare/{self.host}/creds')
+
+    def config(self, creds_path):
+        return json.dumps({
+            'tunnel': self.TUNNELS[self.host],
+            'credentials-file': creds_path,
+            'ingress': [
+                {'hostname': self.hostname, 'path': '^/mesh$',
+                 'service': f'http://127.0.0.1:{self.upstream_port}'},
+                {'service': 'http_status:404'},
+            ],
+        })
 
 
 class EtcdPrivate:
@@ -2021,7 +2051,11 @@ class ClusterMap:
                 'endpoint': [
                     {'proto': 'udp', 'addr': addr, 'port': p['mesh']}
                     for addr in underlay + [h['gofra']['ip']]
-                ],
+                ] + [{
+                    'proto': 'wss', 'addr': f'{hn}.homelab.cam', 'port': 443,
+                    'path': '/mesh', 'bind_proto': 'ws',
+                    'bind_addr': '127.0.0.1', 'bind_port': p['mesh'],
+                }],
             }
 
         for index, line in enumerate(MESH_HOSTS, 64):
@@ -2419,6 +2453,21 @@ class ClusterMap:
                         edge=SEAL_EDGE,
                         protocol=proto,
                     ),
+                }
+
+            for tun in SSH_TUNNELS:
+                k = tun['key']
+                yield {
+                    'host': hn,
+                    'serv': CloudflaredHost(hn, p['mesh'], '127.0.0.1:' + str(p[k]),
+                                           k.removeprefix('ssh_').removesuffix('_tunnel')),
+                }
+
+            for proto in ('http2', 'quic'):
+                yield {
+                    'host': hn,
+                    'serv': CloudflaredHost(hn, p['mesh'], None, f'seal_{proto}',
+                                           edge=SEAL_EDGE, protocol=proto),
                 }
 
 
