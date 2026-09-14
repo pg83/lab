@@ -231,6 +231,10 @@ class Mesh:
     def pkgs(self):
         yield {'pkg': 'bin/mesh'}
 
+    def prom_port(self):
+        # /metrics on the loopback control port.
+        return int(self.control.rsplit(':', 1)[1])
+
     def config(self):
         keys = json.loads(get_key('/mesh/registry'))
         registry = []

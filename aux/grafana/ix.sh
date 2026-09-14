@@ -69,6 +69,10 @@ cat > ${out}/share/grafana-provisioning/dashboards-json/gofra.json <<'JSON'
 {% include 'gofra.json' %}
 JSON
 
+cat > ${out}/share/grafana-provisioning/dashboards-json/mesh.json <<'JSON'
+{% include 'mesh.json' %}
+JSON
+
 {# Per-service deploy convergence: distinct run_sh paths per svc → 1. #}
 {% set svc_list = (services_b64 | b64d).split('\n') | reject('equalto', '') | list %}
 cat > ${out}/share/grafana-provisioning/dashboards-json/deploy.json <<'JSON'

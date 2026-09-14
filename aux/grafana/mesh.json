@@ -1,0 +1,156 @@
+{% set metrics = [
+  {
+    'title': 'mesh0 TX rate',
+    'unit': 'bps',
+    'host': [{'expr': '8 * rate(node_network_transmit_bytes_total{device="mesh0",host="HOST"}[1m])', 'legend': 'HOST'}],
+    'cluster': [{'expr': '8 * sum(rate(node_network_transmit_bytes_total{device="mesh0"}[1m]))', 'legend': 'sum'}],
+  },
+  {
+    'title': 'mesh0 RX rate',
+    'unit': 'bps',
+    'host': [{'expr': '8 * rate(node_network_receive_bytes_total{device="mesh0",host="HOST"}[1m])', 'legend': 'HOST'}],
+    'cluster': [{'expr': '8 * sum(rate(node_network_receive_bytes_total{device="mesh0"}[1m]))', 'legend': 'sum'}],
+  },
+  {
+    'title': 'peers reachable (1 = route exists)',
+    'unit': 'short',
+    'host': [{'expr': 'mesh_peer_reachable{host="HOST"}', 'legend': '{{peer}}'}],
+    'cluster': [{'expr': 'sum by (peer) (mesh_peer_reachable)', 'legend': '{{peer}}'}],
+  },
+  {
+    'title': 'route length to peer (edges)',
+    'unit': 'short',
+    'host': [{'expr': 'mesh_peer_route_edges{host="HOST"}', 'legend': '{{peer}}'}],
+    'cluster': [{'expr': 'max by (peer) (mesh_peer_route_edges)', 'legend': '{{peer}}'}],
+  },
+  {
+    'title': 'incoming links by peer',
+    'unit': 'short',
+    'host': [{'expr': 'mesh_peer_links{host="HOST"}', 'legend': '{{peer}}'}],
+    'cluster': [{'expr': 'sum by (peer) (mesh_peer_links)', 'legend': '{{peer}}'}],
+  },
+  {
+    'title': 'link flaps per minute',
+    'unit': 'short',
+    'host': [{'expr': '60 * rate(mesh_link_down_total{host="HOST"}[5m])', 'legend': 'down'}, {'expr': '60 * rate(mesh_link_up_total{host="HOST"}[5m])', 'legend': 'up'}],
+    'cluster': [{'expr': '60 * sum(rate(mesh_link_down_total[5m]))', 'legend': 'down'}, {'expr': '60 * sum(rate(mesh_link_up_total[5m]))', 'legend': 'up'}],
+  },
+  {
+    'title': 'packets received /s by kind',
+    'unit': 'pps',
+    'host': [{'expr': 'rate(mesh_packets_received_total{host="HOST"}[1m])', 'legend': '{{kind}}'}],
+    'cluster': [{'expr': 'sum by (kind) (rate(mesh_packets_received_total[1m]))', 'legend': '{{kind}}'}],
+  },
+  {
+    'title': 'packets sent /s by kind',
+    'unit': 'pps',
+    'host': [{'expr': 'rate(mesh_packets_sent_total{host="HOST"}[1m])', 'legend': '{{kind}}'}],
+    'cluster': [{'expr': 'sum by (kind) (rate(mesh_packets_sent_total[1m]))', 'legend': '{{kind}}'}],
+  },
+  {
+    'title': 'rejected packets /s by reason',
+    'unit': 'pps',
+    'host': [{'expr': 'rate(mesh_packets_rejected_total{host="HOST"}[1m])', 'legend': '{{reason}}'}],
+    'cluster': [{'expr': 'sum by (reason) (rate(mesh_packets_rejected_total[1m]))', 'legend': '{{reason}}'}],
+  },
+  {
+    'title': 'graph records applied /s',
+    'unit': 'short',
+    'host': [{'expr': 'rate(mesh_records_applied_total{host="HOST"}[1m])', 'legend': 'applied'}, {'expr': 'rate(mesh_records_invalid_total{host="HOST"}[1m])', 'legend': 'invalid'}],
+    'cluster': [{'expr': 'sum(rate(mesh_records_applied_total[1m]))', 'legend': 'applied'}, {'expr': 'sum(rate(mesh_records_invalid_total[1m]))', 'legend': 'invalid'}],
+  },
+  {
+    'title': 'record age by peer (s since last change)',
+    'unit': 's',
+    'host': [{'expr': 'mesh_record_age_seconds{host="HOST"}', 'legend': '{{peer}}'}],
+    'cluster': [{'expr': 'max by (peer) (mesh_record_age_seconds)', 'legend': '{{peer}}'}],
+  },
+  {
+    'title': 'graph size',
+    'unit': 'short',
+    'host': [{'expr': 'mesh_graph_edges{host="HOST"}', 'legend': 'edges'}, {'expr': 'mesh_graph_vertices{host="HOST"}', 'legend': 'vertices'}, {'expr': 'mesh_addresses{host="HOST"}', 'legend': 'addresses'}, {'expr': 'mesh_links{host="HOST"}', 'legend': 'links'}],
+    'cluster': [{'expr': 'max(mesh_graph_edges)', 'legend': 'edges'}, {'expr': 'max(mesh_graph_vertices)', 'legend': 'vertices'}, {'expr': 'max(mesh_addresses)', 'legend': 'addresses'}, {'expr': 'sum(mesh_links)', 'legend': 'links'}],
+  },
+  {
+    'title': 'data drops /s',
+    'unit': 'pps',
+    'host': [{'expr': 'rate(mesh_forward_dropped_total{host="HOST"}[1m])', 'legend': 'relay: no channel'}, {'expr': 'rate(mesh_forward_unlinked_total{host="HOST"}[1m])', 'legend': 'relay: local edge'}, {'expr': 'rate(mesh_tun_unrouted_total{host="HOST"}[1m])', 'legend': 'tun: no route'}],
+    'cluster': [{'expr': 'sum(rate(mesh_forward_dropped_total[1m]))', 'legend': 'relay: no channel'}, {'expr': 'sum(rate(mesh_forward_unlinked_total[1m]))', 'legend': 'relay: local edge'}, {'expr': 'sum(rate(mesh_tun_unrouted_total[1m]))', 'legend': 'tun: no route'}],
+  },
+  {
+    'title': 'channels by transport and direction',
+    'unit': 'short',
+    'host': [{'expr': 'mesh_channels{host="HOST"}', 'legend': '{{transport}} {{direction}}'}],
+    'cluster': [{'expr': 'sum by (transport, direction) (mesh_channels)', 'legend': '{{transport}} {{direction}}'}],
+  },
+  {
+    'title': 'graph actor queue and pending dials',
+    'unit': 'short',
+    'host': [{'expr': 'mesh_events_queued{host="HOST"}', 'legend': 'queued events'}, {'expr': 'mesh_dials_pending{host="HOST"}', 'legend': 'pending dials'}],
+    'cluster': [{'expr': 'max(mesh_events_queued)', 'legend': 'queued events'}, {'expr': 'sum(mesh_dials_pending)', 'legend': 'pending dials'}],
+  },
+  {
+    'title': 'link down log lines /min',
+    'unit': 'short',
+    'ds': 'loki',
+    'host': [{'expr': 'sum(count_over_time({service="mesh",host="HOST"} |= "link down" [1m]))', 'legend': 'HOST'}],
+    'cluster': [{'expr': 'sum(count_over_time({service="mesh"} |= "link down" [1m]))', 'legend': 'sum'}],
+  },
+] %}
+{% set hosts = ['lab1', 'lab2', 'lab3'] %}
+{
+  "uid": "mesh",
+  "title": "mesh",
+  "tags": ["mesh", "network"],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "graphTooltip": 1,
+  "time": {"from": "now-30m", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "refresh": "15s",
+  "annotations": {"list": []},
+  "templating": {"list": []},
+  "links": [],
+  "panels": [
+{% for m in metrics %}
+{% set is_last_metric = loop.last %}
+{% set row = loop.index0 * 6 %}
+{% set mi = loop.index0 %}
+{% set ds_uid = m.ds | default('prom') %}
+{% set ds_type = 'loki' if ds_uid == 'loki' else 'prometheus' %}
+{% for host in hosts %}
+{% set col = loop.index0 * 6 %}
+    {
+      "id": {{ mi * 4 + loop.index }},
+      "title": "{{ m.title }} — {{ host }}",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 6, "x": {{ col }}, "y": {{ row }}},
+      "datasource": {"type": "{{ ds_type }}", "uid": "{{ ds_uid }}"},
+      "fieldConfig": {"defaults": {"unit": "{{ m.unit }}", "min": 0}},
+      "options": {"legend": {"showLegend": true, "displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [
+{% for t in m.host %}
+        {"expr": "{{ t.expr | replace('HOST', host) | replace('"', '\\"') }}", "legendFormat": "{{ t.legend | replace('HOST', host) }}", "refId": "{{ 'ABCDEFGH'[loop.index0] }}"}{% if not loop.last %},{% endif %}
+{% endfor %}
+      ]
+    },
+{% endfor %}
+    {
+      "id": {{ mi * 4 + 4 }},
+      "title": "{{ m.title }} — cluster",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 6, "x": 18, "y": {{ row }}},
+      "datasource": {"type": "{{ ds_type }}", "uid": "{{ ds_uid }}"},
+      "fieldConfig": {"defaults": {"unit": "{{ m.unit }}", "min": 0}},
+      "options": {"legend": {"showLegend": true, "displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [
+{% for t in m.cluster %}
+        {"expr": "{{ t.expr | replace('"', '\\"') }}", "legendFormat": "{{ t.legend }}", "refId": "{{ 'ABCDEFGH'[loop.index0] }}"}{% if not loop.last %},{% endif %}
+{% endfor %}
+      ]
+    }{% if not is_last_metric %},{% endif %}
+{% endfor %}
+  ]
+}
