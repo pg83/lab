@@ -256,7 +256,6 @@ class Mesh:
             'control': self.control,
             'registry': registry,
             'no_dial': self.no_dial,
-            'sshd': True,
         }
 
     def run(self):
