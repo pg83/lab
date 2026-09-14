@@ -311,7 +311,7 @@ class Gofra:
         lines.append('[me]')
         lines.append('vip     = ' + self.vip)
         lines.append('tun_dev = gofra0')
-        lines.append('tun_mtu = 1400')
+        lines.append('tun_mtu = 1472')
         lines.append('user    = gofra')
         lines.append('')
         lines.append('[peers]')
