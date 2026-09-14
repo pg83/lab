@@ -74,8 +74,8 @@
   {
     'title': 'data drops /s',
     'unit': 'pps',
-    'host': [{'expr': 'rate(mesh_forward_dropped_total{host="HOST"}[1m])', 'legend': 'relay: no channel'}, {'expr': 'rate(mesh_forward_unlinked_total{host="HOST"}[1m])', 'legend': 'relay: local edge'}, {'expr': 'rate(mesh_tun_unrouted_total{host="HOST"}[1m])', 'legend': 'tun: no route'}],
-    'cluster': [{'expr': 'sum(rate(mesh_forward_dropped_total[1m]))', 'legend': 'relay: no channel'}, {'expr': 'sum(rate(mesh_forward_unlinked_total[1m]))', 'legend': 'relay: local edge'}, {'expr': 'sum(rate(mesh_tun_unrouted_total[1m]))', 'legend': 'tun: no route'}],
+    'host': [{'expr': 'rate(mesh_forward_dropped_total{host="HOST"}[1m])', 'legend': 'relay: no channel'}, {'expr': 'rate(mesh_tun_unrouted_total{host="HOST"}[1m])', 'legend': 'tun: no route'}],
+    'cluster': [{'expr': 'sum(rate(mesh_forward_dropped_total[1m]))', 'legend': 'relay: no channel'}, {'expr': 'sum(rate(mesh_tun_unrouted_total[1m]))', 'legend': 'tun: no route'}],
   },
   {
     'title': 'channels by transport and direction',
