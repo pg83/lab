@@ -254,6 +254,7 @@ class Mesh:
             'subnet': '192.168.100.0/24',
             'tun': 'mesh0',
             'control': self.control,
+            'dns': True,
             'registry': registry,
             'no_dial': self.no_dial,
         }
