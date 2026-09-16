@@ -1,6 +1,7 @@
 {% extends '//die/gen.sh' %}
 
-{# The scheduler only serializes and enqueues. The long work runs in gorn. #}
+{# The scheduler only serializes and enqueues. The long work runs in gorn.
+   etcd mutexes use prefix ranges; keep schedule separate from work and fixer. #}
 
 {% block install %}
 mkdir -p ${out}/etc/cron
@@ -8,7 +9,7 @@ mkdir -p ${out}/etc/cron
 cat << 'EOF' > ${out}/etc/cron/3600-updater.json
 {
     "cmd": [
-        "etcd_lock", "/lock/updater", "--",
+        "etcd_lock", "/lock/updater/schedule", "--",
         "dedup", "/updater/v1", "--",
         "gorn", "ignite",
         "--root", "updater",
