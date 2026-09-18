@@ -252,6 +252,58 @@ class KV:
             exec_into('kv', self.mode, '-c', conf)
 
 
+class Nitter:
+    def __init__(self, port, kv_port):
+        self.port = port
+        self.kv_port = kv_port
+
+    def pkgs(self):
+        yield {'pkg': 'bin/nitter/pg83'}
+
+    def config(self, hmac_key):
+        return {
+            'Server': {
+                'hostname': 'nitter.homelab.cam',
+                'address': '127.0.0.1',
+                'port': self.port,
+                'https': True,
+                'staticDir': '/ix/realm/system/share/nitter/public',
+            },
+            'Cache': {
+                'enabled': True,
+                'kvEndpoint': f'http://127.0.0.1:{self.kv_port}',
+                'kvBucket': 'nitter',
+                'kvPrefix': 'nitter:v1:',
+                'kvTimeoutMs': 1000,
+                'listMinutes': 240,
+                'rssMinutes': 10,
+            },
+            'Config': {'hmacKey': hmac_key, 'enableDebug': False},
+            'Preferences': {'replaceTwitter': 'nitter.homelab.cam'},
+        }
+
+    def run(self):
+        hmac_key = get_key('/nitter/hmac').decode().strip()
+        if len(hmac_key) < 32:
+            raise ValueError('/nitter/hmac must contain a shared random signing key')
+        sessions = get_key('/nitter/sessions')
+        if not sessions.strip():
+            print('Nitter: /nitter/sessions is empty; X requests need account sessions',
+                  file=sys.stderr, flush=True)
+
+        with multi(memfd('nitter.conf'), memfd('sessions.jsonl')) as (conf, accounts):
+            with open(conf, 'w') as f:
+                for section, settings in self.config(hmac_key).items():
+                    f.write(f'[{section}]\n')
+                    for key, value in settings.items():
+                        f.write(f'{key} = {json.dumps(value)}\n')
+                    f.write('\n')
+            with open(accounts, 'wb') as f:
+                f.write(sessions)
+            exec_into('nitter', NITTER_CONF_FILE=conf, NITTER_SESSIONS_FILE=accounts,
+                      SSL_CERT_FILE='/etc/ssl/cert.pem')
+
+
 class Mesh:
     def __init__(self, host, peers, control, no_dial):
         self.host = host
@@ -1059,13 +1111,14 @@ class CloudflaredTunnel:
     # Routing lives here, not in the CF dashboard.
     TUNNEL_ID = '4b335fae-9cd1-40bb-9868-08deb4a23cb7'
 
-    def __init__(self, hostname, upstream_port, socks, nick, view_port,
+    def __init__(self, hostname, upstream_port, socks, nick, view_port, nitter_port=None,
                  edge=None, protocol='http2'):
         self.hostname = hostname
         self.upstream_port = upstream_port
         self.socks = socks
         self.nick = nick
         self.view_port = view_port
+        self.nitter_port = nitter_port
         self.edge = edge
         self.protocol = protocol
 
@@ -1088,6 +1141,10 @@ class CloudflaredTunnel:
                     'path': '/view/.*',
                     'service': f'http://127.0.0.1:{self.view_port}',
                 },
+                *([{
+                    'hostname': 'nitter.homelab.cam',
+                    'service': f'http://127.0.0.1:{self.nitter_port}',
+                }] if self.nitter_port is not None else []),
                 {
                     'hostname': self.hostname,
                     'service': f'http://127.0.0.1:{self.upstream_port}',
@@ -2217,7 +2274,7 @@ class ClusterMap:
             yield {
                 'host': hn,
                 'serv': KV('back', h['gofra']['ip'], p['kv_back'], {
-                    'buckets': {'default': 64 * 1024 * 1024},
+                    'buckets': {'default': 64 * 1024 * 1024, 'nitter': 1024 * 1024 * 1024},
                 }),
             }
 
@@ -2232,6 +2289,11 @@ class ClusterMap:
                         for peer in self.conf['hosts']
                     ],
                 }),
+            }
+
+            yield {
+                'host': hn,
+                'serv': Nitter(p['nitter'], p['kv_front']),
             }
 
             yield {
@@ -2509,6 +2571,7 @@ class ClusterMap:
                         '127.0.0.1:' + str(p[k]),
                         k.removeprefix('ssh_').removesuffix('_tunnel'),
                         p['artifacts'],
+                        nitter_port=p['nitter'],
                     ),
                 }
 
@@ -2523,6 +2586,7 @@ class ClusterMap:
                         None,
                         f'seal_{proto}',
                         p['artifacts'],
+                        nitter_port=p['nitter'],
                         edge=SEAL_EDGE,
                         protocol=proto,
                     ),
@@ -2846,6 +2910,7 @@ def do(code):
         'ssh_oracle_tunnel': 8060,
         'kv_front': 8061,
         'kv_back': 8062,
+        'nitter': 8063,
         'event_http': 8053,
         'artifacts_upload': 8055,
         'artifacts': 8056,
@@ -2877,6 +2942,7 @@ def do(code):
         'ssh_oracle_tunnel': 2013,
         'kv_front': 2014,
         'kv_back': 2015,
+        'nitter': 2016,
         'samogon_bot': 2004,
         'job_scheduler': 2005,
         'secrets_v2': 1028,
