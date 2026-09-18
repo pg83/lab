@@ -220,8 +220,9 @@ def get_key(k):
 
 
 class KV:
-    def __init__(self, ip, port, peers):
+    def __init__(self, ip, mesh_ip, port, peers):
         self.ip = ip
+        self.mesh_ip = mesh_ip
         self.port = port
         self.peers = peers
 
@@ -236,7 +237,11 @@ class KV:
 
     def config(self):
         return {
-            'listen': [f'127.0.0.1:{self.port}', f'{self.ip}:{self.port}'],
+            'listen': [
+                f'127.0.0.1:{self.port}',
+                f'{self.ip}:{self.port}',
+                f'{self.mesh_ip}:{self.port}',
+            ],
             'peers': self.peers,
             'buckets': {'default': 64 * 1024 * 1024},
         }
@@ -2213,7 +2218,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': KV(h['gofra']['ip'], p['kv'], [
+                'serv': KV(h['gofra']['ip'], h['mesh']['ip'], p['kv'], [
                     {
                         'id': peer['hostname'],
                         'endpoint': f"http://{peer['gofra']['ip']}:{p['kv']}",
