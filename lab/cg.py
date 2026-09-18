@@ -220,14 +220,14 @@ def get_key(k):
 
 
 class KV:
-    def __init__(self, ip, mesh_ip, port, peers):
+    def __init__(self, mode, ip, port, settings):
+        self.mode = mode
         self.ip = ip
-        self.mesh_ip = mesh_ip
         self.port = port
-        self.peers = peers
+        self.settings = settings
 
     def name(self):
-        return 'kv'
+        return f'kv_{self.mode}'
 
     def pkgs(self):
         yield {'pkg': 'bin/kv'}
@@ -237,21 +237,19 @@ class KV:
 
     def config(self):
         return {
+            **self.settings,
             'listen': [
                 f'127.0.0.1:{self.port}',
                 f'{self.ip}:{self.port}',
-                f'{self.mesh_ip}:{self.port}',
             ],
-            'peers': self.peers,
-            'buckets': {'default': 64 * 1024 * 1024},
         }
 
     def run(self):
-        with memfd('kv.json') as conf:
+        with memfd(f'kv-{self.mode}.json') as conf:
             with open(conf, 'w') as f:
                 json.dump(self.config(), f)
 
-            exec_into('kv', 'run', '-c', conf)
+            exec_into('kv', self.mode, '-c', conf)
 
 
 class Mesh:
@@ -2218,13 +2216,22 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': KV(h['gofra']['ip'], h['mesh']['ip'], p['kv'], [
-                    {
-                        'id': peer['hostname'],
-                        'endpoint': f"http://{peer['gofra']['ip']}:{p['kv']}",
-                    }
-                    for peer in self.conf['hosts']
-                ]),
+                'serv': KV('back', h['gofra']['ip'], p['kv_back'], {
+                    'buckets': {'default': 64 * 1024 * 1024},
+                }),
+            }
+
+            yield {
+                'host': hn,
+                'serv': KV('front', h['mesh']['ip'], p['kv_front'], {
+                    'peers': [
+                        {
+                            'id': peer['hostname'],
+                            'endpoint': f"http://{peer['gofra']['ip']}:{p['kv_back']}",
+                        }
+                        for peer in self.conf['hosts']
+                    ],
+                }),
             }
 
             yield {
@@ -2837,7 +2844,8 @@ def do(code):
         'mesh_control': 8058,
         'mesh_web': 8059,
         'ssh_oracle_tunnel': 8060,
-        'kv': 8061,
+        'kv_front': 8061,
+        'kv_back': 8062,
         'event_http': 8053,
         'artifacts_upload': 8055,
         'artifacts': 8056,
@@ -2867,7 +2875,8 @@ def do(code):
         'etcd_3': 2011,
         'mesh_web': 2012,
         'ssh_oracle_tunnel': 2013,
-        'kv': 2014,
+        'kv_front': 2014,
+        'kv_back': 2015,
         'samogon_bot': 2004,
         'job_scheduler': 2005,
         'secrets_v2': 1028,

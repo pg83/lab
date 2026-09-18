@@ -1,11 +1,11 @@
 {% extends '//die/go/build.sh' %}
 
 {% block go_url %}
-https://github.com/pg83/kv/archive/refs/tags/1.tar.gz
+https://github.com/pg83/kv/archive/refs/tags/2.tar.gz
 {% endblock %}
 
 {% block go_sha %}
-106c7d8aea32bda50319aba820dcdea0d5b1d8e1568a71e56fe66e477ede611a
+b0a380ed567bda2f03af0cccf1eade954b3f01004817c5dbaa1385245a501e49
 {% endblock %}
 
 {% block go_bins %}
