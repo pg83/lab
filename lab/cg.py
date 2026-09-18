@@ -219,6 +219,36 @@ def get_key(k):
     return ur.urlopen('http://localhost:8022' + k).read()
 
 
+class KV:
+    def __init__(self, ip, port, peers):
+        self.ip = ip
+        self.port = port
+        self.peers = peers
+
+    def name(self):
+        return 'kv'
+
+    def pkgs(self):
+        yield {'pkg': 'bin/kv'}
+
+    def prom_port(self):
+        return self.port
+
+    def config(self):
+        return {
+            'listen': [f'127.0.0.1:{self.port}', f'{self.ip}:{self.port}'],
+            'peers': self.peers,
+            'buckets': {'default': 64 * 1024 * 1024},
+        }
+
+    def run(self):
+        with memfd('kv.json') as conf:
+            with open(conf, 'w') as f:
+                json.dump(self.config(), f)
+
+            exec_into('kv', 'run', '-c', conf)
+
+
 class Mesh:
     def __init__(self, host, peers, control, no_dial):
         self.host = host
@@ -2183,6 +2213,17 @@ class ClusterMap:
 
             yield {
                 'host': hn,
+                'serv': KV(h['gofra']['ip'], p['kv'], [
+                    {
+                        'id': peer['hostname'],
+                        'endpoint': f"http://{peer['gofra']['ip']}:{p['kv']}",
+                    }
+                    for peer in self.conf['hosts']
+                ]),
+            }
+
+            yield {
+                'host': hn,
                 'serv': Federator(p['federator'], p['collector'], [x['hostname'] for x in self.conf['hosts']]),
             }
 
@@ -2791,6 +2832,7 @@ def do(code):
         'mesh_control': 8058,
         'mesh_web': 8059,
         'ssh_oracle_tunnel': 8060,
+        'kv': 8061,
         'event_http': 8053,
         'artifacts_upload': 8055,
         'artifacts': 8056,
@@ -2820,6 +2862,7 @@ def do(code):
         'etcd_3': 2011,
         'mesh_web': 2012,
         'ssh_oracle_tunnel': 2013,
+        'kv': 2014,
         'samogon_bot': 2004,
         'job_scheduler': 2005,
         'secrets_v2': 1028,
