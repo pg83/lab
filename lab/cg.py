@@ -2274,7 +2274,11 @@ class ClusterMap:
             yield {
                 'host': hn,
                 'serv': KV('back', h['gofra']['ip'], p['kv_back'], {
-                    'buckets': {'default': 64 * 1024 * 1024, 'nitter': 1024 * 1024 * 1024},
+                    'buckets': {
+                        'default': 64 * 1024 * 1024,
+                        'nitter': 1024 * 1024 * 1024,
+                        'molot': 10 * 1024 * 1024 * 1024,
+                    },
                 }),
             }
 
