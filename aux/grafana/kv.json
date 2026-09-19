@@ -1,0 +1,1357 @@
+{
+  "uid": "kv",
+  "title": "KV",
+  "description": "Stateless fronts and sharded storage backends. Host selection applies everywhere; bucket selection applies to storage and cache metrics. Stored bytes count keys and values, excluding process memory overhead.",
+  "tags": [
+    "kv",
+    "cache"
+  ],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "graphTooltip": 1,
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "refresh": "15s",
+  "annotations": {
+    "list": []
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "host",
+        "label": "Host",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prom"
+        },
+        "query": {
+          "query": "label_values(up{job=~\"kv_(front|back)\"}, host)",
+          "refId": "VariableQuery"
+        },
+        "definition": "label_values(up{job=~\"kv_(front|back)\"}, host)",
+        "refresh": 1,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": []
+      },
+      {
+        "name": "bucket",
+        "label": "Bucket",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prom"
+        },
+        "query": {
+          "query": "label_values(kv_bucket_capacity_bytes{job=\"kv_back\",host=~\"$host\"}, bucket)",
+          "refId": "VariableQuery"
+        },
+        "definition": "label_values(kv_bucket_capacity_bytes{job=\"kv_back\",host=~\"$host\"}, bucket)",
+        "refresh": 1,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": []
+      }
+    ]
+  },
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Front availability",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "description": "Share of selected fronts that Prometheus can scrape. See the availability timeline for individual hosts.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "noValue": "\u2014",
+          "max": 1,
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(up{job=\"kv_front\",host=~\"$host\"}) / count(up{job=\"kv_front\",host=~\"$host\"})",
+          "legendFormat": "Front availability",
+          "range": false,
+          "instant": true,
+          "interval": "15s"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 2,
+      "title": "Backend availability",
+      "type": "stat",
+      "gridPos": {
+        "x": 4,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "description": "Share of selected storage backends that Prometheus can scrape.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "noValue": "\u2014",
+          "max": 1,
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(up{job=\"kv_back\",host=~\"$host\"}) / count(up{job=\"kv_back\",host=~\"$host\"})",
+          "legendFormat": "Backend availability",
+          "range": false,
+          "instant": true,
+          "interval": "15s"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 3,
+      "title": "Stored data",
+      "type": "stat",
+      "gridPos": {
+        "x": 8,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "description": "Key and value bytes in the selected buckets and hosts. Storage and Go runtime overhead are excluded.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0,
+          "noValue": "\u2014"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(kv_bucket_bytes{job=\"kv_back\",host=~\"$host\",bucket=~\"$bucket\"})",
+          "legendFormat": "Stored data",
+          "range": false,
+          "instant": true,
+          "interval": "15s"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 4,
+      "title": "Capacity",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "description": "Sum of configured bucket capacities across selected backends. Each backend has its own limit.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0,
+          "noValue": "\u2014"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(kv_bucket_capacity_bytes{job=\"kv_back\",host=~\"$host\",bucket=~\"$bucket\"})",
+          "legendFormat": "Capacity",
+          "range": false,
+          "instant": true,
+          "interval": "15s"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 5,
+      "title": "Items",
+      "type": "stat",
+      "gridPos": {
+        "x": 16,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "description": "Entries in the selected buckets and hosts.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "noValue": "\u2014"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(kv_bucket_items{job=\"kv_back\",host=~\"$host\",bucket=~\"$bucket\"})",
+          "legendFormat": "Items",
+          "range": false,
+          "instant": true,
+          "interval": "15s"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 6,
+      "title": "Cache hit ratio",
+      "type": "stat",
+      "gridPos": {
+        "x": 20,
+        "y": 0,
+        "w": 4,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "description": "Hits divided by all lookups in the rate interval, weighted by request count. No traffic produces no ratio.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "noValue": "\u2014",
+          "max": 1,
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(kv_bucket_hits_total{job=\"kv_back\",host=~\"$host\",bucket=~\"$bucket\"}[$__rate_interval])) / (sum(rate(kv_bucket_hits_total{job=\"kv_back\",host=~\"$host\",bucket=~\"$bucket\"}[$__rate_interval])) + sum(rate(kv_bucket_misses_total{job=\"kv_back\",host=~\"$host\",bucket=~\"$bucket\"}[$__rate_interval])))",
+          "legendFormat": "Cache hit ratio",
+          "range": false,
+          "instant": true,
+          "interval": "15s"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 7,
+      "title": "Requests \u00b7 host filter",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 8,
+      "title": "Front request rate",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "description": "Client requests, counted once at the front. The host filter applies here; HTTP metrics have no bucket label.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0,
+          "noValue": "\u2014",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (host, operation) (rate(kv_http_requests_total{job=\"kv_front\",scope=\"external\",host=~\"$host\"}[$__rate_interval]))",
+          "legendFormat": "{{host}} \u00b7 {{operation}}",
+          "range": true,
+          "instant": false,
+          "interval": "15s"
+        }
+      ],
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "title": "Backend request rate",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 5,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "description": "Requests received by storage backends. The host filter applies here; HTTP metrics have no bucket label.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0,
+          "noValue": "\u2014",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (host, operation) (rate(kv_http_requests_total{job=\"kv_back\",scope=\"internal\",host=~\"$host\"}[$__rate_interval]))",
+          "legendFormat": "{{host}} \u00b7 {{operation}}",
+          "range": true,
+          "instant": false,
+          "interval": "15s"
+        }
+      ],
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "title": "Front request latency",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "description": "Includes forwarding and backend response time. The host filter applies here; HTTP metrics have no bucket label.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "noValue": "\u2014",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.5, sum by (le, operation) (rate(kv_http_request_duration_seconds_bucket{job=\"kv_front\",scope=\"external\",host=~\"$host\"}[$__rate_interval])))",
+          "legendFormat": "p50 \u00b7 {{operation}}",
+          "range": true,
+          "instant": false,
+          "interval": "15s"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le, operation) (rate(kv_http_request_duration_seconds_bucket{job=\"kv_front\",scope=\"external\",host=~\"$host\"}[$__rate_interval])))",
+          "legendFormat": "p95 \u00b7 {{operation}}",
+          "range": true,
+          "instant": false,
+          "interval": "15s"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le, operation) (rate(kv_http_request_duration_seconds_bucket{job=\"kv_front\",scope=\"external\",host=~\"$host\"}[$__rate_interval])))",
+          "legendFormat": "p99 \u00b7 {{operation}}",
+          "range": true,
+          "instant": false,
+          "interval": "15s"
+        }
+      ],
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "title": "Backend request latency",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 12,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "description": "Time spent serving the backend HTTP request. The host filter applies here; HTTP metrics have no bucket label.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "noValue": "\u2014",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.5, sum by (le, operation) (rate(kv_http_request_duration_seconds_bucket{job=\"kv_back\",scope=\"internal\",host=~\"$host\"}[$__rate_interval])))",
+          "legendFormat": "p50 \u00b7 {{operation}}",
+          "range": true,
+          "instant": false,
+          "interval": "15s"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le, operation) (rate(kv_http_request_duration_seconds_bucket{job=\"kv_back\",scope=\"internal\",host=~\"$host\"}[$__rate_interval])))",
+          "legendFormat": "p95 \u00b7 {{operation}}",
+          "range": true,
+          "instant": false,
+          "interval": "15s"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le, operation) (rate(kv_http_request_duration_seconds_bucket{job=\"kv_back\",scope=\"internal\",host=~\"$host\"}[$__rate_interval])))",
+          "legendFormat": "p99 \u00b7 {{operation}}",
+          "range": true,
+          "instant": false,
+          "interval": "15s"
+        }
+      ],
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 12,
+      "title": "Front HTTP responses",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 19,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "description": "GET 404 represents a missing key or bucket. Successful GET is 200 and PUT is 204. The host filter applies here; HTTP metrics have no bucket label.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0,
+          "noValue": "\u2014",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (operation, code) (rate(kv_http_requests_total{job=\"kv_front\",scope=\"external\",host=~\"$host\"}[$__rate_interval]))",
+          "legendFormat": "{{operation}} \u00b7 {{code}}",
+          "range": true,
+          "instant": false,
+          "interval": "15s"
+        }
+      ],
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 13,
+      "title": "HTTP errors",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 19,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "description": "GET 404 is excluded from errors; PUT 404 remains a client error. The host filter applies here; HTTP metrics have no bucket label.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0,
+          "noValue": "\u2014",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(rate(kv_http_requests_total{job=\"kv_front\",host=~\"$host\",code=~\"5..\"}[$__rate_interval])) or 0 * sum(up{job=\"kv_front\",host=~\"$host\"}))",
+          "legendFormat": "front \u00b7 5xx",
+          "range": true,
+          "instant": false,
+          "interval": "15s"
+        },
+        {
+          "refId": "B",
+          "expr": "(sum(rate(kv_http_requests_total{job=\"kv_front\",host=~\"$host\",code=~\"4..\"}[$__rate_interval])) or 0 * sum(up{job=\"kv_front\",host=~\"$host\"})) - (sum(rate(kv_http_requests_total{job=\"kv_front\",host=~\"$host\",operation=\"get\",code=\"404\"}[$__rate_interval])) or 0 * sum(up{job=\"kv_front\",host=~\"$host\"}))",
+          "legendFormat": "front \u00b7 4xx except GET 404",
+          "range": true,
+          "instant": false,
+          "interval": "15s"
+        },
+        {
+          "refId": "C",
+          "expr": "(sum(rate(kv_http_requests_total{job=\"kv_back\",host=~\"$host\",code=~\"5..\"}[$__rate_interval])) or 0 * sum(up{job=\"kv_back\",host=~\"$host\"}))",
+          "legendFormat": "back \u00b7 5xx",
+          "range": true,
+          "instant": false,
+          "interval": "15s"
+        },
+        {
+          "refId": "D",
+          "expr": "(sum(rate(kv_http_requests_total{job=\"kv_back\",host=~\"$host\",code=~\"4..\"}[$__rate_interval])) or 0 * sum(up{job=\"kv_back\",host=~\"$host\"})) - (sum(rate(kv_http_requests_total{job=\"kv_back\",host=~\"$host\",operation=\"get\",code=\"404\"}[$__rate_interval])) or 0 * sum(up{job=\"kv_back\",host=~\"$host\"}))",
+          "legendFormat": "back \u00b7 4xx except GET 404",
+          "range": true,
+          "instant": false,
+          "interval": "15s"
+        }
+      ],
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 14,
+      "title": "Buckets \u00b7 host and bucket filters",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 26,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 15,
+      "title": "Bucket utilization",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 27,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "description": "Used key and value bytes divided by the configured capacity of each local bucket.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "noValue": "\u2014",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "max": 1
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (host, bucket) (kv_bucket_bytes{job=\"kv_back\",host=~\"$host\",bucket=~\"$bucket\"}) / sum by (host, bucket) (kv_bucket_capacity_bytes{job=\"kv_back\",host=~\"$host\",bucket=~\"$bucket\"})",
+          "legendFormat": "{{host}} \u00b7 {{bucket}}",
+          "range": true,
+          "instant": false,
+          "interval": "15s"
+        }
+      ],
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 16,
+      "title": "Stored bytes by bucket",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 27,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "description": "Key and value bytes; excludes storage overhead and Go process memory.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0,
+          "noValue": "\u2014",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "kv_bucket_bytes{job=\"kv_back\",host=~\"$host\",bucket=~\"$bucket\"}",
+          "legendFormat": "{{host}} \u00b7 {{bucket}}",
+          "range": true,
+          "instant": false,
+          "interval": "15s"
+        }
+      ],
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 17,
+      "title": "Items by bucket",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 34,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "noValue": "\u2014",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "kv_bucket_items{job=\"kv_back\",host=~\"$host\",bucket=~\"$bucket\"}",
+          "legendFormat": "{{host}} \u00b7 {{bucket}}",
+          "range": true,
+          "instant": false,
+          "interval": "15s"
+        }
+      ],
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 18,
+      "title": "Cache hit ratio by bucket",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 34,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "description": "No lookups produces a gap rather than a zero hit ratio.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "noValue": "\u2014",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "max": 1
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (host, bucket) (rate(kv_bucket_hits_total{job=\"kv_back\",host=~\"$host\",bucket=~\"$bucket\"}[$__rate_interval])) / (sum by (host, bucket) (rate(kv_bucket_hits_total{job=\"kv_back\",host=~\"$host\",bucket=~\"$bucket\"}[$__rate_interval])) + sum by (host, bucket) (rate(kv_bucket_misses_total{job=\"kv_back\",host=~\"$host\",bucket=~\"$bucket\"}[$__rate_interval])))",
+          "legendFormat": "{{host}} \u00b7 {{bucket}}",
+          "range": true,
+          "instant": false,
+          "interval": "15s"
+        }
+      ],
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 19,
+      "title": "Hits and misses",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 41,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "description": "Lookup rates summed across selected hosts.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0,
+          "noValue": "\u2014",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (bucket) (rate(kv_bucket_hits_total{job=\"kv_back\",host=~\"$host\",bucket=~\"$bucket\"}[$__rate_interval]))",
+          "legendFormat": "{{bucket}} \u00b7 hits",
+          "range": true,
+          "instant": false,
+          "interval": "15s"
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (bucket) (rate(kv_bucket_misses_total{job=\"kv_back\",host=~\"$host\",bucket=~\"$bucket\"}[$__rate_interval]))",
+          "legendFormat": "{{bucket}} \u00b7 misses",
+          "range": true,
+          "instant": false,
+          "interval": "15s"
+        }
+      ],
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 20,
+      "title": "Writes by bucket",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 41,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "description": "Successful local writes, including replacement of existing keys.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0,
+          "noValue": "\u2014",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(kv_bucket_puts_total{job=\"kv_back\",host=~\"$host\",bucket=~\"$bucket\"}[$__rate_interval])",
+          "legendFormat": "{{host}} \u00b7 {{bucket}}",
+          "range": true,
+          "instant": false,
+          "interval": "15s"
+        }
+      ],
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 21,
+      "title": "LRU evictions",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 48,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "description": "Entries removed to keep a bucket within its capacity.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0,
+          "noValue": "\u2014",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(kv_bucket_evictions_total{job=\"kv_back\",host=~\"$host\",bucket=~\"$bucket\"}[$__rate_interval])",
+          "legendFormat": "{{host}} \u00b7 {{bucket}}",
+          "range": true,
+          "instant": false,
+          "interval": "15s"
+        }
+      ],
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 22,
+      "title": "Rejected writes",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 48,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "description": "Writes rejected because the key and value exceed the capacity of a single backend bucket. Rejected writes return HTTP 413.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0,
+          "noValue": "\u2014",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(kv_bucket_rejected_puts_total{job=\"kv_back\",host=~\"$host\",bucket=~\"$bucket\"}[$__rate_interval])",
+          "legendFormat": "{{host}} \u00b7 {{bucket}}",
+          "range": true,
+          "instant": false,
+          "interval": "15s"
+        }
+      ],
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 23,
+      "title": "Availability and logs \u00b7 host filter",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 55,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 24,
+      "title": "Service availability",
+      "type": "state-timeline",
+      "gridPos": {
+        "x": 0,
+        "y": 56,
+        "w": 24,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "description": "Prometheus scrape status for each front and backend. Gaps mean no samples.",
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 1,
+          "unit": "short",
+          "noValue": "No data",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Down",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "Up",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "custom": {
+            "lineWidth": 0,
+            "fillOpacity": 85,
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "up{job=~\"kv_(front|back)\",host=~\"$host\"}",
+          "legendFormat": "{{host}} \u00b7 {{job}}",
+          "range": true,
+          "instant": false,
+          "interval": "15s"
+        }
+      ],
+      "options": {
+        "mergeValues": true,
+        "rowHeight": 0.8,
+        "showValue": "auto",
+        "alignValue": "center",
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      }
+    },
+    {
+      "id": 25,
+      "title": "KV logs",
+      "description": "Front and backend service logs on the selected hosts. The bucket filter does not apply.",
+      "type": "logs",
+      "gridPos": {
+        "x": 0,
+        "y": 63,
+        "w": 24,
+        "h": 9
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{service=~\"kv_(front|back)\",host=~\"$host\"}",
+          "queryType": "range"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none"
+      }
+    }
+  ]
+}
