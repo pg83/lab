@@ -23,9 +23,9 @@ semantics of IX's bin/ix/tools/upver, but every build is executed by Molot:
      Deliberately do not run a third package build; CI and the repair agent
      own failures after the mechanical update.
 
-Molot itself batch-resolves completed uids against the molot cache service
-(MOLOT_RESOLVE / IX_PACKAGE_CACHE endpoints) and backstops misses with
-per-node S3 stats; this script does not manage any local cache snapshot.
+Molot itself batch-resolves completed uids against the authoritative molot
+store service (MOLOT_RESOLVE / IX_PACKAGE_CACHE endpoints); this script does
+not manage any local cache snapshot.
 """
 
 import json

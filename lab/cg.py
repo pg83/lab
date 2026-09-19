@@ -740,11 +740,12 @@ class DropBear2(DropBear):
 
 
 class GornSsh:
-    def __init__(self, uniq, host, port, nebula_host):
+    def __init__(self, uniq, host, port, nebula_host, store_endpoint):
         self.uniq = uniq
         self.host = host
         self.port = port
         self.nebula_host = nebula_host
+        self.store_endpoint = store_endpoint
 
     def name(self):
         return f'gorn_{self.uniq}'
@@ -828,7 +829,7 @@ class GornSsh:
                 '-r', ed25519,
             ]
 
-            exec_into(*args, user=u)
+            exec_into(*args, user=u, MOLOT_STORE_ENDPOINT=self.store_endpoint)
 
 
 class GornBase:
@@ -1044,13 +1045,19 @@ class MolotWeb:
 class MolotCache:
     # Shared IX package cache. Public inside the ordinary/overlay networks:
     # the uid index and artifacts are content-addressed and contain no secrets.
-    def __init__(self, listen, s3_endpoint, s3_bucket):
+    def __init__(self, listen, s3_endpoint, s3_bucket, kv_endpoint, kv_bucket, kv_timeout):
         self.listen = listen
         self.s3_endpoint = s3_endpoint
         self.s3_bucket = s3_bucket
+        self.kv_endpoint = kv_endpoint
+        self.kv_bucket = kv_bucket
+        self.kv_timeout = kv_timeout
 
     def name(self):
         return 'molot_cache'
+
+    def command(self):
+        return 'cache'
 
     def pkgs(self):
         yield {
@@ -1062,10 +1069,14 @@ class MolotCache:
         aws_secret = get_key('/s3/iam/molot/secret').decode().strip()
 
         exec_into(
-            'molot', 'cache',
+            'molot', self.command(),
             '--listen', self.listen,
             '--index-bucket', self.s3_bucket,
             '--index-key', 'complete',
+            '--index-ttl', '30s',
+            '--kv-endpoint', self.kv_endpoint,
+            '--kv-bucket', self.kv_bucket,
+            '--kv-timeout', self.kv_timeout,
             S3_ENDPOINT=self.s3_endpoint,
             S3_BUCKET=self.s3_bucket,
             AWS_ACCESS_KEY_ID=aws_key,
@@ -1073,6 +1084,14 @@ class MolotCache:
             TMPDIR=os.getcwd(),
             PATH='/bin',
         )
+
+
+class MolotStore(MolotCache):
+    def name(self):
+        return 'molot_store'
+
+    def command(self):
+        return 'store'
 
 
 class Artifacts:
@@ -2484,7 +2503,7 @@ class ClusterMap:
                 port = p[f'gorn_{i}']
                 user = f'gorn_{i}'
                 # Legacy key namespace; SSH itself uses gofra_ip.
-                serv = GornSsh(i, gofra_ip, port, key_host)
+                serv = GornSsh(i, gofra_ip, port, key_host, f"http://127.0.0.1:{p['molot_store']}")
 
                 if nonce := GORN_RESTART_NONCE.get((hn, i)):
                     serv.restart_nonce = nonce
@@ -2553,7 +2572,14 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': MolotCache(f"0.0.0.0:{p['molot_cache']}", f"http://127.0.0.1:{p['minio']}", 'molot'),
+                'serv': MolotCache(f"0.0.0.0:{p['molot_cache']}", f"http://127.0.0.1:{p['minio']}", 'molot',
+                                   f"http://127.0.0.1:{p['kv_front']}", 'molot', '5s'),
+            }
+
+            yield {
+                'host': hn,
+                'serv': MolotStore(f"127.0.0.1:{p['molot_store']}", f"http://127.0.0.1:{p['minio']}", 'molot',
+                                   f"http://127.0.0.1:{p['kv_front']}", 'molot', '5s'),
             }
 
             # One connector per socks exit, pinned directly to its ssh
@@ -2915,6 +2941,7 @@ def do(code):
         'kv_front': 8061,
         'kv_back': 8062,
         'nitter': 8063,
+        'molot_store': 8064,
         'event_http': 8053,
         'artifacts_upload': 8055,
         'artifacts': 8056,
@@ -2947,6 +2974,7 @@ def do(code):
         'kv_front': 2014,
         'kv_back': 2015,
         'nitter': 2016,
+        'molot_store': 2017,
         'samogon_bot': 2004,
         'job_scheduler': 2005,
         'secrets_v2': 1028,
