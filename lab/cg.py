@@ -1142,7 +1142,7 @@ class CloudflaredTunnel:
         self.protocol = protocol
 
     def name(self):
-        return f'cloudflared_{self.nick}'
+        return f'cf_{self.nick}'
 
     def user(self):
         return 'cloudflared'

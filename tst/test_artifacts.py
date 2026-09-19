@@ -14,7 +14,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 
-spec = importlib.util.spec_from_file_location('artifacts', Path(__file__).resolve().parents[1] / 'lab/artifacts.py')
+spec = importlib.util.spec_from_file_location('artifacts', Path(__file__).resolve().parents[1] / 'bin/artifacts/scripts/artifacts.py')
 app = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(app)
 
