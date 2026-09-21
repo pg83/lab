@@ -938,12 +938,15 @@ class Gorn(GornBase):
 
 
 class GornCtl(GornBase):
-    def __init__(self, endpoints, s3, listen, etcd_endpoints, serve_listen):
+    def __init__(self, endpoints, s3, listen, etcd_endpoints, serve_listen, loki):
         self.endpoints = endpoints
         self.s3 = s3
         self.listen = listen
         self.etcd_endpoints = list(etcd_endpoints)
         self.serve_listen = serve_listen
+        # Task pages read the task log through control; promtail files it
+        # under service=gorn_task, which is control's default selector.
+        self.loki = loki
 
     def name(self):
         return 'gorn_ctl'
@@ -953,7 +956,7 @@ class GornCtl(GornBase):
 
     def config(self):
         cfg = self.base_config()
-        cfg['control'] = {'listen': self.listen}
+        cfg['control'] = {'listen': self.listen, 'loki': self.loki}
         return cfg
 
 
@@ -2548,14 +2551,16 @@ class ClusterMap:
                 'serv': Gorn(gorn_endpoints, s3, gorn_etcd, gorn_inflight),
             }
 
+            gorn_loki = f"http://127.0.0.1:{p['loki']}"
+
             yield {
                 'host': hn,
-                'serv': GornCtl(gorn_endpoints, s3, f"127.0.0.1:{p['gorn_ctl']}", gorn_etcd, gorn_inflight),
+                'serv': GornCtl(gorn_endpoints, s3, f"127.0.0.1:{p['gorn_ctl']}", gorn_etcd, gorn_inflight, gorn_loki),
             }
 
             yield {
                 'host': hn,
-                'serv': GornCtlMesh(gorn_endpoints, s3, f"{h['mesh']['ip']}:{p['gorn_ctl_mesh']}", gorn_etcd, gorn_inflight),
+                'serv': GornCtlMesh(gorn_endpoints, s3, f"{h['mesh']['ip']}:{p['gorn_ctl_mesh']}", gorn_etcd, gorn_inflight, gorn_loki),
             }
 
             yield {
