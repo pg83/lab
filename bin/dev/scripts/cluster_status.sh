@@ -73,9 +73,9 @@ for h, us in sorted(by.items()):
 PY
 
 HOSTS="${*:-lab1 lab2 lab3}"
-# gorn_ctl (8025) binds to 127.0.0.1; gorn_ctl_mesh (8027) is the mesh
-# sibling exposed on the host's mesh IP.
-GORN_API="${GORN_API:-http://lab1.mesh:8027}"
+# gorn_ctl binds loopback; the lab proxy publishes it as api.gorn.lab.mesh
+# (any lab) or api.gorn.labN.mesh. Needs the lab CA in the trust store.
+GORN_API="${GORN_API:-https://api.gorn.lab.mesh}"
 ETCDCTL_ENDPOINTS="${ETCDCTL_ENDPOINTS:-127.0.0.1:8020}"
 export ETCDCTL_ENDPOINTS
 

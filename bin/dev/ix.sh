@@ -4,6 +4,7 @@
 bin/curl
 bin/python
 bin/etcd/ctl
+bin/openssl
 bin/dev/scripts
 bin/openssh/client
 bin/minio/patched/client

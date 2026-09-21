@@ -3,7 +3,7 @@
 """
 Cluster log follower.
 
-Polls each tail_log endpoint (http://lab{1,2,3}.mesh:8040) once
+Polls each tail_log endpoint (https://logs.lab{1,2,3}.mesh) once
 per second, detects what's new since the last poll via md5-of-line
 uids kept per-endpoint, merges the union across endpoints, sorts by
 ts, prints each uid at most once. Override endpoints via
@@ -28,9 +28,9 @@ import urllib.request
 
 
 DEFAULT_EPS = ','.join([
-    'http://lab1.mesh:8040',
-    'http://lab2.mesh:8040',
-    'http://lab3.mesh:8040',
+    'https://logs.lab1.mesh',
+    'https://logs.lab2.mesh',
+    'https://logs.lab3.mesh',
 ])
 
 ENDPOINTS = os.environ.get('LOG_FOLLOW_ENDPOINTS', DEFAULT_EPS).split(',')
@@ -50,6 +50,9 @@ def label_of(ep):
 
     if host.endswith('.mesh'):
         host = host[:-len('.mesh')]
+
+    if host.startswith('logs.'):
+        host = host[len('logs.'):]
 
     return host
 

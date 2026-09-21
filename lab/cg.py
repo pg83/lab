@@ -2,6 +2,7 @@
 
 import io
 import os
+import re
 import sys
 import ast
 import zlib
@@ -171,13 +172,22 @@ def make_dirs(path, owner=None):
 
 
 class Collector:
-    def __init__(self, port, host):
+    def __init__(self, port, host, listen):
         self.port = port
         self.host = host
+        # Federators scrape this address; prometheus binds one address,
+        # so the local scrape targets it too instead of loopback.
+        self.listen = listen
         self.jobs = []
 
-    def prom_port(self):
-        return self.port
+    def prom_jobs(self):
+        yield {
+            'job_name': self.name(),
+            'static_configs': [{'targets': [f'{self.listen}:{self.port}']}],
+        }
+
+    def proxies(self):
+        yield {'name': 'collector', 'host': self.listen, 'port': self.port}
 
     def pkgs(self):
         yield {
@@ -208,8 +218,7 @@ class Collector:
                 'prometheus',
                 f'--config.file={fn}',
                 '--storage.tsdb.path=/home/collector/',
-                # 0.0.0.0: prom 3.7 repeated --listen flag drops 2nd arg.
-                f'--web.listen-address=0.0.0.0:{self.port}',
+                f'--web.listen-address={self.listen}:{self.port}',
             ]
 
             exec_into(*args)
@@ -235,13 +244,19 @@ class KV:
     def prom_port(self):
         return self.port
 
+    def proxies(self):
+        if self.mode == 'front':
+            yield {'name': 'kv', 'port': self.port}
+
     def config(self):
+        listen = [f'127.0.0.1:{self.port}']
+
+        if self.ip:
+            listen.append(f'{self.ip}:{self.port}')
+
         return {
             **self.settings,
-            'listen': [
-                f'127.0.0.1:{self.port}',
-                f'{self.ip}:{self.port}',
-            ],
+            'listen': listen,
         }
 
     def run(self):
@@ -259,6 +274,9 @@ class Nitter:
 
     def pkgs(self):
         yield {'pkg': 'bin/nitter/pg83'}
+
+    def proxies(self):
+        yield {'name': 'nitter', 'port': self.port}
 
     def config(self, hmac_key):
         return {
@@ -340,6 +358,12 @@ class Mesh:
             'tun': 'mesh0',
             'control': self.control,
             'dns': True,
+            # <name>.lab.mesh answers with every reachable lab, <name>.labN.mesh
+            # with that one; the lab proxy routes both by Host.
+            'dns_records': {
+                '*.lab': ['lab1', 'lab2', 'lab3'],
+                **{f'*.{hn}': [hn] for hn in ['lab1', 'lab2', 'lab3']},
+            },
             'registry': registry,
             'no_dial': self.no_dial,
         }
@@ -366,6 +390,9 @@ class MeshWeb:
 
     def pkgs(self):
         yield {'pkg': 'bin/mesh'}
+
+    def proxies(self):
+        yield {'name': 'mesh', 'port': int(self.listen.rsplit(':', 1)[1])}
 
     def run(self):
         exec_into('mesh', 'web', '-control', self.control, '-listen', self.listen)
@@ -685,6 +712,9 @@ class MinioConsole:
             'pkg': 'bin/minio/console',
         }
 
+    def proxies(self):
+        yield {'name': 'minio', 'port': self.port}
+
     def run(self):
         args = [
             'minio-console',
@@ -954,6 +984,9 @@ class GornCtl(GornBase):
     def subcommand(self):
         return 'control'
 
+    def proxies(self):
+        yield {'name': 'api.gorn', 'port': int(self.listen.rsplit(':', 1)[1])}
+
     def config(self):
         cfg = self.base_config()
         cfg['control'] = {'listen': self.listen, 'loki': self.loki}
@@ -961,8 +994,13 @@ class GornCtl(GornBase):
 
 
 class GornCtlMesh(GornCtl):
+    # Control on the gofra address, for callers that cannot use loopback
+    # or the proxy: the fixer's wirez container dials 192.* directly.
     def name(self):
         return 'gorn_ctl_mesh'
+
+    def proxies(self):
+        return []
 
 
 class GornProm(GornBase):
@@ -1001,6 +1039,9 @@ class GornWeb:
             'pkg': 'bin/gorn',
         }
 
+    def proxies(self):
+        yield {'name': 'gorn', 'port': int(self.listen.rsplit(':', 1)[1])}
+
     def run(self):
         cfg = {
             'web': {
@@ -1031,6 +1072,9 @@ class MolotWeb:
         yield {
             'pkg': 'bin/molot',
         }
+
+    def proxies(self):
+        yield {'name': 'molot', 'port': int(self.listen.rsplit(':', 1)[1])}
 
     def run(self):
         aws_key = get_key('/s3/iam/molot/key').decode().strip()
@@ -1064,6 +1108,10 @@ class MolotCache:
 
     def command(self):
         return 'cache'
+
+    def proxies(self):
+        if self.command() == 'cache':
+            yield {'name': 'cache', 'port': int(self.listen.rsplit(':', 1)[1])}
 
     def pkgs(self):
         yield {
@@ -1109,6 +1157,10 @@ class Artifacts:
 
     def pkgs(self):
         yield {'pkg': 'bin/artifacts'}
+
+    def proxies(self):
+        yield {'name': 'view', 'port': self.port}
+        yield {'name': 'upload.view', 'port': self.upload_port}
 
     def run(self):
         from urllib.parse import quote
@@ -1434,6 +1486,9 @@ class Federator:
     def prom_port(self):
         return self.port
 
+    def proxies(self):
+        yield {'name': 'prometheus', 'port': self.port}
+
     def prepare(self):
         u = self.name()
         make_dirs(f'/home/{u}', owner=u)
@@ -1470,8 +1525,7 @@ class Federator:
                 'prometheus',
                 f'--config.file={fn}',
                 f'--storage.tsdb.path=/home/{self.name()}/',
-                # 0.0.0.0: prometheus multi-listen broken (see Collector).
-                f'--web.listen-address=0.0.0.0:{self.port}',
+                f'--web.listen-address=127.0.0.1:{self.port}',
             ]
 
             exec_into(*args)
@@ -1497,6 +1551,9 @@ class Grafana:
     def prom_port(self):
         # /metrics on main HTTP port; default ini has [metrics], no auth.
         return self.port
+
+    def proxies(self):
+        yield {'name': 'grafana', 'port': self.port}
 
     def pkgs(self):
         yield {
@@ -1527,8 +1584,7 @@ class Grafana:
 
         return (
             '[server]\n'
-            # 0.0.0.0: overlay-only bind broke local scrape (see Federator).
-            'http_addr = 0.0.0.0\n'
+            'http_addr = 127.0.0.1\n'
             f'http_port = {self.port}\n'
             '[paths]\n'
             f'data = {s}/data\n'
@@ -1822,13 +1878,15 @@ class EventRetry(EventRunner):
 class Loki:
     # HA per-host. Ring on tmpfs etcd_3 — ephemeral by nature, members
     # re-register on restart (gossip per grafana/loki#14019).
-    def __init__(self, port, s3_endpoint, peers, me, etcd_endpoints):
+    def __init__(self, port, s3_endpoint, peers, me, etcd_endpoints, grpc_listen):
         self.v = 1
         self.port = port
         self.s3_endpoint = s3_endpoint
         self.peers = list(peers)
         self.me = me
         self.etcd_endpoints = list(etcd_endpoints)
+        # Ring members dial each other's gRPC on gofra; HTTP stays local.
+        self.grpc_listen = grpc_listen
 
     def name(self):
         return 'loki'
@@ -1858,13 +1916,18 @@ class Loki:
     def prom_port(self):
         return self.port
 
+    def proxies(self):
+        yield {'name': 'loki', 'port': self.port}
+
     def config(self):
         scheme, rest = self.s3_endpoint.split('://', 1)
 
         return {
             'auth_enabled': False,
             'server': {
+                'http_listen_address': '127.0.0.1',
                 'http_listen_port': self.port,
+                'grpc_listen_address': self.grpc_listen,
                 'grpc_listen_port': 9095,
                 'log_level': 'info',
             },
@@ -1972,7 +2035,9 @@ class Promtail:
 
         return {
             'server': {
+                'http_listen_address': '127.0.0.1',
                 'http_listen_port': self.port,
+                'grpc_listen_address': '127.0.0.1',
                 'grpc_listen_port': 9096,
             },
             'positions': {
@@ -2025,6 +2090,9 @@ class TailLog:
 
     def pkgs(self):
         yield {'pkg': 'bin/tail/log'}
+
+    def proxies(self):
+        yield {'name': 'logs', 'port': self.port}
 
     def log_sources(self):
         for svc in self.IX_TINYLOGS:
@@ -2155,6 +2223,99 @@ class CO2Mon:
         exec_into('co2mond')
 
 
+class LabProxy:
+    # HTTPS front on the mesh address: <name>.lab.mesh lands on any lab,
+    # <name>.<host>.mesh on this one; both go to the service on loopback.
+    # Every servant lists its names in proxies() as {name, port[, host]},
+    # the second pass of do() collects them here, so a servant never binds
+    # the mesh itself.
+    def __init__(self, host, listen, port, http_port):
+        self.host = host
+        self.listen = listen
+        self.port = port
+        self.http_port = http_port
+        self.routes = []
+
+    def name(self):
+        return 'lab_proxy'
+
+    def user(self):
+        return 'root'
+
+    def pkgs(self):
+        yield {'pkg': 'bin/reproxy'}
+        yield {'pkg': 'bin/openssl'}
+
+    def names(self):
+        return sorted({r['name'] for r in self.routes})
+
+    def rules(self):
+        for r in sorted(self.routes, key=lambda r: r['name']):
+            server = '^' + re.escape(r['name']) + r'\.(lab|' + re.escape(self.host) + r')\.mesh$'
+            yield f"{server},^/(.*),http://{r.get('host', '127.0.0.1')}:{r['port']}/$1"
+
+    def san(self):
+        names = [f'*.lab.mesh', f'*.{self.host}.mesh', 'lab.mesh', f'{self.host}.mesh']
+
+        for n in self.names():
+            names += [f'{n}.lab.mesh', f'{n}.{self.host}.mesh']
+
+        return ','.join('DNS:' + n for n in names)
+
+    def run(self):
+        # openssl on the host has no openssl.cnf; every input is explicit.
+        env = dict(os.environ, OPENSSL_CONF='/dev/null', PATH='/bin')
+        assets = os.path.join(os.getcwd(), 'assets')
+        os.makedirs(assets, exist_ok=True)
+        ca_crt_pem = get_key('/tls/lab/ca.crt')
+
+        with open(os.path.join(assets, 'ca.crt'), 'wb') as f:
+            f.write(ca_crt_pem)
+
+        with multi(memfd('ca.key'), memfd('ca.crt'), memfd('leaf.key'), memfd('leaf.csr'), memfd('leaf.crt'), memfd('ext.cnf')) as (ca_key, ca_crt, leaf_key, leaf_csr, leaf_crt, ext):
+            with open(ca_key, 'wb') as f:
+                f.write(get_key('/tls/lab/ca.key'))
+
+            with open(ca_crt, 'wb') as f:
+                f.write(ca_crt_pem)
+
+            with open(ext, 'w') as f:
+                f.write(f'subjectAltName={self.san()}\nextendedKeyUsage=serverAuth\nbasicConstraints=CA:FALSE\n')
+
+            subprocess.run([
+                'openssl', 'req', '-new', '-newkey', 'ec', '-pkeyopt', 'ec_paramgen_curve:P-256', '-nodes',
+                '-keyout', leaf_key, '-out', leaf_csr, '-subj', '/CN=*.lab.mesh',
+            ], check=True, env=env)
+
+            # A fresh leaf per start, ten years, key only in memory.
+            subprocess.run([
+                'openssl', 'x509', '-req', '-in', leaf_csr, '-CA', ca_crt, '-CAkey', ca_key,
+                '-set_serial', f'0x{random.getrandbits(127):x}', '-days', '3650', '-extfile', ext, '-out', leaf_crt,
+            ], check=True, env=env)
+
+            args = [
+                'reproxy',
+                '--listen', f'{self.listen}:{self.port}',
+                '--ssl.type=static',
+                f'--ssl.cert={leaf_crt}',
+                f'--ssl.key={leaf_key}',
+                f'--ssl.http-port={self.http_port}',
+                '--keep-host',
+                '--max=0',
+                '--timeout.write=10m',
+                '--timeout.idle=5m',
+                '--timeout.resp-header=5m',
+                '--logger.stdout',
+                f'--assets.location={assets}',
+                '--static.enabled',
+            ]
+
+            for rule in self.rules():
+                args.append(f'--static.rule={rule}')
+
+            exec_into(*args, PATH='/bin', HOME=os.getcwd())
+
+
 class ClusterMap:
     def __init__(self, conf):
         self.conf = conf
@@ -2262,7 +2423,7 @@ class ClusterMap:
                 'serv': minio,
             }
 
-            mc_host = mesh['ip']
+            mc_host = '127.0.0.1'
             mc_port = p['minio_web']
             mc_serv = 'http://' + minio.addr
 
@@ -2293,7 +2454,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': Collector(p['collector'], hn),
+                'serv': Collector(p['collector'], hn, h['gofra']['ip']),
             }
 
             yield {
@@ -2309,7 +2470,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': KV('front', h['mesh']['ip'], p['kv_front'], {
+                'serv': KV('front', None, p['kv_front'], {
                     'peers': [
                         {
                             'id': peer['hostname'],
@@ -2343,6 +2504,7 @@ class ClusterMap:
                     peers=[x['hostname'] for x in self.conf['hosts']],
                     me=hn,
                     etcd_endpoints=[f"127.0.0.1:{p['etcd_3_client']}"],
+                    grpc_listen=h['gofra']['ip'],
                 ),
             }
 
@@ -2360,7 +2522,7 @@ class ClusterMap:
                 'serv': TailLog(
                     port=p['tail_log'],
                     me=hn,
-                    bind_addr=h['mesh']['ip'],
+                    bind_addr='127.0.0.1',
                 ),
             }
 
@@ -2409,7 +2571,7 @@ class ClusterMap:
                     s3_endpoint=f"http://127.0.0.1:{p['minio']}",
                     etcd_endpoints=[f"127.0.0.1:{p['etcd_3_client']}"],
                     etcd_persist_endpoints=[f"127.0.0.1:{p['etcd_1_client']}"],
-                    codex_gorn_api=f"http://{h['mesh']['ip']}:{p['gorn_ctl_mesh']}",
+                    codex_gorn_api=f"http://{h['gofra']['ip']}:{p['gorn_ctl_mesh']}",
                     codex_s3_endpoint=f"http://{h['gofra']['ip']}:{p['minio']}",
                 ),
             }
@@ -2495,7 +2657,12 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': MeshWeb(f"127.0.0.1:{p['mesh_control']}", f"0.0.0.0:{p['mesh_web']}"),
+                'serv': MeshWeb(f"127.0.0.1:{p['mesh_control']}", f"127.0.0.1:{p['mesh_web']}"),
+            }
+
+            yield {
+                'host': hn,
+                'serv': LabProxy(hn, h['mesh']['ip'], p['lab_proxy'], p['lab_proxy_http']),
             }
 
         gorn_endpoints = []
@@ -2560,12 +2727,12 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': GornCtlMesh(gorn_endpoints, s3, f"{h['mesh']['ip']}:{p['gorn_ctl_mesh']}", gorn_etcd, gorn_inflight, gorn_loki),
+                'serv': GornCtlMesh(gorn_endpoints, s3, f"{h['gofra']['ip']}:{p['gorn_ctl_mesh']}", gorn_etcd, gorn_inflight, gorn_loki),
             }
 
             yield {
                 'host': hn,
-                'serv': GornWeb(f"http://127.0.0.1:{p['gorn_ctl']}", f"{h['mesh']['ip']}:{p['gorn_web']}"),
+                'serv': GornWeb(f"http://127.0.0.1:{p['gorn_ctl']}", f"127.0.0.1:{p['gorn_web']}"),
             }
 
             yield {
@@ -2575,7 +2742,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': MolotWeb(f"{h['mesh']['ip']}:{p['molot_web']}", f"http://127.0.0.1:{p['gorn_ctl']}", f"http://127.0.0.1:{p['minio']}", 'molot'),
+                'serv': MolotWeb(f"127.0.0.1:{p['molot_web']}", f"http://127.0.0.1:{p['gorn_ctl']}", f"http://127.0.0.1:{p['minio']}", 'molot'),
             }
 
             yield {
@@ -2594,7 +2761,7 @@ class ClusterMap:
             # tunnel port: an exit death takes down only its connector.
             yield {
                 'host': hn,
-                'serv': Artifacts(h['mesh']['ip'], p['artifacts'], p['artifacts_upload'],
+                'serv': Artifacts('127.0.0.1', p['artifacts'], p['artifacts_upload'],
                                   f"http://127.0.0.1:{p['minio']}"),
             }
 
@@ -2767,6 +2934,12 @@ class Service:
             lbl.setdefault('stream', 'custom')
 
             yield {**s, 'labels': lbl}
+
+    def iter_proxies(self):
+        try:
+            yield from self.srv.proxies()
+        except AttributeError:
+            return
 
     def enabled(self):
         return not self.disabled()
@@ -2953,6 +3126,8 @@ def do(code):
         'event_http': 8053,
         'artifacts_upload': 8055,
         'artifacts': 8056,
+        'lab_proxy': 443,
+        'lab_proxy_http': 80,
     }
 
     users = {
@@ -3073,6 +3248,12 @@ def do(code):
         if tail_log_key in by_addr:
             for src in hndl.iter_log_sources():
                 by_addr[tail_log_key].srv.paths.append(src['path'])
+
+        proxy_key = f'{host}:lab_proxy'
+
+        if proxy_key in by_addr:
+            for route in hndl.iter_proxies():
+                by_addr[proxy_key].srv.routes.append(route)
 
     py_modules = list(sorted(frozenset(py_modules)))
 
