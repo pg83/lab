@@ -18,6 +18,12 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
+      # tst/canon.json is generated on the developer machine; the pickled
+      # service runners inside it depend on the Python release.
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.14'
+
       - name: Canon
         run: python3 tst/test.py | diff tst/canon.json -
 
