@@ -16,7 +16,7 @@
                 "bin/su/exec(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=minio)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio,runsh_script=sha256:8b071c062f2a434a,srv_user=root,extra_deps=YmluL21pbmlvL2RhZW1vbgpiaW4vc3UvZXhlYw==)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio,runsh_script=sha256:5c5ea2501b2f1d14,srv_user=root,extra_deps=YmluL21pbmlvL2RhZW1vbgpiaW4vc3UvZXhlYw==)",
                 "bin/minio/console(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=minio_console)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio_console,runsh_script=sha256:4ae39edcdd7c28cc,srv_user=minio_console,extra_deps=YmluL21pbmlvL2NvbnNvbGU=)",
@@ -85,7 +85,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon_bot,runsh_script=sha256:3f597fef0c180da7,srv_user=samogon_bot,extra_deps=YmluL3NhbW9nb24KYmluL2V0Y2QvbG9jaw==)",
                 "bin/job/scheduler(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=job_scheduler)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:a46d40ca574b4005,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:255759b389bc36af,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
                 "bin/event(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=event_http)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_http,runsh_script=sha256:db8927e645ff4f0d,srv_user=event_http,extra_deps=YmluL2V2ZW50)",
@@ -306,7 +306,7 @@
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=cloudflared)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cf_lab1_seal_quic,runsh_script=sha256:3fc22d6ef5788f7c,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:792e24214f642d65)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:594f58050bfad2df)"
             ],
             "gofra": {
                 "hostname": "lab1.gofra",
@@ -361,7 +361,7 @@
                 "bin/su/exec(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=minio)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio,runsh_script=sha256:447c8037bfeab480,srv_user=root,extra_deps=YmluL21pbmlvL2RhZW1vbgpiaW4vc3UvZXhlYw==)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio,runsh_script=sha256:07350c58f9296319,srv_user=root,extra_deps=YmluL21pbmlvL2RhZW1vbgpiaW4vc3UvZXhlYw==)",
                 "bin/minio/console(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=minio_console)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio_console,runsh_script=sha256:1c02c27ca1dddb06,srv_user=minio_console,extra_deps=YmluL21pbmlvL2NvbnNvbGU=)",
@@ -430,7 +430,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon_bot,runsh_script=sha256:3f597fef0c180da7,srv_user=samogon_bot,extra_deps=YmluL3NhbW9nb24KYmluL2V0Y2QvbG9jaw==)",
                 "bin/job/scheduler(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=job_scheduler)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:53dc24486d04d345,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:aad64732733c97cd,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
                 "bin/event(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=event_http)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_http,runsh_script=sha256:db8927e645ff4f0d,srv_user=event_http,extra_deps=YmluL2V2ZW50)",
@@ -641,7 +641,7 @@
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=cloudflared)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cf_lab2_seal_quic,runsh_script=sha256:2c637a786f4ec44f,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:792e24214f642d65)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:594f58050bfad2df)"
             ],
             "gofra": {
                 "hostname": "lab2.gofra",
@@ -696,7 +696,7 @@
                 "bin/su/exec(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=minio)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio,runsh_script=sha256:f826e1a6c9357510,srv_user=root,extra_deps=YmluL21pbmlvL2RhZW1vbgpiaW4vc3UvZXhlYw==)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio,runsh_script=sha256:5090b1129f53846f,srv_user=root,extra_deps=YmluL21pbmlvL2RhZW1vbgpiaW4vc3UvZXhlYw==)",
                 "bin/minio/console(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=minio_console)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio_console,runsh_script=sha256:7769f156bdd6075b,srv_user=minio_console,extra_deps=YmluL21pbmlvL2NvbnNvbGU=)",
@@ -765,7 +765,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon_bot,runsh_script=sha256:3f597fef0c180da7,srv_user=samogon_bot,extra_deps=YmluL3NhbW9nb24KYmluL2V0Y2QvbG9jaw==)",
                 "bin/job/scheduler(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=job_scheduler)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:cf876d4461e58f61,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:049e46f1d41d5cfc,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
                 "bin/event(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=event_http)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_http,runsh_script=sha256:db8927e645ff4f0d,srv_user=event_http,extra_deps=YmluL2V2ZW50)",
@@ -946,7 +946,7 @@
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=cloudflared)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cf_lab3_seal_quic,runsh_script=sha256:3a268a32fd967421,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:792e24214f642d65)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:594f58050bfad2df)"
             ],
             "gofra": {
                 "hostname": "lab3.gofra",
@@ -1003,7 +1003,7 @@
                 "bin/su/exec(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=minio)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio,runsh_script=sha256:8b071c062f2a434a,srv_user=root,extra_deps=YmluL21pbmlvL2RhZW1vbgpiaW4vc3UvZXhlYw==)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio,runsh_script=sha256:5c5ea2501b2f1d14,srv_user=root,extra_deps=YmluL21pbmlvL2RhZW1vbgpiaW4vc3UvZXhlYw==)",
                 "bin/minio/console(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=minio_console)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio_console,runsh_script=sha256:4ae39edcdd7c28cc,srv_user=minio_console,extra_deps=YmluL21pbmlvL2NvbnNvbGU=)",
@@ -1072,7 +1072,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon_bot,runsh_script=sha256:3f597fef0c180da7,srv_user=samogon_bot,extra_deps=YmluL3NhbW9nb24KYmluL2V0Y2QvbG9jaw==)",
                 "bin/job/scheduler(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=job_scheduler)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:a46d40ca574b4005,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:255759b389bc36af,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
                 "bin/event(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=event_http)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_http,runsh_script=sha256:db8927e645ff4f0d,srv_user=event_http,extra_deps=YmluL2V2ZW50)",
@@ -1293,7 +1293,7 @@
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=cloudflared)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cf_lab1_seal_quic,runsh_script=sha256:3fc22d6ef5788f7c,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:792e24214f642d65)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:594f58050bfad2df)"
             ],
             "gofra": {
                 "hostname": "lab1.gofra",
@@ -1348,7 +1348,7 @@
                 "bin/su/exec(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=minio)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio,runsh_script=sha256:447c8037bfeab480,srv_user=root,extra_deps=YmluL21pbmlvL2RhZW1vbgpiaW4vc3UvZXhlYw==)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio,runsh_script=sha256:07350c58f9296319,srv_user=root,extra_deps=YmluL21pbmlvL2RhZW1vbgpiaW4vc3UvZXhlYw==)",
                 "bin/minio/console(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=minio_console)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio_console,runsh_script=sha256:1c02c27ca1dddb06,srv_user=minio_console,extra_deps=YmluL21pbmlvL2NvbnNvbGU=)",
@@ -1417,7 +1417,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon_bot,runsh_script=sha256:3f597fef0c180da7,srv_user=samogon_bot,extra_deps=YmluL3NhbW9nb24KYmluL2V0Y2QvbG9jaw==)",
                 "bin/job/scheduler(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=job_scheduler)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:53dc24486d04d345,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:aad64732733c97cd,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
                 "bin/event(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=event_http)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_http,runsh_script=sha256:db8927e645ff4f0d,srv_user=event_http,extra_deps=YmluL2V2ZW50)",
@@ -1628,7 +1628,7 @@
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=cloudflared)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cf_lab2_seal_quic,runsh_script=sha256:2c637a786f4ec44f,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:792e24214f642d65)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:594f58050bfad2df)"
             ],
             "gofra": {
                 "hostname": "lab2.gofra",
@@ -1683,7 +1683,7 @@
                 "bin/su/exec(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=minio)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio,runsh_script=sha256:f826e1a6c9357510,srv_user=root,extra_deps=YmluL21pbmlvL2RhZW1vbgpiaW4vc3UvZXhlYw==)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio,runsh_script=sha256:5090b1129f53846f,srv_user=root,extra_deps=YmluL21pbmlvL2RhZW1vbgpiaW4vc3UvZXhlYw==)",
                 "bin/minio/console(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=minio_console)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=minio_console,runsh_script=sha256:7769f156bdd6075b,srv_user=minio_console,extra_deps=YmluL21pbmlvL2NvbnNvbGU=)",
@@ -1752,7 +1752,7 @@
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=samogon_bot,runsh_script=sha256:3f597fef0c180da7,srv_user=samogon_bot,extra_deps=YmluL3NhbW9nb24KYmluL2V0Y2QvbG9jaw==)",
                 "bin/job/scheduler(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=job_scheduler)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:cf876d4461e58f61,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=job_scheduler,runsh_script=sha256:049e46f1d41d5cfc,srv_user=job_scheduler,extra_deps=YmluL2pvYi9zY2hlZHVsZXI=)",
                 "bin/event(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=event_http)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=event_http,runsh_script=sha256:db8927e645ff4f0d,srv_user=event_http,extra_deps=YmluL2V2ZW50)",
@@ -1933,7 +1933,7 @@
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,user=cloudflared)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,srv_dir=cf_lab3_seal_quic,runsh_script=sha256:3a268a32fd967421,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:792e24214f642d65)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:594f58050bfad2df)"
             ],
             "gofra": {
                 "hostname": "lab3.gofra",

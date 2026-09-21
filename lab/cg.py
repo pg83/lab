@@ -607,6 +607,9 @@ mkdir -p /var/mnt/minio/3
 mount -t xfs LABEL=MINIO_3 /var/mnt/minio/3
 mkdir -p /var/mnt/minio/3/data
 
+# 9 drives x parallel gorn uploads exhaust the inherited 4096 hard limit.
+ulimit -n 65536
+
 exec su-exec minio minio server --address {ipv4}:{port} {cmap}
 '''
 
@@ -1722,7 +1725,7 @@ class JobScheduler:
 
         # Per-bucket creds — each cron file forwards the one bucket it
         # touches as AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID_<BUCKET>.
-        for bucket in ('cas', 'gorn', 'mirror', 'molot'):
+        for bucket in ('cas', 'etcd', 'gorn', 'mirror', 'molot'):
             bk = get_key(f'/s3/iam/{bucket}/key').decode().strip()
             bs = get_key(f'/s3/iam/{bucket}/secret').decode().strip()
             env[f'AWS_ACCESS_KEY_ID_{bucket.upper()}'] = bk
