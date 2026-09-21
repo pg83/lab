@@ -99,6 +99,12 @@ def memfd(name):
         os.close(fd)
 
 
+def memfd_fds(*paths):
+    # subprocess closes inherited descriptors; a child that must open a
+    # memfd by its /proc/self/fd path needs the number passed through.
+    return [int(p.rsplit('/', 1)[1]) for p in paths]
+
+
 @contextlib.contextmanager
 def multi(*args):
     with contextlib.ExitStack() as es:
@@ -2285,13 +2291,13 @@ class LabProxy:
             subprocess.run([
                 'openssl', 'req', '-new', '-newkey', 'ec', '-pkeyopt', 'ec_paramgen_curve:P-256', '-nodes',
                 '-keyout', leaf_key, '-out', leaf_csr, '-subj', '/CN=*.lab.mesh',
-            ], check=True, env=env)
+            ], check=True, env=env, pass_fds=memfd_fds(leaf_key, leaf_csr))
 
             # A fresh leaf per start, ten years, key only in memory.
             subprocess.run([
                 'openssl', 'x509', '-req', '-in', leaf_csr, '-CA', ca_crt, '-CAkey', ca_key,
                 '-set_serial', f'0x{random.getrandbits(127):x}', '-days', '3650', '-extfile', ext, '-out', leaf_crt,
-            ], check=True, env=env)
+            ], check=True, env=env, pass_fds=memfd_fds(leaf_csr, ca_crt, ca_key, ext, leaf_crt))
 
             args = [
                 'reproxy',
