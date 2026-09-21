@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Cluster config tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Canon
+        run: python3 tst/test.py | diff tst/canon.json -
+
+      - name: Pickle round-trip
+        run: python3 tst/dryrun.py
+
+      - name: Class source hash
+        run: python3 tst/test_class_hash.py
+
+      - name: Artifact server
+        run: python3 -m unittest tst.test_artifacts
+
+      - name: Package unit tests
+        run: |
+          python3 -m unittest discover -s bin/job/scheduler/scripts -p 'test_*.py'
+          python3 -m unittest discover -s bin/molot/complete/scripts -p 'test_*.py'
+          python3 -m unittest discover -s bin/updater/scripts -p 'test_*.py'
+          python3 -m unittest discover -s bin/updater/fixer/scripts -p 'test_*.py'
