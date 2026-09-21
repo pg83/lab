@@ -1915,9 +1915,17 @@ class Loki:
         }
 
     def prepare(self):
-        # Wipe state every boot; ring is authoritative in etcd.
-        shutil.rmtree(self.home_dir(), ignore_errors=True)
-        make_dirs(self.home_dir(), owner='loki')
+        # Wipe state every boot; ring is authoritative in etcd. The WAL
+        # stays: it holds chunks not yet flushed to S3, and wiping it cost
+        # up to half an hour of logs per host on every restart.
+        home = self.home_dir()
+
+        if os.path.isdir(home):
+            for entry in os.listdir(home):
+                if entry != 'wal':
+                    shutil.rmtree(os.path.join(home, entry), ignore_errors=True)
+
+        make_dirs(home, owner='loki')
 
     def prom_port(self):
         return self.port
@@ -1977,6 +1985,12 @@ class Loki:
             },
             'limits_config': {
                 'allow_structured_metadata': True,
+            },
+            'ingester': {
+                'wal': {
+                    # A planned restart hands its chunks to S3 instead of the WAL.
+                    'flush_on_shutdown': True,
+                },
             },
             'distributor': {
                 'rate_store': {
