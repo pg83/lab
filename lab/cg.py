@@ -1938,6 +1938,9 @@ class Loki:
                 'log_level': 'info',
             },
             'common': {
+                # Also the query-frontend's advertised address: without it the
+                # frontend announces the first NIC and queriers cannot reach it.
+                'instance_addr': self.grpc_listen,
                 'path_prefix': self.home_dir(),
                 'storage': {
                     's3': {
