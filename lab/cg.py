@@ -18,6 +18,7 @@ import contextlib
 import subprocess
 import collections
 
+import urllib.error as ue
 import urllib.request as ur
 
 
@@ -232,8 +233,23 @@ class Collector:
             exec_into(*args)
 
 
-def get_key(k):
-    return ur.urlopen('http://localhost:8022' + k).read()
+def get_key(k, timeout=120):
+    # secrets_v2 answers 503 while etcd is not up yet, and is itself not
+    # listening for the first seconds after boot: wait for both instead
+    # of crash-looping the service. 404 (no such key) is raised at once.
+    deadline = time.monotonic() + timeout
+
+    while True:
+        try:
+            return ur.urlopen('http://localhost:8022' + k).read()
+        except ue.HTTPError as e:
+            if e.code != 503 or time.monotonic() > deadline:
+                raise
+        except ue.URLError:
+            if time.monotonic() > deadline:
+                raise
+
+        time.sleep(1)
 
 
 class KV:

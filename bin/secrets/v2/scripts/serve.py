@@ -107,11 +107,23 @@ def main():
 
     etcd_cache = {}
 
+    class EtcdUnavailable(Exception):
+        pass
+
     def get_etcd(path):
         if path in etcd_cache:
             return etcd_cache[path]
 
-        out = subprocess.check_output(['etcdctl', 'get', '--print-value-only', path])
+        try:
+            out = subprocess.check_output(['etcdctl', 'get', '--print-value-only', path])
+        except (subprocess.CalledProcessError, OSError) as e:
+            # etcdctl fails when etcd is down or still electing at boot,
+            # not when the key is absent: an absent key is an empty reply.
+            raise EtcdUnavailable(str(e))
+
+        if not out:
+            raise KeyError(path)
+
         etcd_cache[path] = out
 
         return out
@@ -132,8 +144,13 @@ def main():
 
             try:
                 body = get_etcd(self.path)
-            except Exception as e:
-                self.send_error(404, message=str(e))
+            except EtcdUnavailable as e:
+                # 503 tells clients to retry instead of treating the key as missing.
+                self.send_error(503, message=str(e))
+
+                return
+            except KeyError:
+                self.send_error(404, message=f'no such key {self.path}')
 
                 return
 
