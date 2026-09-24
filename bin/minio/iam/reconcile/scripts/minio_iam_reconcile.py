@@ -14,6 +14,7 @@ BUCKETS = (
     'etcd',
     'geesefs',
     'gorn',
+    'logovo',
     'loki',
     'mirror',
     'molot',
