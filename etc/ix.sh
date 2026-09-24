@@ -11,6 +11,7 @@ etc/hosts
 etc/sysctl
 etc/multihome
 etc/tun
+etc/cgroup
 
 {% for d in hm.disabled %}
 etc/stopper(srv_dir={{d}})
