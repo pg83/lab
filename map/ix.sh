@@ -29,6 +29,7 @@ bin/etcd/backup
 bin/etcd/defrag
 bin/kernel/6/14
 bin/kernel/6/16
+bin/kernel/7/2
 bin/mirror/fetch(socks5_proxy=127.0.0.1:{{(cluster_map | des).ports.socks_proxy}})
 bin/ogorod/mirror
 bin/smart/mon/tools
