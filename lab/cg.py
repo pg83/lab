@@ -646,17 +646,43 @@ class SftpD:
 MINIO_SCRIPT = '''
 set -xue
 
-mkdir -p /var/mnt/minio/1
-mount -t xfs LABEL=MINIO_1 /var/mnt/minio/1
-mkdir -p /var/mnt/minio/1/data
+# SMR drives (lab2) sit behind bcache: an SSD partition per drive, writeback,
+# so fsync-heavy small writes never wait for the platter. The xfs label lives
+# on /dev/bcacheN, which exists only once both halves of a pair are
+# registered. There is no udev here, so register everything by hand; devices
+# without a bcache superblock fail with EINVAL and are skipped. Registration
+# is asynchronous, hence the mount retries below.
+for d in /dev/sd? /dev/sd?[0-9]; do
+    echo $d > /sys/fs/bcache/register 2>/dev/null || true
+done
 
-mkdir -p /var/mnt/minio/2
-mount -t xfs LABEL=MINIO_2 /var/mnt/minio/2
-mkdir -p /var/mnt/minio/2/data
+for b in /sys/block/bcache*/bcache; do
+    [ -e $b ] || continue
+    echo writeback > $b/cache_mode
+    echo 0 > $b/sequential_cutoff
+    echo 0 > $b/writeback_percent
+done
 
-mkdir -p /var/mnt/minio/3
-mount -t xfs LABEL=MINIO_3 /var/mnt/minio/3
-mkdir -p /var/mnt/minio/3/data
+# never send IO past the cache to the SMR drive because the SSD looked slow
+for c in /sys/fs/bcache/*/congested_read_threshold_us /sys/fs/bcache/*/congested_write_threshold_us; do
+    [ -e $c ] && echo 0 > $c
+done
+
+for n in 1 2 3; do
+    mkdir -p /var/mnt/minio/$n
+
+    for i in $(seq 30); do
+        mount -t xfs LABEL=MINIO_$n /var/mnt/minio/$n && break
+        sleep 1
+    done
+
+    # never let minio run on the root disk because a label did not show up
+    grep -q " /var/mnt/minio/$n " /proc/mounts
+
+    mkdir -p /var/mnt/minio/$n/data
+    # a freshly made filesystem is root-owned; minio runs as its own user
+    chown minio:minio /var/mnt/minio/$n/data
+done
 
 # 9 drives x parallel gorn uploads exhaust the inherited 4096 hard limit.
 ulimit -n 65536
@@ -713,6 +739,10 @@ class MinIO:
                 'MINIO_ROOT_PASSWORD': get_key('/s3/password').decode().strip(),
                 'MINIO_BROWSER': 'off',
                 'MINIO_PROMETHEUS_AUTH_TYPE': 'public',
+                # a replaced drive is rebuilt by GOMAXPROCS/4 workers by
+                # default; the rebuild is bound by xl.meta reads from the
+                # other drives, so give it more in flight.
+                '_MINIO_HEAL_WORKERS': '32',
             }
 
             exec_into(*args, **kwargs)
