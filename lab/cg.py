@@ -1117,8 +1117,8 @@ class MolotWeb:
 
 
 class LogovoCollect:
-    # The one logovo listener on a mesh address: every host's `logovo scan`
-    # posts session log portions to http://logovo.lab.mesh:<port>.
+    # Receives session log portions; reached through web, which lab_proxy
+    # publishes as logovo.lab.mesh, so this stays on loopback.
     def __init__(self, listen, s3_endpoint, s3_bucket):
         self.listen = listen
         self.s3_endpoint = s3_endpoint
@@ -1173,10 +1173,12 @@ class LogovoServe:
 
 
 class LogovoWeb:
-    # The page, and the /v1/ proxy the CLI uses through the same name.
-    def __init__(self, listen, api):
+    # What stands behind logovo.lab.mesh: the page, /v1/portions proxied to
+    # collect for `logovo scan`, the rest of /v1/ proxied to serve.
+    def __init__(self, listen, api, collect):
         self.listen = listen
         self.api = api
+        self.collect = collect
 
     def name(self):
         return 'logovo_web'
@@ -1190,7 +1192,7 @@ class LogovoWeb:
         yield {'name': 'logovo', 'port': int(self.listen.rsplit(':', 1)[1])}
 
     def run(self):
-        exec_into('logovo', 'web', '-listen', self.listen, '-api', self.api, PATH='/bin')
+        exec_into('logovo', 'web', '-listen', self.listen, '-api', self.api, '-collect', self.collect, PATH='/bin')
 
 
 class MolotCache:
@@ -2418,6 +2420,9 @@ class LabProxy:
             args = [
                 'reproxy',
                 '--listen', f'{self.listen}:{self.port}',
+                # reproxy caps request bodies at 64K by default; logovo scan
+                # posts portions of up to 4 MiB.
+                '--max=16M',
                 '--ssl.type=static',
                 f'--ssl.cert={leaf_crt}',
                 f'--ssl.key={leaf_key}',
@@ -2869,7 +2874,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': LogovoCollect(f"{h['mesh']['ip']}:{p['logovo_collect']}", f"http://127.0.0.1:{p['minio']}", 'logovo'),
+                'serv': LogovoCollect(f"127.0.0.1:{p['logovo_collect']}", f"http://127.0.0.1:{p['minio']}", 'logovo'),
             }
 
             yield {
@@ -2879,7 +2884,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': LogovoWeb(f"127.0.0.1:{p['logovo_web']}", f"http://127.0.0.1:{p['logovo_serve']}"),
+                'serv': LogovoWeb(f"127.0.0.1:{p['logovo_web']}", f"http://127.0.0.1:{p['logovo_serve']}", f"http://127.0.0.1:{p['logovo_collect']}"),
             }
 
             yield {
@@ -3298,6 +3303,9 @@ def do(code):
         'kv_back': 2015,
         'nitter': 2016,
         'molot_store': 2017,
+        'logovo_collect': 2018,
+        'logovo_serve': 2019,
+        'logovo_web': 2020,
         'samogon_bot': 2004,
         'job_scheduler': 2005,
         'secrets_v2': 1028,
