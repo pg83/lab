@@ -167,7 +167,9 @@ class NodeExporter:
         return self.port
 
     def run(self):
-        exec_into('node_exporter', f'--web.listen-address=127.0.0.1:{self.port}')
+        # Kernel 7.2 changed /proc/fs/xfs/stat and the xfs collector fails
+        # every scrape; there are no xfs mounts left on the hosts anyway.
+        exec_into('node_exporter', f'--web.listen-address=127.0.0.1:{self.port}', '--no-collector.xfs')
 
 
 def make_dirs(path, owner=None):
@@ -1985,6 +1987,10 @@ class Loki:
             },
             'limits_config': {
                 'allow_structured_metadata': True,
+                # The 4 MB/s default is split across the three distributors
+                # and bursts of gorn task output tripped it all day (429s).
+                'ingestion_rate_mb': 16,
+                'ingestion_burst_size_mb': 32,
             },
             'ingester': {
                 'wal': {
