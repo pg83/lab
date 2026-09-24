@@ -12,5 +12,6 @@ export GORN_API=http://127.0.0.1:8025
 export GORN_API_MESH=http://{{hostname}}.gofra:8027
 export IX_PACKAGE_CACHE="127.0.0.1:{{cm.ports.molot_store}}"
 export MOLOT_STORE_ENDPOINT="http://127.0.0.1:{{cm.ports.molot_store}}"
+export MOLOT_FULL_SLOTS=10
 EOF
 {% endblock %}

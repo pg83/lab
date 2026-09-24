@@ -21,7 +21,6 @@ cat << 'EOF' > ${out}/etc/cron/3600-updater.json
         "--env", "GIT_USER=pg83",
         "--env", "GIT_PASS=$GITHUB_TOKEN",
         "--env", "MOLOT_QUIET=1",
-        "--env", "MOLOT_FULL_SLOTS=10",
         "--",
         "/bin/env", "PATH=/bin",
         "etcd_lock", "/lock/updater/work", "--",

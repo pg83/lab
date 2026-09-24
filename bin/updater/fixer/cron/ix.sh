@@ -27,7 +27,6 @@ cat << 'EOF' > ${out}/etc/cron/300-updater-fixer.json
         "--env", "IX_FIXER_CODEX_S3_ENDPOINT=$CODEX_S3_ENDPOINT",
         "--env", "IX_FIXER_GENERATION=6",
         "--env", "MOLOT_QUIET=1",
-        "--env", "MOLOT_FULL_SLOTS=10",
         "--",
         "/bin/env", "PATH=/bin",
         "etcd_lock", "/lock/updater/fixer/work", "--",
