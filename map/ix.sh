@@ -27,6 +27,7 @@ bin/lm/sensors
 bin/traceroute
 bin/etcd/backup
 bin/etcd/defrag
+bin/logovo/cron
 bin/kernel/6/14
 bin/kernel/6/16
 bin/kernel/7/2

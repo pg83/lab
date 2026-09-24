@@ -1116,6 +1116,83 @@ class MolotWeb:
         )
 
 
+class LogovoCollect:
+    # The one logovo listener on a mesh address: every host's `logovo scan`
+    # posts session log portions to http://logovo.lab.mesh:<port>.
+    def __init__(self, listen, s3_endpoint, s3_bucket):
+        self.listen = listen
+        self.s3_endpoint = s3_endpoint
+        self.s3_bucket = s3_bucket
+
+    def name(self):
+        return 'logovo_collect'
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/logovo',
+        }
+
+    def run(self):
+        exec_into(
+            'logovo', 'collect',
+            '-listen', self.listen,
+            '-store', f's3://{self.s3_bucket}',
+            S3_ENDPOINT=self.s3_endpoint,
+            AWS_ACCESS_KEY_ID=get_key(f'/s3/iam/{self.s3_bucket}/key').decode().strip(),
+            AWS_SECRET_ACCESS_KEY=get_key(f'/s3/iam/{self.s3_bucket}/secret').decode().strip(),
+            PATH='/bin',
+        )
+
+
+class LogovoServe:
+    # Search API over the latest index, fetched from S3 whenever it changes.
+    def __init__(self, listen, s3_endpoint, s3_bucket):
+        self.listen = listen
+        self.s3_endpoint = s3_endpoint
+        self.s3_bucket = s3_bucket
+
+    def name(self):
+        return 'logovo_serve'
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/logovo',
+        }
+
+    def run(self):
+        exec_into(
+            'logovo', 'serve',
+            '-listen', self.listen,
+            '-store', f's3://{self.s3_bucket}',
+            '-dir', os.path.join(os.getcwd(), 'index'),
+            S3_ENDPOINT=self.s3_endpoint,
+            AWS_ACCESS_KEY_ID=get_key(f'/s3/iam/{self.s3_bucket}/key').decode().strip(),
+            AWS_SECRET_ACCESS_KEY=get_key(f'/s3/iam/{self.s3_bucket}/secret').decode().strip(),
+            PATH='/bin',
+        )
+
+
+class LogovoWeb:
+    # The page, and the /v1/ proxy the CLI uses through the same name.
+    def __init__(self, listen, api):
+        self.listen = listen
+        self.api = api
+
+    def name(self):
+        return 'logovo_web'
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/logovo',
+        }
+
+    def proxies(self):
+        yield {'name': 'logovo', 'port': int(self.listen.rsplit(':', 1)[1])}
+
+    def run(self):
+        exec_into('logovo', 'web', '-listen', self.listen, '-api', self.api, PATH='/bin')
+
+
 class MolotCache:
     # Shared IX package cache. Public inside the ordinary/overlay networks:
     # the uid index and artifacts are content-addressed and contain no secrets.
@@ -1808,7 +1885,7 @@ class JobScheduler:
 
         # Per-bucket creds — each cron file forwards the one bucket it
         # touches as AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID_<BUCKET>.
-        for bucket in ('cas', 'etcd', 'gorn', 'mirror', 'molot'):
+        for bucket in ('cas', 'etcd', 'gorn', 'logovo', 'mirror', 'molot'):
             bk = get_key(f'/s3/iam/{bucket}/key').decode().strip()
             bs = get_key(f'/s3/iam/{bucket}/secret').decode().strip()
             env[f'AWS_ACCESS_KEY_ID_{bucket.upper()}'] = bk
@@ -2792,6 +2869,21 @@ class ClusterMap:
 
             yield {
                 'host': hn,
+                'serv': LogovoCollect(f"{h['mesh']['ip']}:{p['logovo_collect']}", f"http://127.0.0.1:{p['minio']}", 'logovo'),
+            }
+
+            yield {
+                'host': hn,
+                'serv': LogovoServe(f"127.0.0.1:{p['logovo_serve']}", f"http://127.0.0.1:{p['minio']}", 'logovo'),
+            }
+
+            yield {
+                'host': hn,
+                'serv': LogovoWeb(f"127.0.0.1:{p['logovo_web']}", f"http://127.0.0.1:{p['logovo_serve']}"),
+            }
+
+            yield {
+                'host': hn,
                 'serv': MolotCache(f"0.0.0.0:{p['molot_cache']}", f"http://127.0.0.1:{p['minio']}", 'molot',
                                    f"http://127.0.0.1:{p['kv_front']}", 'molot', '5s'),
             }
@@ -3171,6 +3263,9 @@ def do(code):
         'event_http': 8053,
         'artifacts_upload': 8055,
         'artifacts': 8056,
+        'logovo_collect': 8070,
+        'logovo_serve': 8071,
+        'logovo_web': 8072,
         'lab_proxy': 443,
         'lab_proxy_http': 80,
     }
