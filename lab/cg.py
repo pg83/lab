@@ -680,8 +680,9 @@ done
 for n in 1 2 3; do
     mkdir -p /var/mnt/minio/$n
 
+    # the type comes from the device: xfs everywhere, nilfs2 on lab2's third drive
     for i in $(seq 30); do
-        mount -t xfs LABEL=MINIO_$n /var/mnt/minio/$n && break
+        mount LABEL=MINIO_$n /var/mnt/minio/$n && break
         sleep 1
     done
 
