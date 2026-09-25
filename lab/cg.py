@@ -730,7 +730,7 @@ class S3Service:
             yield {'name': 's3', 'port': int(self.listen.rsplit(':', 1)[1])}
 
         if self.kind == 'web':
-            yield {'name': 's3_web', 'port': int(self.listen.rsplit(':', 1)[1])}
+            yield {'name': 's3web', 'port': int(self.listen.rsplit(':', 1)[1])}
 
     def config(self):
         cells = []
