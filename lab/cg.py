@@ -668,7 +668,9 @@ attach() {
 ssd=$(attach ssd.img)
 hdd=$(attach hdd.img)
 
-blkid $ssd | grep -q 'TYPE="xfs"' || mkfs.xfs -q $ssd
+# busybox blkid does not probe loop devices and mkfs.xfs refuses a loop
+# device without -f even when it is all zeros: look at the magic ourselves
+[ "$(dd if=$ssd bs=4 count=1 2>/dev/null)" = "XFSB" ] || mkfs.xfs -q -f $ssd
 
 mkdir -p $d/ssd
 mount -t xfs $ssd $d/ssd
