@@ -783,6 +783,7 @@ class S3Manager:
             REGION='us-east-1',
             USE_SSL='false',
             BUCKET_LOOKUP='Path',
+            PUBLIC_URL='https://s3.lab.mesh/{bucket}/{key}',
         )
 
 
