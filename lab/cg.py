@@ -706,6 +706,52 @@ class S3Cell:
             exec_into('/bin/unshare', '-m', '/bin/sh', script, PATH='/bin')
 
 
+class S3Service:
+    # front, background and web share one config: gorn's etcd and every cell
+    # of the cluster by its gofra name.
+    def __init__(self, kind, listen, etcd, cell_ports):
+        self.kind = kind
+        self.listen = listen
+        self.etcd = etcd
+        self.cell_ports = cell_ports
+
+    def name(self):
+        return f's3_{self.kind}'
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/s3/store',
+        }
+
+    def proxies(self):
+        if self.kind == 'front':
+            yield {'name': 's3', 'port': int(self.listen.rsplit(':', 1)[1])}
+
+        if self.kind == 'web':
+            yield {'name': 's3_web', 'port': int(self.listen.rsplit(':', 1)[1])}
+
+    def config(self):
+        cells = []
+
+        for n in (1, 2, 3):
+            for i, port in enumerate(self.cell_ports):
+                cells.append({'id': (n - 1) * len(self.cell_ports) + i, 'host': f'lab{n}', 'addr': f'lab{n}.gofra:{port}'})
+
+        return {'etcd': [self.etcd], 'cells': cells}
+
+    def run(self):
+        with memfd('config.json') as conf:
+            with open(conf, 'w') as f:
+                json.dump(self.config(), f)
+
+            args = ['s3', self.kind, '-c', conf]
+
+            if self.listen:
+                args += ['-listen', self.listen]
+
+            exec_into(*args, PATH='/bin')
+
+
 MINIO_SCRIPT = '''
 set -xue
 
@@ -2996,6 +3042,15 @@ class ClusterMap:
                     'serv': S3Cell(i, h['gofra']['ip'], p[f's3_cell_{i}']),
                 }
 
+            s3_etcd = f"http://127.0.0.1:{p['etcd_3_client']}"
+            s3_cell_ports = [p[f's3_cell_{i}'] for i in range(3)]
+
+            for kind, listen in (('front', f"127.0.0.1:{p['s3_front']}"), ('background', ''), ('web', f"127.0.0.1:{p['s3_web']}")):
+                yield {
+                    'host': hn,
+                    'serv': S3Service(kind, listen, s3_etcd, s3_cell_ports),
+                }
+
             yield {
                 'host': hn,
                 'serv': MolotCache(f"0.0.0.0:{p['molot_cache']}", f"http://127.0.0.1:{p['minio']}", 'molot',
@@ -3383,6 +3438,8 @@ def do(code):
         's3_cell_0': 8090,
         's3_cell_1': 8091,
         's3_cell_2': 8092,
+        's3_front': 8093,
+        's3_web': 8094,
         'lab_proxy': 443,
         'lab_proxy_http': 80,
     }
@@ -3418,6 +3475,9 @@ def do(code):
         'logovo_collect': 2018,
         'logovo_serve': 2019,
         'logovo_web': 2020,
+        's3_front': 2021,
+        's3_background': 2022,
+        's3_web': 2023,
         'samogon_bot': 2004,
         'job_scheduler': 2005,
         'secrets_v2': 1028,
