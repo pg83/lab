@@ -660,7 +660,16 @@ for b in /sys/block/bcache*/bcache; do
     [ -e $b ] || continue
     echo writeback > $b/cache_mode
     echo 0 > $b/sequential_cutoff
-    echo 0 > $b/writeback_percent
+    # keep dirty data on the SSD and trickle it back: a full-speed writeback
+    # queues dozens of writes on the shingled drive, and bcache forwards
+    # every fsync flush behind that queue, which once took over 30 s and
+    # made minio mark the drive faulty
+    echo 10 > $b/writeback_percent
+    # with no volatile cache on the backing drive the block layer drops
+    # those flushes altogether; the drive's own media cache is persistent
+    for f in /sys/block/$(cat $b/backing_dev_name)/device/scsi_disk/*/cache_type; do
+        [ -e $f ] && echo "write through" > $f
+    done
 done
 
 # never send IO past the cache to the SMR drive because the SSD looked slow
