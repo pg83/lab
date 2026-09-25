@@ -709,13 +709,15 @@ class S3Cell:
 
 
 class S3Service:
-    # front, background and web share one config: gorn's etcd and every cell
-    # of the cluster by its gofra name.
-    def __init__(self, kind, listen, etcd, cell_ports):
+    # front, repair and web share one config: gorn's etcd and every cell of
+    # the cluster by its gofra name. repair is the exception for its own
+    # host: those cells it reaches over loopback and nothing else.
+    def __init__(self, kind, listen, etcd, cell_ports, host):
         self.kind = kind
         self.listen = listen
         self.etcd = etcd
         self.cell_ports = cell_ports
+        self.host = host
 
     def name(self):
         return f's3_{self.kind}'
@@ -736,8 +738,11 @@ class S3Service:
         cells = []
 
         for n in (1, 2, 3):
+            host = f'lab{n}'
+            where = '127.0.0.1' if self.kind == 'repair' and host == self.host else f'{host}.gofra'
+
             for i, port in enumerate(self.cell_ports):
-                cells.append({'id': (n - 1) * len(self.cell_ports) + i, 'host': f'lab{n}', 'addr': f'lab{n}.gofra:{port}'})
+                cells.append({'id': (n - 1) * len(self.cell_ports) + i, 'host': host, 'addr': f'{where}:{port}'})
 
         return {'etcd': [self.etcd], 'cells': cells}
 
@@ -750,6 +755,9 @@ class S3Service:
 
             if self.listen:
                 args += ['-listen', self.listen]
+
+            if self.kind == 'repair':
+                args += ['-host', self.host]
 
             exec_into(*args, PATH='/bin')
 
@@ -3080,10 +3088,10 @@ class ClusterMap:
             s3_etcd = f"http://127.0.0.1:{p['etcd_3_client']}"
             s3_cell_ports = [p[f's3_cell_{i}'] for i in range(3)]
 
-            for kind, listen in (('front', f"127.0.0.1:{p['s3_front']}"), ('background', ''), ('web', f"127.0.0.1:{p['s3_web']}")):
+            for kind, listen in (('front', f"127.0.0.1:{p['s3_front']}"), ('repair', ''), ('web', f"127.0.0.1:{p['s3_web']}")):
                 yield {
                     'host': hn,
-                    'serv': S3Service(kind, listen, s3_etcd, s3_cell_ports),
+                    'serv': S3Service(kind, listen, s3_etcd, s3_cell_ports, hn),
                 }
 
             yield {
@@ -3517,7 +3525,7 @@ def do(code):
         'logovo_serve': 2019,
         'logovo_web': 2020,
         's3_front': 2021,
-        's3_background': 2022,
+        's3_repair': 2022,
         's3_web': 2023,
         's3_manager': 2024,
         'samogon_bot': 2004,
