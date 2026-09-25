@@ -646,12 +646,21 @@ class SftpD:
 S3_CELL_SCRIPT = '''
 set -xue
 
-# Test stand: one 5 GiB "SSD" and one 20 GiB "HDD" per cell, both sparse
-# files in the service directory behind loop devices. The SSD half carries
-# an xfs for the log tail, the HDD half is handed to the cell raw.
+# Test stand: two 2.5 GiB "SSD" halves and one 20 GiB "HDD" per cell, all
+# sparse files in the service directory behind loop devices. The SSD halves
+# carry an xfs each, one for the blocks being written and one for the blocks
+# being read, so the two do not fight over one place; the HDD is handed to
+# the cell raw.
 d=$(pwd)
 
-[ -f ssd.img ] || truncate -s 5G ssd.img
+if [ -f ssd.img ]; then
+    old=$(losetup -a | grep -F " $d/ssd.img" | cut -d: -f1)
+    [ -z "$old" ] || losetup -d $old
+    rm -f ssd.img
+fi
+
+[ -f load.img ] || truncate -s 2560M load.img
+[ -f store.img ] || truncate -s 2560M store.img
 [ -f hdd.img ] || truncate -s 20G hdd.img
 
 attach() {
@@ -665,17 +674,21 @@ attach() {
     echo $dev
 }
 
-ssd=$(attach ssd.img)
+load=$(attach load.img)
+store=$(attach store.img)
 hdd=$(attach hdd.img)
 
 # busybox blkid does not probe loop devices and mkfs.xfs refuses a loop
 # device without -f even when it is all zeros: look at the magic ourselves
-[ "$(dd if=$ssd bs=4 count=1 2>/dev/null)" = "XFSB" ] || mkfs.xfs -q -f $ssd
+for dev in $load $store; do
+    [ "$(dd if=$dev bs=4 count=1 2>/dev/null)" = "XFSB" ] || mkfs.xfs -q -f $dev
+done
 
-mkdir -p $d/ssd
-mount -t xfs $ssd $d/ssd
+mkdir -p $d/load $d/store
+mount -t xfs $load $d/load
+mount -t xfs $store $d/store
 
-exec s3 cell -listen {listen} -ssd $d/ssd -hdd $hdd
+exec s3 cell -listen {listen} -load $d/load -store $d/store -hdd $hdd
 '''
 
 
