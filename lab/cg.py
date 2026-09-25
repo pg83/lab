@@ -682,19 +682,11 @@ for n in 1 2 3; do
 
     for i in $(seq 30); do
         mount -t xfs LABEL=MINIO_$n /var/mnt/minio/$n && break
-        mount -t nilfs2 LABEL=MINIO_$n /var/mnt/minio/$n && break
         sleep 1
     done
 
     # never let minio run on the root disk because a label did not show up
     grep -q " /var/mnt/minio/$n " /proc/mounts
-
-    # nilfs2 frees dead segments only through its userspace cleaner, which
-    # refuses to start without a config file; an empty one means defaults
-    if grep -q " /var/mnt/minio/$n nilfs2 " /proc/mounts; then
-        : > /var/run/minio/nilfs_cleanerd.conf
-        nilfs_cleanerd -c /var/run/minio/nilfs_cleanerd.conf $(awk -v m=/var/mnt/minio/$n '$2 == m {print $1}' /proc/mounts) /var/mnt/minio/$n
-    fi
 
     mkdir -p /var/mnt/minio/$n/data
     # a freshly made filesystem is root-owned; minio runs as its own user
@@ -733,10 +725,6 @@ class MinIO:
 
         yield {
             'pkg': 'bin/su/exec',
-        }
-
-        yield {
-            'pkg': 'bin/nilfs/tools',
         }
 
     def run(self):
