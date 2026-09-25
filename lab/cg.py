@@ -754,6 +754,38 @@ class S3Service:
             exec_into(*args, PATH='/bin')
 
 
+class S3Manager:
+    # A stock S3 web client against our front, so the API gets exercised by
+    # someone else's code: minio-go, path style, plain http, any keys.
+    def __init__(self, port, endpoint):
+        self.port = port
+        self.endpoint = endpoint
+
+    def name(self):
+        return 's3_manager'
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/s3/manager',
+        }
+
+    def proxies(self):
+        yield {'name': 's3manager', 'port': self.port}
+
+    def run(self):
+        exec_into(
+            's3manager',
+            PATH='/bin',
+            PORT=self.port,
+            ENDPOINT=self.endpoint,
+            ACCESS_KEY_ID='lab',
+            SECRET_ACCESS_KEY='lab',
+            REGION='us-east-1',
+            USE_SSL='false',
+            BUCKET_LOOKUP='Path',
+        )
+
+
 MINIO_SCRIPT = '''
 set -xue
 
@@ -3055,6 +3087,11 @@ class ClusterMap:
 
             yield {
                 'host': hn,
+                'serv': S3Manager(p['s3_manager'], f"127.0.0.1:{p['s3_front']}"),
+            }
+
+            yield {
+                'host': hn,
                 'serv': MolotCache(f"0.0.0.0:{p['molot_cache']}", f"http://127.0.0.1:{p['minio']}", 'molot',
                                    f"http://127.0.0.1:{p['kv_front']}", 'molot', '5s'),
             }
@@ -3442,6 +3479,7 @@ def do(code):
         's3_cell_2': 8092,
         's3_front': 8093,
         's3_web': 8094,
+        's3_manager': 8095,
         'lab_proxy': 443,
         'lab_proxy_http': 80,
     }
@@ -3480,6 +3518,7 @@ def do(code):
         's3_front': 2021,
         's3_background': 2022,
         's3_web': 2023,
+        's3_manager': 2024,
         'samogon_bot': 2004,
         'job_scheduler': 2005,
         'secrets_v2': 1028,
