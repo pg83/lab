@@ -643,6 +643,69 @@ class SftpD:
             exec_into(*args, user=self.users()[1])
 
 
+S3_CELL_SCRIPT = '''
+set -xue
+
+# Test stand: one 5 GiB "SSD" and one 20 GiB "HDD" per cell, both sparse
+# files in the service directory behind loop devices. The SSD half carries
+# an xfs for the log tail, the HDD half is handed to the cell raw.
+d=$(pwd)
+
+[ -f ssd.img ] || truncate -s 5G ssd.img
+[ -f hdd.img ] || truncate -s 20G hdd.img
+
+attach() {
+    dev=$(losetup -a | grep -F " $d/$1" | cut -d: -f1)
+
+    if [ -z "$dev" ]; then
+        losetup -f $d/$1
+        dev=$(losetup -a | grep -F " $d/$1" | cut -d: -f1)
+    fi
+
+    echo $dev
+}
+
+ssd=$(attach ssd.img)
+hdd=$(attach hdd.img)
+
+blkid $ssd | grep -q 'TYPE="xfs"' || mkfs.xfs -q $ssd
+
+mkdir -p $d/ssd
+mount -t xfs $ssd $d/ssd
+
+exec s3 cell -listen {listen} -ssd $d/ssd -hdd $hdd
+'''
+
+
+class S3Cell:
+    # One append-only log per (virtual) disk; the front puts object pieces here.
+    def __init__(self, index, ipv4, port):
+        self.index = index
+        self.listen = f'{ipv4}:{port}'
+
+    def name(self):
+        return f's3_cell_{self.index}'
+
+    def user(self):
+        return 'root'
+
+    def pkgs(self):
+        yield {
+            'pkg': 'bin/s3/store',
+        }
+
+        yield {
+            'pkg': 'bin/xfsprogs',
+        }
+
+    def run(self):
+        with memfd('run.sh') as script:
+            with open(script, 'w') as f:
+                f.write(S3_CELL_SCRIPT.replace('{listen}', self.listen))
+
+            exec_into('/bin/unshare', '-m', '/bin/sh', script, PATH='/bin')
+
+
 MINIO_SCRIPT = '''
 set -xue
 
@@ -2927,6 +2990,12 @@ class ClusterMap:
                 'serv': LogovoWeb(f"127.0.0.1:{p['logovo_web']}", f"http://127.0.0.1:{p['logovo_serve']}", f"http://127.0.0.1:{p['logovo_collect']}"),
             }
 
+            for i in range(3):
+                yield {
+                    'host': hn,
+                    'serv': S3Cell(i, h['gofra']['ip'], p[f's3_cell_{i}']),
+                }
+
             yield {
                 'host': hn,
                 'serv': MolotCache(f"0.0.0.0:{p['molot_cache']}", f"http://127.0.0.1:{p['minio']}", 'molot',
@@ -3311,6 +3380,9 @@ def do(code):
         'logovo_collect': 8070,
         'logovo_serve': 8071,
         'logovo_web': 8072,
+        's3_cell_0': 8090,
+        's3_cell_1': 8091,
+        's3_cell_2': 8092,
         'lab_proxy': 443,
         'lab_proxy_http': 80,
     }
