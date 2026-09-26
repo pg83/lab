@@ -136,7 +136,7 @@ def backup(data_dir, backup_uri):
 
     try:
         tar_create_zstd(data_dir, tmp_archive)
-        mc('cp', tmp_archive, backup_uri)
+        mc('cp', '--disable-multipart', tmp_archive, backup_uri)
         log(f'backup uploaded to {backup_uri}')
     finally:
         if os.path.exists(tmp_archive):
