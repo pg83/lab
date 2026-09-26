@@ -2127,9 +2127,12 @@ class SamogonBot:
 class JobScheduler:
     # Cluster cron; singleton via etcd_lock /lock/job/scheduler.
     def __init__(self, gorn_api, s3_endpoint, etcd_endpoints, etcd_persist_endpoints,
-                 codex_gorn_api, codex_s3_endpoint):
+                 codex_gorn_api, codex_s3_endpoint, logovo_s3_endpoint):
         self.gorn_api = gorn_api
         self.s3_endpoint = s3_endpoint
+        # logovo lives in our s3 with its collect and serve; the merge and
+        # index jobs must fold the same queue.
+        self.logovo_s3_endpoint = logovo_s3_endpoint
         # etcd_endpoints: tmpfs etcd_3; etcd_persist_endpoints: cold-safe.
         self.etcd_endpoints = list(etcd_endpoints)
         self.etcd_persist_endpoints = list(etcd_persist_endpoints)
@@ -2177,6 +2180,7 @@ class JobScheduler:
             # Wirez gives 192.* a direct route; loopback is a different netns.
             'CODEX_GORN_API': self.codex_gorn_api,
             'CODEX_S3_ENDPOINT': self.codex_s3_endpoint,
+            'LOGOVO_S3_ENDPOINT': self.logovo_s3_endpoint,
         }
 
         # Per-bucket creds — each cron file forwards the one bucket it
@@ -3016,6 +3020,7 @@ class ClusterMap:
                     etcd_persist_endpoints=[f"127.0.0.1:{p['etcd_1_client']}"],
                     codex_gorn_api=f"http://{h['gofra']['ip']}:{p['gorn_ctl_mesh']}",
                     codex_s3_endpoint=f"http://{h['gofra']['ip']}:{p['minio']}",
+                    logovo_s3_endpoint=f"http://127.0.0.1:{p['s3_front']}",
                 ),
             }
 
