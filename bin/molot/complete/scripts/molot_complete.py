@@ -109,7 +109,7 @@ def main():
                 raise subprocess.CalledProcessError(proc.returncode, proc.args)
 
         subprocess.run(
-            ('minio-client', 'cp', path, DESTINATION),
+            ('minio-client', 'cp', '--disable-multipart', path, DESTINATION),
             check=True,
         )
     finally:

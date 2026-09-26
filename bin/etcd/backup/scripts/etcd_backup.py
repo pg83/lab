@@ -88,7 +88,7 @@ def main():
 
     key = f'etcd/etcd/backup/{blob}'
     subprocess.run(
-        ['minio-client', 'cp', blob, key],
+        ['minio-client', 'cp', '--disable-multipart', blob, key],
         env=mc_env(os.environ),
         check=True,
     )

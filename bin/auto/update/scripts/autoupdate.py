@@ -86,7 +86,7 @@ def warm_cache(ix):
         env = dict(os.environ)
         env['IX_EXEC_KIND'] = 'molot'
         env['S3_BUCKET'] = 'molot'
-        env['S3_ENDPOINT'] = 'http://127.0.0.1:8012'
+        env['S3_ENDPOINT'] = 'http://127.0.0.1:8093'
         env['MOLOT_QUIET'] = '1'
         env['AWS_ACCESS_KEY_ID'] = secret('/s3/iam/molot/key')
         env['AWS_SECRET_ACCESS_KEY'] = secret('/s3/iam/molot/secret')

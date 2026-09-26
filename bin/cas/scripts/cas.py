@@ -19,6 +19,6 @@ print(f'will store {path} into {s3path}', file=sys.stderr)
 if check_exists(s3path):
     print(f'already have {s3path}', file=sys.stderr)
 else:
-    minio('put', path, s3path)
+    minio('put', '--disable-multipart', path, s3path)
 
 print(f'done', file=sys.stderr)

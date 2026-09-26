@@ -738,7 +738,9 @@ class S3Service:
     # for its own host: those cells it reaches over loopback and nothing else.
     def __init__(self, kind, listen, etcd, cell_ports, host, buckets):
         self.kind = kind
-        self.listen = listen
+        # Addresses to serve on; the front also serves on gofra for the
+        # processes that live in another network namespace (codex).
+        self.listen = list(listen)
         self.etcd = etcd
         self.cell_ports = cell_ports
         self.host = host
@@ -755,10 +757,10 @@ class S3Service:
 
     def proxies(self):
         if self.kind == 'front':
-            yield {'name': 's3', 'port': int(self.listen.rsplit(':', 1)[1])}
+            yield {'name': 's3', 'port': int(self.listen[0].rsplit(':', 1)[1])}
 
         if self.kind == 'web':
-            yield {'name': 's3web', 'port': int(self.listen.rsplit(':', 1)[1])}
+            yield {'name': 's3web', 'port': int(self.listen[0].rsplit(':', 1)[1])}
 
     def config(self):
         cells = []
@@ -779,8 +781,8 @@ class S3Service:
 
             args = ['s3', self.kind, '-debug', '-c', conf]
 
-            if self.listen:
-                args += ['-listen', self.listen]
+            for addr in self.listen:
+                args += ['-listen', addr]
 
             if self.kind == 'repair':
                 args += ['-host', self.host]
@@ -2837,7 +2839,7 @@ class ClusterMap:
                     backup_uri=f'minio/etcd/3/{hn}.tar.zstd',
                     timeout_sec=12 * 3600,
                     jitter_sec=6 * 3600,
-                    s3_endpoint=f"http://127.0.0.1:{p['minio']}",
+                    s3_endpoint=f"http://127.0.0.1:{p['s3_front']}",
                     s3_user_key='/s3/iam/etcd/key',
                     s3_pass_key='/s3/iam/etcd/secret',
                 ),
@@ -2976,7 +2978,7 @@ class ClusterMap:
             }
 
             ogorod_etcd = [f"127.0.0.1:{p['etcd_1_client']}"]
-            ogorod_s3 = f"http://127.0.0.1:{p['minio']}"
+            ogorod_s3 = f"http://127.0.0.1:{p['s3_front']}"
 
             for bind, suffix in [(h['gofra']['ip'], None), ('127.0.0.1', 'local')]:
                 yield {
@@ -2999,14 +3001,14 @@ class ClusterMap:
                 'host': hn,
                 'serv': Samogon(
                     p['samogon'],
-                    s3_endpoint=f"http://127.0.0.1:{p['minio']}",
+                    s3_endpoint=f"http://127.0.0.1:{p['s3_front']}",
                 ),
             }
 
             yield {
                 'host': hn,
                 'serv': SamogonBot(
-                    s3_endpoint=f"http://127.0.0.1:{p['minio']}",
+                    s3_endpoint=f"http://127.0.0.1:{p['s3_front']}",
                     gorn_api=f"http://127.0.0.1:{p['gorn_ctl']}",
                     tg_allow_users=TG_ALLOW_USERS,
                     etcd_endpoints=[f"127.0.0.1:{p['etcd_3_client']}"],
@@ -3017,11 +3019,11 @@ class ClusterMap:
                 'host': hn,
                 'serv': JobScheduler(
                     gorn_api=f"http://127.0.0.1:{p['gorn_ctl']}",
-                    s3_endpoint=f"http://127.0.0.1:{p['minio']}",
+                    s3_endpoint=f"http://127.0.0.1:{p['s3_front']}",
                     etcd_endpoints=[f"127.0.0.1:{p['etcd_3_client']}"],
                     etcd_persist_endpoints=[f"127.0.0.1:{p['etcd_1_client']}"],
                     codex_gorn_api=f"http://{h['gofra']['ip']}:{p['gorn_ctl_mesh']}",
-                    codex_s3_endpoint=f"http://{h['gofra']['ip']}:{p['minio']}",
+                    codex_s3_endpoint=f"http://{h['gofra']['ip']}:{p['s3_front']}",
                     logovo_s3_endpoint=f"http://127.0.0.1:{p['s3_front']}",
                 ),
             }
@@ -3042,7 +3044,7 @@ class ClusterMap:
                         etcd_endpoints=[f"127.0.0.1:{p['etcd_1_client']}"],
                         etcd_tmpfs_endpoints=[f"127.0.0.1:{p['etcd_3_client']}"],
                         gorn_api=f"http://127.0.0.1:{p['gorn_ctl']}",
-                        s3_endpoint=f"http://127.0.0.1:{p['minio']}",
+                        s3_endpoint=f"http://127.0.0.1:{p['s3_front']}",
                     ),
                 }
 
@@ -3192,7 +3194,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': MolotWeb(f"127.0.0.1:{p['molot_web']}", f"http://127.0.0.1:{p['gorn_ctl']}", f"http://127.0.0.1:{p['minio']}", 'molot'),
+                'serv': MolotWeb(f"127.0.0.1:{p['molot_web']}", f"http://127.0.0.1:{p['gorn_ctl']}", f"http://127.0.0.1:{p['s3_front']}", 'molot'),
             }
 
             yield {
@@ -3219,7 +3221,11 @@ class ClusterMap:
             s3_etcd = f"http://127.0.0.1:{p['etcd_2_client']}"
             s3_cell_ports = [p[f's3_cell_{i}'] for i in range(3)]
 
-            for kind, listen in (('front', f"127.0.0.1:{p['s3_front']}"), ('repair', ''), ('web', f"127.0.0.1:{p['s3_web']}")):
+            for kind, listen in (
+                ('front', [f"127.0.0.1:{p['s3_front']}", f"{h['gofra']['ip']}:{p['s3_front']}"]),
+                ('repair', []),
+                ('web', [f"127.0.0.1:{p['s3_web']}"]),
+            ):
                 yield {
                     'host': hn,
                     'serv': S3Service(kind, listen, s3_etcd, s3_cell_ports, hn, S3_BUCKETS),
@@ -3232,13 +3238,13 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': MolotCache(f"0.0.0.0:{p['molot_cache']}", f"http://127.0.0.1:{p['minio']}", 'molot',
+                'serv': MolotCache(f"0.0.0.0:{p['molot_cache']}", f"http://127.0.0.1:{p['s3_front']}", 'molot',
                                    f"http://127.0.0.1:{p['kv_front']}", 'molot', '5s'),
             }
 
             yield {
                 'host': hn,
-                'serv': MolotStore(f"127.0.0.1:{p['molot_store']}", f"http://127.0.0.1:{p['minio']}", 'molot',
+                'serv': MolotStore(f"127.0.0.1:{p['molot_store']}", f"http://127.0.0.1:{p['s3_front']}", 'molot',
                                    f"http://127.0.0.1:{p['kv_front']}", 'molot', '5s'),
             }
 
