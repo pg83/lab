@@ -254,100 +254,6 @@ def get_key(k, timeout=120):
         time.sleep(1)
 
 
-class KV:
-    def __init__(self, mode, ip, port, settings):
-        self.mode = mode
-        self.ip = ip
-        self.port = port
-        self.settings = settings
-
-    def name(self):
-        return f'kv_{self.mode}'
-
-    def pkgs(self):
-        yield {'pkg': 'bin/kv'}
-
-    def prom_port(self):
-        return self.port
-
-    def proxies(self):
-        if self.mode == 'front':
-            yield {'name': 'kv', 'port': self.port}
-
-    def config(self):
-        listen = [f'127.0.0.1:{self.port}']
-
-        if self.ip:
-            listen.append(f'{self.ip}:{self.port}')
-
-        return {
-            **self.settings,
-            'listen': listen,
-        }
-
-    def run(self):
-        with memfd(f'kv-{self.mode}.json') as conf:
-            with open(conf, 'w') as f:
-                json.dump(self.config(), f)
-
-            exec_into('kv', self.mode, '-c', conf)
-
-
-class Nitter:
-    def __init__(self, port, kv_port):
-        self.port = port
-        self.kv_port = kv_port
-
-    def pkgs(self):
-        yield {'pkg': 'bin/nitter/pg83'}
-
-    def proxies(self):
-        yield {'name': 'nitter', 'port': self.port}
-
-    def config(self, hmac_key):
-        return {
-            'Server': {
-                'hostname': 'nitter.homelab.cam',
-                'address': '127.0.0.1',
-                'port': self.port,
-                'https': True,
-                'staticDir': '/ix/realm/system/share/nitter/public',
-            },
-            'Cache': {
-                'enabled': True,
-                'kvEndpoint': f'http://127.0.0.1:{self.kv_port}',
-                'kvBucket': 'nitter',
-                'kvPrefix': 'nitter:v1:',
-                'kvTimeoutMs': 1000,
-                'listMinutes': 240,
-                'rssMinutes': 10,
-            },
-            'Config': {'hmacKey': hmac_key, 'enableDebug': False},
-            'Preferences': {'replaceTwitter': 'nitter.homelab.cam'},
-        }
-
-    def run(self):
-        hmac_key = get_key('/nitter/hmac').decode().strip()
-        if len(hmac_key) < 32:
-            raise ValueError('/nitter/hmac must contain a shared random signing key')
-        sessions = get_key('/nitter/sessions')
-        if not sessions.strip():
-            print('Nitter: /nitter/sessions is empty; X requests need account sessions',
-                  file=sys.stderr, flush=True)
-
-        with multi(memfd('nitter.conf'), memfd('sessions.jsonl')) as (conf, accounts):
-            with open(conf, 'w') as f:
-                for section, settings in self.config(hmac_key).items():
-                    f.write(f'[{section}]\n')
-                    for key, value in settings.items():
-                        f.write(f'{key} = {json.dumps(value)}\n')
-                    f.write('\n')
-            with open(accounts, 'wb') as f:
-                f.write(sessions)
-            exec_into('nitter', NITTER_CONF_FILE=conf, NITTER_SESSIONS_FILE=accounts,
-                      SSL_CERT_FILE='/etc/ssl/cert.pem')
-
-
 class Mesh:
     def __init__(self, host, peers, control, no_dial):
         self.host = host
@@ -1420,13 +1326,10 @@ class LogovoWeb:
 class MolotCache:
     # Shared IX package cache. Public inside the ordinary/overlay networks:
     # the uid index and artifacts are content-addressed and contain no secrets.
-    def __init__(self, listen, s3_endpoint, s3_bucket, kv_endpoint, kv_bucket, kv_timeout):
+    def __init__(self, listen, s3_endpoint, s3_bucket):
         self.listen = listen
         self.s3_endpoint = s3_endpoint
         self.s3_bucket = s3_bucket
-        self.kv_endpoint = kv_endpoint
-        self.kv_bucket = kv_bucket
-        self.kv_timeout = kv_timeout
 
     def name(self):
         return 'molot_cache'
@@ -1453,9 +1356,6 @@ class MolotCache:
             '--index-bucket', self.s3_bucket,
             '--index-key', 'complete',
             '--index-ttl', '30s',
-            '--kv-endpoint', self.kv_endpoint,
-            '--kv-bucket', self.kv_bucket,
-            '--kv-timeout', self.kv_timeout,
             S3_ENDPOINT=self.s3_endpoint,
             S3_BUCKET=self.s3_bucket,
             AWS_ACCESS_KEY_ID=aws_key,
@@ -1513,14 +1413,13 @@ class CloudflaredTunnel:
     # Routing lives here, not in the CF dashboard.
     TUNNEL_ID = '4b335fae-9cd1-40bb-9868-08deb4a23cb7'
 
-    def __init__(self, hostname, upstream_port, socks, nick, view_port, nitter_port=None,
+    def __init__(self, hostname, upstream_port, socks, nick, view_port,
                  edge=None, protocol='http2'):
         self.hostname = hostname
         self.upstream_port = upstream_port
         self.socks = socks
         self.nick = nick
         self.view_port = view_port
-        self.nitter_port = nitter_port
         self.edge = edge
         self.protocol = protocol
 
@@ -1543,10 +1442,6 @@ class CloudflaredTunnel:
                     'path': '/view/.*',
                     'service': f'http://127.0.0.1:{self.view_port}',
                 },
-                *([{
-                    'hostname': 'nitter.homelab.cam',
-                    'service': f'http://127.0.0.1:{self.nitter_port}',
-                }] if self.nitter_port is not None else []),
                 {
                     'hostname': self.hostname,
                     'service': f'http://127.0.0.1:{self.upstream_port}',
@@ -2912,35 +2807,6 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': KV('back', h['gofra']['ip'], p['kv_back'], {
-                    'buckets': {
-                        'default': 64 * 1024 * 1024,
-                        'nitter': 1024 * 1024 * 1024,
-                        'molot': 10 * 1024 * 1024 * 1024,
-                    },
-                }),
-            }
-
-            yield {
-                'host': hn,
-                'serv': KV('front', None, p['kv_front'], {
-                    'peers': [
-                        {
-                            'id': peer['hostname'],
-                            'endpoint': f"http://{peer['gofra']['ip']}:{p['kv_back']}",
-                        }
-                        for peer in self.conf['hosts']
-                    ],
-                }),
-            }
-
-            yield {
-                'host': hn,
-                'serv': Nitter(p['nitter'], p['kv_front']),
-            }
-
-            yield {
-                'host': hn,
                 'serv': Federator(p['federator'], p['collector'], [x['hostname'] for x in self.conf['hosts']]),
             }
 
@@ -3240,14 +3106,12 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': MolotCache(f"0.0.0.0:{p['molot_cache']}", f"http://127.0.0.1:{p['s3_front']}", 'molot',
-                                   f"http://127.0.0.1:{p['kv_front']}", 'molot', '5s'),
+                'serv': MolotCache(f"0.0.0.0:{p['molot_cache']}", f"http://127.0.0.1:{p['s3_front']}", 'molot'),
             }
 
             yield {
                 'host': hn,
-                'serv': MolotStore(f"127.0.0.1:{p['molot_store']}", f"http://127.0.0.1:{p['s3_front']}", 'molot',
-                                   f"http://127.0.0.1:{p['kv_front']}", 'molot', '5s'),
+                'serv': MolotStore(f"127.0.0.1:{p['molot_store']}", f"http://127.0.0.1:{p['s3_front']}", 'molot'),
             }
 
             # One connector per socks exit, pinned directly to its ssh
@@ -3269,7 +3133,6 @@ class ClusterMap:
                         '127.0.0.1:' + str(p[k]),
                         k.removeprefix('ssh_').removesuffix('_tunnel'),
                         p['artifacts'],
-                        nitter_port=p['nitter'],
                     ),
                 }
 
@@ -3284,7 +3147,6 @@ class ClusterMap:
                         None,
                         f'seal_{proto}',
                         p['artifacts'],
-                        nitter_port=p['nitter'],
                         edge=SEAL_EDGE,
                         protocol=proto,
                     ),
@@ -3614,9 +3476,6 @@ def do(code):
         'mesh_control': 8058,
         'mesh_web': 8059,
         'ssh_oracle_tunnel': 8060,
-        'kv_front': 8061,
-        'kv_back': 8062,
-        'nitter': 8063,
         'molot_store': 8064,
         'event_http': 8053,
         'artifacts_upload': 8055,
@@ -3659,9 +3518,6 @@ def do(code):
         'etcd_2': 2025,
         'mesh_web': 2012,
         'ssh_oracle_tunnel': 2013,
-        'kv_front': 2014,
-        'kv_back': 2015,
-        'nitter': 2016,
         'molot_store': 2017,
         'logovo_collect': 2018,
         'logovo_serve': 2019,
