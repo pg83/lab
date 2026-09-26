@@ -2935,7 +2935,7 @@ class ClusterMap:
                 'host': hn,
                 'serv': Loki(
                     port=p['loki'],
-                    s3_endpoint=f"http://127.0.0.1:{p['minio']}",
+                    s3_endpoint=f"http://127.0.0.1:{p['s3_front']}",
                     peers=[x['hostname'] for x in self.conf['hosts']],
                     me=hn,
                     etcd_endpoints=[f"127.0.0.1:{p['etcd_3_client']}"],
@@ -3138,7 +3138,7 @@ class ClusterMap:
             h = self.conf['by_host'][hn]
 
             s3 = {
-                'endpoint': f"http://127.0.0.1:{p['minio']}",
+                'endpoint': f"http://127.0.0.1:{p['s3_front']}",
                 'region': 'minio',
                 'bucket': 'gorn',
                 'use_path_style': True,
@@ -3182,12 +3182,12 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': LogovoCollect(f"127.0.0.1:{p['logovo_collect']}", f"http://127.0.0.1:{p['minio']}", 'logovo'),
+                'serv': LogovoCollect(f"127.0.0.1:{p['logovo_collect']}", f"http://127.0.0.1:{p['s3_front']}", 'logovo'),
             }
 
             yield {
                 'host': hn,
-                'serv': LogovoServe(f"127.0.0.1:{p['logovo_serve']}", f"http://127.0.0.1:{p['minio']}", 'logovo'),
+                'serv': LogovoServe(f"127.0.0.1:{p['logovo_serve']}", f"http://127.0.0.1:{p['s3_front']}", 'logovo'),
             }
 
             yield {
@@ -3232,7 +3232,7 @@ class ClusterMap:
             yield {
                 'host': hn,
                 'serv': Artifacts('127.0.0.1', p['artifacts'], p['artifacts_upload'],
-                                  f"http://127.0.0.1:{p['minio']}"),
+                                  f"http://127.0.0.1:{p['s3_front']}"),
             }
 
             for tun in SSH_TUNNELS:
