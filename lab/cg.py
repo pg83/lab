@@ -29,7 +29,7 @@ DISABLE_ALL = [
 
 DISABLE = {
     'lab1': DISABLE_ALL + [],
-    'lab2': DISABLE_ALL + [],
+    'lab2': DISABLE_ALL + ['s3_cell_0', 's3_cell_1', 's3_cell_2', 's3_repair'],  # s3 runs on lab1 and lab3 while lab2 is repartitioned; its repair would only churn
     'lab3': DISABLE_ALL + ['minio'],  # the leg goes to our s3; MinIO stays two-legged on lab1 and lab2
 }
 
