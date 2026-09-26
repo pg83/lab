@@ -646,40 +646,39 @@ class SftpD:
 S3_CELL_SCRIPT = '''
 set -xue
 
-# Test stand: two 2.5 GiB "SSD" halves and one 20 GiB "HDD" per cell, all
-# sparse files in the service directory behind loop devices. The SSD halves
-# carry an xfs each, one for the blocks being written and one for the blocks
-# being read, so the two do not fight over one place; the HDD is handed to
-# the cell raw.
+# Every host carries GPT partitions named S3_HDD_<i>, S3_STORE_<i> and
+# S3_LOAD_<i> for each cell: the HDD is handed to the cell raw, the two SSD
+# parts carry an xfs each, one for the blocks being written and one for the
+# blocks being read. Names, not device paths: sdX moves between boots.
 d=$(pwd)
+i={index}
 
-if [ -f ssd.img ]; then
-    old=$(losetup -a | grep -F " $d/ssd.img" | cut -d: -f1)
-    [ -z "$old" ] || losetup -d $old
-    rm -f ssd.img
-fi
+bypart() {
+    for disk in /dev/sd?; do
+        n=$(sgdisk -p $disk 2>/dev/null | awk -v want="$1" '$NF == want {print $1}')
 
-[ -f load.img ] || truncate -s 2560M load.img
-[ -f store.img ] || truncate -s 2560M store.img
-[ -f hdd.img ] || truncate -s 20G hdd.img
+        if [ -n "$n" ]; then
+            echo "$disk$n"
+            return 0
+        fi
+    done
 
-attach() {
-    dev=$(losetup -a | grep -F " $d/$1" | cut -d: -f1)
-
-    if [ -z "$dev" ]; then
-        losetup -f $d/$1
-        dev=$(losetup -a | grep -F " $d/$1" | cut -d: -f1)
-    fi
-
-    echo $dev
+    echo "no partition named $1" >&2
+    return 1
 }
 
-load=$(attach load.img)
-store=$(attach store.img)
-hdd=$(attach hdd.img)
+# the loopback stand this used to be: images in the service directory
+for img in ssd.img load.img store.img hdd.img; do
+    [ -f $d/$img ] || continue
+    old=$(losetup -a | grep -F " $d/$img" | cut -d: -f1)
+    [ -z "$old" ] || losetup -d $old
+    rm -f $d/$img
+done
 
-# busybox blkid does not probe loop devices and mkfs.xfs refuses a loop
-# device without -f even when it is all zeros: look at the magic ourselves
+hdd=$(bypart S3_HDD_$i)
+load=$(bypart S3_LOAD_$i)
+store=$(bypart S3_STORE_$i)
+
 for dev in $load $store; do
     [ "$(dd if=$dev bs=4 count=1 2>/dev/null)" = "XFSB" ] || mkfs.xfs -q -f $dev
 done
@@ -693,7 +692,7 @@ exec s3 cell -listen {listen} -load $d/load -store $d/store -hdd $hdd
 
 
 class S3Cell:
-    # One append-only log per (virtual) disk; the front puts object pieces here.
+    # One append-only log per disk; the front puts object pieces here.
     def __init__(self, index, ipv4, port):
         self.index = index
         self.listen = f'{ipv4}:{port}'
@@ -713,10 +712,14 @@ class S3Cell:
             'pkg': 'bin/xfsprogs',
         }
 
+        yield {
+            'pkg': 'bin/gptfdisk',
+        }
+
     def run(self):
         with memfd('run.sh') as script:
             with open(script, 'w') as f:
-                f.write(S3_CELL_SCRIPT.replace('{listen}', self.listen))
+                f.write(S3_CELL_SCRIPT.replace('{listen}', self.listen).replace('{index}', str(self.index)))
 
             exec_into('/bin/unshare', '-m', '/bin/sh', script, PATH='/bin')
 
@@ -1648,7 +1651,10 @@ class EtcdPrivate:
         if 'ETCDCTL_ENDPOINTS' in os.environ:
             os.environ.pop('ETCDCTL_ENDPOINTS')
 
-        args = [
+        exec_into(*self.argv())
+
+    def argv(self):
+        return [
             'etcd',
             '--name', self.hostname,
             '--data-dir', self.data_dir,
@@ -1679,7 +1685,82 @@ class EtcdPrivate:
             '--warning-apply-duration', '2s',
         ]
 
-        exec_into(*args)
+
+ETCD_ON_PART_SCRIPT = '''
+set -xue
+
+bypart() {
+    for disk in /dev/sd?; do
+        n=$(sgdisk -p $disk 2>/dev/null | awk -v want="$1" '$NF == want {print $1}')
+
+        if [ -n "$n" ]; then
+            echo "$disk$n"
+            return 0
+        fi
+    done
+
+    echo "no partition named $1" >&2
+    return 1
+}
+
+dev=$(bypart {part})
+
+[ "$(dd if=$dev bs=4 count=1 2>/dev/null)" = "XFSB" ] || mkfs.xfs -q -f $dev
+
+mkdir -p {mnt}
+mount -t xfs $dev {mnt}
+mkdir -p {data}
+chown {user}:{user} {data}
+
+exec su-exec {user} {argv}
+'''
+
+
+class EtcdOnPart(EtcdPrivate):
+    # The s3 etcd: its data on the SSD partition named S3_ETCD of every host.
+    # Runs as root to mount it, then drops to its user.
+    def __init__(self, *args, part, mnt, **kwargs):
+        super().__init__(*args, data_dir=f'{mnt}/data', **kwargs)
+        self.part = part
+        self.mnt = mnt
+
+    def user(self):
+        return 'root'
+
+    def users(self):
+        return ['root', self.user_name]
+
+    def prepare(self):
+        pass
+
+    def pkgs(self):
+        yield from super().pkgs()
+
+        yield {
+            'pkg': 'bin/xfsprogs',
+        }
+
+        yield {
+            'pkg': 'bin/gptfdisk',
+        }
+
+        yield {
+            'pkg': 'bin/su/exec',
+        }
+
+    def run(self):
+        if 'ETCDCTL_ENDPOINTS' in os.environ:
+            os.environ.pop('ETCDCTL_ENDPOINTS')
+
+        script = ETCD_ON_PART_SCRIPT
+        script = script.replace('{part}', self.part).replace('{mnt}', self.mnt).replace('{data}', self.data_dir)
+        script = script.replace('{user}', self.user_name).replace('{argv}', ' '.join(self.argv()))
+
+        with memfd('run.sh') as ss:
+            with open(ss, 'w') as f:
+                f.write(script)
+
+            exec_into('/bin/unshare', '-m', '/bin/sh', ss, PATH='/bin')
 
 
 class EtcdEphemeral:
@@ -2657,6 +2738,7 @@ class ClusterMap:
 
         all_etc_1 = []
         all_etc_3 = []
+        all_etc_4 = []
 
         # gofra peer table: VIP → underlay IPs. 103/24 prod overlay.
         gofra_hosts = {}
@@ -2703,6 +2785,10 @@ class ClusterMap:
                 'hostname': hn,
                 'ip': h['gofra']['ip'],
             })
+            all_etc_4.append({
+                'hostname': hn,
+                'ip': h['gofra']['ip'],
+            })
 
             # Primary etcd: events, secrets fallback, IAM creds, ogorod refs.
             yield {
@@ -2740,6 +2826,23 @@ class ClusterMap:
                     s3_endpoint=f"http://127.0.0.1:{p['minio']}",
                     s3_user_key='/s3/iam/etcd/key',
                     s3_pass_key='/s3/iam/etcd/secret',
+                ),
+            }
+            # The s3 store's own etcd: keys, repair queues, buckets. On disk.
+            yield {
+                'host': hn,
+                'serv': EtcdOnPart(
+                    all_etc_4,
+                    p['etcd_2_peer'],
+                    p['etcd_2_client'],
+                    hn,
+                    'etcd_2',
+                    h['gofra']['ip'],
+                    '127.0.0.1',
+                    'etcd_2',
+                    'new',
+                    part='S3_ETCD',
+                    mnt='/var/mnt/etcd_2',
                 ),
             }
 
@@ -3098,7 +3201,7 @@ class ClusterMap:
                     'serv': S3Cell(i, h['gofra']['ip'], p[f's3_cell_{i}']),
                 }
 
-            s3_etcd = f"http://127.0.0.1:{p['etcd_3_client']}"
+            s3_etcd = f"http://127.0.0.1:{p['etcd_2_client']}"
             s3_cell_ports = [p[f's3_cell_{i}'] for i in range(3)]
 
             for kind, listen in (('front', f"127.0.0.1:{p['s3_front']}"), ('repair', ''), ('web', f"127.0.0.1:{p['s3_web']}")):
@@ -3473,6 +3576,8 @@ def do(code):
         'etcd_1_peer': 8021,
         'etcd_3_client': 8042,
         'etcd_3_peer': 8043,
+        'etcd_2_client': 8044,
+        'etcd_2_peer': 8045,
         'secrets': 8022,
         'grafana': 8029,
         'federator': 8030,
@@ -3528,6 +3633,7 @@ def do(code):
         'ssh_jopa_tunnel': 1024,
         'etcd_1': 2010,
         'etcd_3': 2011,
+        'etcd_2': 2025,
         'mesh_web': 2012,
         'ssh_oracle_tunnel': 2013,
         'kv_front': 2014,
