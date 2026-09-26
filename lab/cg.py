@@ -687,15 +687,17 @@ mkdir -p $d/load $d/store
 mount -t xfs $load $d/load
 mount -t xfs $store $d/store
 
-exec s3 cell -debug -listen {listen} -load $d/load -store $d/store -hdd $hdd
+exec s3 cell -debug {listen} -load $d/load -store $d/store -hdd $hdd
 '''
 
 
 class S3Cell:
-    # One append-only log per disk; the front puts object pieces here.
+    # One append-only log per disk; the front puts object pieces here. It
+    # listens on loopback for the repair of its own host and on the gofra
+    # address for everyone else.
     def __init__(self, index, ipv4, port):
         self.index = index
-        self.listen = f'{ipv4}:{port}'
+        self.listen = f'-listen 127.0.0.1:{port} -listen {ipv4}:{port}'
 
     def name(self):
         return f's3_cell_{self.index}'
