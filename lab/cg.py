@@ -30,7 +30,7 @@ DISABLE_ALL = [
 DISABLE = {
     'lab1': DISABLE_ALL + [],
     'lab2': DISABLE_ALL + [],
-    'lab3': DISABLE_ALL + [],
+    'lab3': DISABLE_ALL + ['minio'],  # the leg goes to our s3; MinIO stays two-legged on lab1 and lab2
 }
 
 # Allow-list for SamogonBot. Empty → crash-loop (no world-writable bot).
