@@ -724,10 +724,16 @@ class S3Cell:
             exec_into('/bin/unshare', '-m', '/bin/sh', script, PATH='/bin')
 
 
+# The buckets of our s3 are static: the front, repair and web read them
+# from the config, nothing about them lives in etcd, and the API makes
+# none. A new consumer of s3 gets its bucket here first.
+S3_BUCKETS = ('gorn', 'logovo', 'loki', 'view')
+
+
 class S3Service:
-    # front, repair and web share one config: gorn's etcd and every cell of
-    # the cluster by its gofra name. repair is the exception for its own
-    # host: those cells it reaches over loopback and nothing else.
+    # front, repair and web share one config: the s3 etcd, the buckets and
+    # every cell of the cluster by its gofra name. repair is the exception
+    # for its own host: those cells it reaches over loopback and nothing else.
     def __init__(self, kind, listen, etcd, cell_ports, host):
         self.kind = kind
         self.listen = listen
@@ -760,7 +766,7 @@ class S3Service:
             for i, port in enumerate(self.cell_ports):
                 cells.append({'id': (n - 1) * len(self.cell_ports) + i, 'host': host, 'addr': f'{where}:{port}'})
 
-        return {'etcd': [self.etcd], 'cells': cells}
+        return {'etcd': [self.etcd], 'buckets': list(S3_BUCKETS), 'cells': cells}
 
     def run(self):
         with memfd('config.json') as conf:
