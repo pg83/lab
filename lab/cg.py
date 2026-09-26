@@ -729,7 +729,7 @@ class S3Cell:
 # The buckets of our s3 are static: the front, repair and web read them
 # from the config, nothing about them lives in etcd, and the API makes
 # none. A new consumer of s3 gets its bucket here first.
-S3_BUCKETS = ('gorn', 'logovo', 'loki', 'view')
+S3_BUCKETS = ('cas', 'geesefs', 'gorn', 'logovo', 'loki', 'samogon', 'view')
 
 
 class S3Service:
