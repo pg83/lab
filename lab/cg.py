@@ -736,12 +736,14 @@ class S3Service:
     # front, repair and web share one config: the s3 etcd, the buckets and
     # every cell of the cluster by its gofra name. repair is the exception
     # for its own host: those cells it reaches over loopback and nothing else.
-    def __init__(self, kind, listen, etcd, cell_ports, host):
+    def __init__(self, kind, listen, etcd, cell_ports, host, buckets):
         self.kind = kind
         self.listen = listen
         self.etcd = etcd
         self.cell_ports = cell_ports
         self.host = host
+        # Part of the instance, so a change of the list restarts the service.
+        self.buckets = list(buckets)
 
     def name(self):
         return f's3_{self.kind}'
@@ -768,7 +770,7 @@ class S3Service:
             for i, port in enumerate(self.cell_ports):
                 cells.append({'id': (n - 1) * len(self.cell_ports) + i, 'host': host, 'addr': f'{where}:{port}'})
 
-        return {'etcd': [self.etcd], 'buckets': list(S3_BUCKETS), 'cells': cells}
+        return {'etcd': [self.etcd], 'buckets': self.buckets, 'cells': cells}
 
     def run(self):
         with memfd('config.json') as conf:
@@ -3220,7 +3222,7 @@ class ClusterMap:
             for kind, listen in (('front', f"127.0.0.1:{p['s3_front']}"), ('repair', ''), ('web', f"127.0.0.1:{p['s3_web']}")):
                 yield {
                     'host': hn,
-                    'serv': S3Service(kind, listen, s3_etcd, s3_cell_ports, hn),
+                    'serv': S3Service(kind, listen, s3_etcd, s3_cell_ports, hn, S3_BUCKETS),
                 }
 
             yield {
