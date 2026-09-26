@@ -687,7 +687,7 @@ mkdir -p $d/load $d/store
 mount -t xfs $load $d/load
 mount -t xfs $store $d/store
 
-exec s3 cell -listen {listen} -load $d/load -store $d/store -hdd $hdd
+exec s3 cell -debug -listen {listen} -load $d/load -store $d/store -hdd $hdd
 '''
 
 
@@ -767,7 +767,7 @@ class S3Service:
             with open(conf, 'w') as f:
                 json.dump(self.config(), f)
 
-            args = ['s3', self.kind, '-c', conf]
+            args = ['s3', self.kind, '-debug', '-c', conf]
 
             if self.listen:
                 args += ['-listen', self.listen]
