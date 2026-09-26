@@ -15,7 +15,8 @@ bin/molot/stats/cron
 bin/etcd/backup/cron
 bin/etcd/defrag/cron
 bin/ogorod/mirror/cron
-{# updater and fixer rest while the data moves off MinIO: they are the build load on molot #}
+bin/updater/cron
+bin/updater/fixer/cron
 
 bin/mc/gc/cron(root=/gorn/cli,hours=24)
 bin/mc/gc/cron(root=/gorn/mc_gc,hours=1)
