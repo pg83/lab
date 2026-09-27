@@ -14,8 +14,8 @@ with s3 instead of PostgreSQL.
                             the upstream API — plus projects.meta.json
 
 The code is a clone of the ogorod mirror of repology-updater at a pinned
-commit; rules and repos.d come from the mirror of repology-rules and the
-same clone at master, live. The pinned code is patched in place at start
+commit; rules and repos.d are live: master of the repology-rules mirror
+and master of the repology-updater mirror, cloned by branch name. The pinned code is patched in place at start
 (see patch()) and completed by stand-in modules from share/repology/shims
 for libversion, xxhash, yarl, jsonslicer and pydantic, so no wheel beyond
 PyYAML and jinja2 is needed.
@@ -110,21 +110,29 @@ def patch(updater):
     )
 
 
+def clone_master(mirror, dst):
+    # A mirror's HEAD is whatever branch ogorod saw first (repology-rules:
+    # AMDmi3-patch-1 from 2021), not upstream's default: name the branch.
+    run('git', 'clone', '-q', '--depth', '1', '--branch', 'master', f'{OGOROD}/{mirror}.git', dst)
+
+    return subprocess.check_output(['git', '-C', dst, 'rev-parse', 'HEAD'], text=True).strip()
+
+
 def checkout(work):
+    """Pinned code in updater/, live rules in rules/ and live repos.d in live/."""
     updater = work / 'updater'
-    rules = work / 'rules'
 
     run('git', 'clone', '-q', f'{OGOROD}/mirror_repology-updater.git', updater)
     run('git', '-C', updater, 'checkout', '-q', UPDATER_COMMIT)
-    run('git', 'clone', '-q', '--depth', '1', f'{OGOROD}/mirror_repology-rules.git', rules)
 
-    rules_commit = subprocess.check_output(['git', '-C', rules, 'rev-parse', 'HEAD'], text=True).strip()
+    rules_commit = clone_master('mirror_repology-rules', work / 'rules')
+    repos_commit = clone_master('mirror_repology-updater', work / 'live')
 
     patch(updater)
 
     sys.path[:0] = [str(SHARE / 'shims'), str(updater)]
 
-    return updater, rules, rules_commit
+    return updater, rules_commit, repos_commit
 
 
 def mc(*args):
@@ -159,7 +167,7 @@ def repomgr_and_proc(work, updater):
     from repology.repoproc import RepositoryProcessor
     from repology.yamlloader import YamlConfig
 
-    repomgr = RepositoryManager(YamlConfig.from_path(str(updater / 'repos.d')))
+    repomgr = RepositoryManager(YamlConfig.from_path(str(work / 'live' / 'repos.d')))
     repoproc = RepositoryProcessor(repomgr, str(work / '_state'), str(work / '_parsed'))
 
     return repomgr, repoproc
@@ -167,7 +175,7 @@ def repomgr_and_proc(work, updater):
 
 def fetch(repo):
     work = Path.cwd()
-    updater, rules, rules_commit = checkout(work)
+    updater, rules_commit, repos_commit = checkout(work)
 
     from repology.logger import StderrLogger
     from repology.transformer import PackageTransformer
@@ -180,7 +188,7 @@ def fetch(repo):
 
     repoproc.fetch([repo], update=True, logger=logger)
 
-    ruleset = Ruleset(YamlConfig.from_path(str(rules)))
+    ruleset = Ruleset(YamlConfig.from_path(str(work / 'rules')))
     transformer = PackageTransformer(ruleset, repo, repository.ruleset)
     repoproc.parse([repo], transformer=transformer, maintainermgr=None, logger=logger)
 
@@ -192,6 +200,7 @@ def fetch(repo):
         'repo': repo,
         'code': UPDATER_COMMIT,
         'rules': rules_commit,
+        'repos_d': repos_commit,
         'packages': chunk_counts(parsed),
         'fetched': now(),
     }
@@ -232,7 +241,7 @@ def select(packageset, ours=OURS):
 
 def aggregate():
     work = Path.cwd()
-    updater, rules, rules_commit = checkout(work)
+    updater, rules_commit, repos_commit = checkout(work)
 
     from repology.classifier import classify_packages
     from repology.logger import StderrLogger
@@ -279,6 +288,7 @@ def aggregate():
     meta = {
         'code': UPDATER_COMMIT,
         'rules': rules_commit,
+        'repos_d': repos_commit,
         'generated': now(),
         'projects_total': total,
         'projects': len(projects),
