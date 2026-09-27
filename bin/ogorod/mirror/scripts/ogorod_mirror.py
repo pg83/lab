@@ -4,8 +4,10 @@
 Mirror github.com/pg83/<r> → http://127.0.0.1:8035/mirror_<r>.git
 under /lock/ogorod/mirror/<r>, fired every 10s by job_scheduler
 and shipped to a gorn worker via `gorn ignite`. The repo name is
-the only argv; the cron generator emits one entry per repo so each
-sync runs on its own lock and on whichever worker is free.
+the only argv (owner/name for a repo outside pg83; the mirror and
+the event still carry just the name); the cron generator emits one
+entry per repo so each sync runs on its own lock and on whichever
+worker is free.
 
 ls-remote both upstream and our mirror, sort, compare. Equality
 (the common case) means an early return — the whole tick is two
@@ -85,11 +87,12 @@ def emit_git_event(repo, sha):
 
 def main():
     if len(sys.argv) != 2:
-        raise SystemExit('usage: ogorod_mirror <repo>')
+        raise SystemExit('usage: ogorod_mirror [owner/]<repo>')
 
-    name = sys.argv[1]
+    owner, _, name = sys.argv[1].rpartition('/')
+    owner = owner or 'pg83'
 
-    src = f'https://github.com/pg83/{name}.git'
+    src = f'https://github.com/{owner}/{name}.git'
     dst = f'{TARGET}/mirror_{name}.git'
 
     if ls_remote(src) == ls_remote(dst):

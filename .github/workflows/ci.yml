@@ -40,5 +40,6 @@ jobs:
         run: |
           python3 -m unittest discover -s bin/job/scheduler/scripts -p 'test_*.py'
           python3 -m unittest discover -s bin/molot/complete/scripts -p 'test_*.py'
+          python3 -m unittest discover -s bin/repology/scripts -p 'test_*.py'
           python3 -m unittest discover -s bin/updater/scripts -p 'test_*.py'
           python3 -m unittest discover -s bin/updater/fixer/scripts -p 'test_*.py'

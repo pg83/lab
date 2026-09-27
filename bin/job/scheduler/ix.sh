@@ -15,6 +15,8 @@ bin/molot/stats/cron
 bin/etcd/backup/cron
 bin/etcd/defrag/cron
 bin/ogorod/mirror/cron
+bin/repology
+bin/repology/cron
 bin/updater/cron
 bin/updater/fixer/cron
 
@@ -30,6 +32,7 @@ bin/mc/gc/cron(root=/gorn/molot_stats,hours=24)
 bin/mc/gc/cron(root=/gorn/etcd_defrag,hours=24)
 bin/mc/gc/cron(root=/gorn/mirror_fetch,hours=1)
 bin/mc/gc/cron(root=/gorn/ogorod_mirror,hours=1)
+bin/mc/gc/cron(root=/gorn/repology,hours=24)
 bin/mc/gc/cron(root=/gorn/updater,hours=24)
 bin/mc/gc/cron(root=/gorn/updater_fixer,hours=24)
 {% endblock %}

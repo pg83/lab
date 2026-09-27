@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import importlib.util
+import io
 import sys
 import tempfile
 import unittest
@@ -209,23 +210,44 @@ class UpdaterTests(unittest.TestCase):
             ],
         )
 
-    def test_repology_fetches_every_page(self):
-        first = {f'p{number:03d}': [number] for number in range(200)}
-        second = {'p199': [199], 'p200': [200]}
-        url = 'https://repology.example/api/v1/projects/?inrepo=stalix_dev&outdated=1'
-
-        with mock.patch.object(
-            updater, 'fetch_repology_page', side_effect=(first, second),
-        ) as fetch:
-            data = updater.fetch_repology(url)
-
-        self.assertEqual(len(data), 201)
-        self.assertEqual(data['p200'], [200])
-        self.assertEqual(fetch.call_count, 2)
+    def test_repology_url_is_the_projects_file_in_our_s3(self):
         self.assertEqual(
-            fetch.call_args_list[1].args[0],
-            'https://repology.example/api/v1/projects/p199/?inrepo=stalix_dev&outdated=1',
+            updater.repology_url({'S3_ENDPOINT': 'http://127.0.0.1:8093'}),
+            'http://127.0.0.1:8093/repology/projects.json',
         )
+        self.assertEqual(
+            updater.repology_url({'S3_ENDPOINT': 'http://x', 'IX_UPDATER_REPOLOGY_URL': 'http://y/p.json'}),
+            'http://y/p.json',
+        )
+
+    def test_outdated_in_keeps_the_api_inrepo_outdated_view(self):
+        data = {
+            'zlib': [
+                {'repo': 'stalix', 'version': '1.2', 'status': 'outdated'},
+                {'repo': 'stalix_dev', 'version': '1.2', 'status': 'outdated'},
+                {'repo': 'arch', 'version': '1.3', 'status': 'newest'},
+            ],
+            'python': [
+                {'repo': 'stalix_dev', 'version': '3.14', 'status': 'newest'},
+                {'repo': 'arch', 'version': '3.14', 'status': 'newest'},
+            ],
+            'foo': [
+                {'repo': 'stalix', 'version': '1', 'status': 'outdated'},
+                {'repo': 'arch', 'version': '2', 'status': 'newest'},
+            ],
+        }
+
+        self.assertEqual(list(updater.outdated_in(data, 'stalix_dev')), ['zlib'])
+        self.assertEqual(sorted(updater.outdated_in(data, 'stalix')), ['foo', 'zlib'])
+
+    def test_fetch_repology_reads_the_whole_file(self):
+        body = io.BytesIO(b'{"zlib": [{"repo": "stalix", "version": "1.2"}]}')
+
+        with mock.patch.object(updater.urllib.request, 'urlopen', return_value=body) as urlopen:
+            data = updater.fetch_repology('http://127.0.0.1:8093/repology/projects.json')
+
+        self.assertEqual(data, {'zlib': [{'repo': 'stalix', 'version': '1.2'}]})
+        self.assertEqual(urlopen.call_args.args[0].full_url, 'http://127.0.0.1:8093/repology/projects.json')
 
     def test_prepare_recipe_keeps_go_upgrade_rule(self):
         with tempfile.TemporaryDirectory() as td:

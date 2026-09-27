@@ -637,7 +637,7 @@ class S3Cell:
 # The buckets of our s3 are static: the front, repair and web read them
 # from the config, nothing about them lives in etcd, and the API makes
 # none. A new consumer of s3 gets its bucket here first.
-S3_BUCKETS = ('cas', 'cix', 'etcd', 'geesefs', 'gorn', 'logovo', 'loki', 'mirror', 'molot', 'ogorod', 'samogon', 'view')
+S3_BUCKETS = ('cas', 'cix', 'etcd', 'geesefs', 'gorn', 'logovo', 'loki', 'mirror', 'molot', 'ogorod', 'repology', 'samogon', 'view')
 
 
 class S3Service:
@@ -2043,9 +2043,11 @@ class SamogonBot:
 class JobScheduler:
     # Cluster cron; singleton via etcd_lock /lock/job/scheduler.
     def __init__(self, gorn_api, s3_endpoint, etcd_endpoints, etcd_persist_endpoints,
-                 codex_gorn_api, codex_s3_endpoint, logovo_s3_endpoint):
+                 codex_gorn_api, codex_s3_endpoint, logovo_s3_endpoint, socks5):
         self.gorn_api = gorn_api
         self.s3_endpoint = s3_endpoint
+        # Egress for jobs that fetch from the internet (repology).
+        self.socks5 = socks5
         # logovo lives in our s3 with its collect and serve; the merge and
         # index jobs must fold the same queue.
         self.logovo_s3_endpoint = logovo_s3_endpoint
@@ -2068,6 +2070,9 @@ class JobScheduler:
             'pip/PyYAML',
             'pip/requests',
             'pip/filelock',
+            # repology: repos.d and rules are jinja2 templates of yaml.
+            'pip/jinja2',
+            'pip/markupsafe',
         ]
 
     def pkgs(self):
@@ -2097,11 +2102,12 @@ class JobScheduler:
             'CODEX_GORN_API': self.codex_gorn_api,
             'CODEX_S3_ENDPOINT': self.codex_s3_endpoint,
             'LOGOVO_S3_ENDPOINT': self.logovo_s3_endpoint,
+            'SOCKS5_PROXY': self.socks5,
         }
 
         # Per-bucket creds — each cron file forwards the one bucket it
         # touches as AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID_<BUCKET>.
-        for bucket in ('cas', 'etcd', 'gorn', 'logovo', 'mirror', 'molot'):
+        for bucket in ('cas', 'etcd', 'gorn', 'logovo', 'mirror', 'molot', 'repology'):
             bk = get_key(f'/s3/iam/{bucket}/key').decode().strip()
             bs = get_key(f'/s3/iam/{bucket}/secret').decode().strip()
             env[f'AWS_ACCESS_KEY_ID_{bucket.upper()}'] = bk
@@ -2908,6 +2914,7 @@ class ClusterMap:
                     codex_gorn_api=f"http://{h['gofra']['ip']}:{p['gorn_ctl_mesh']}",
                     codex_s3_endpoint=f"http://{h['gofra']['ip']}:{p['s3_front']}",
                     logovo_s3_endpoint=f"http://127.0.0.1:{p['s3_front']}",
+                    socks5=f"127.0.0.1:{p['socks_proxy']}",
                 ),
             }
 

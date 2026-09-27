@@ -43,7 +43,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-REPOLOGY_URL = 'https://repology.org/api/v1/projects/?inrepo=stalix_dev&outdated=1'
+# Our repology (bin/repology): the aggregate job writes the projects that
+# contain a stalix package, in the upstream API shape, into the repology
+# bucket; the updater keeps the API's inrepo=stalix_dev&outdated=1 view.
+REPOLOGY_PROJECTS = '/repology/projects.json'
+REPOLOGY_INREPO = 'stalix_dev'
 IX_GIT_READ_URL = 'http://127.0.0.1:8035/mirror_ix.git'
 IX_GIT_PUSH_URL = 'https://github.com/pg83/ix.git'
 IX_BRANCH = 'main'
@@ -54,7 +58,6 @@ REGENERATED_PATHS = (
 
 GOOD_SHA_CHARS = frozenset('0123456789abcdef')
 BUILD_FLAGS = ('--opengl=fake', '--vulkan=fake', '--seed=1')
-REPOLOGY_PAGE_SIZE = 200
 GIT_MIRROR_RETRY_DELAY_S = 15
 
 GO_LATEST = 26
@@ -219,16 +222,21 @@ def candidates_from_repology(data):
         yield candidate
 
 
-def repology_page_url(url, bound):
-    if not bound:
-        return url
-
-    parts = urllib.parse.urlsplit(url)
-    path = parts.path.rstrip('/') + '/' + urllib.parse.quote(bound, safe='') + '/'
-    return urllib.parse.urlunsplit((parts.scheme, parts.netloc, path, parts.query, parts.fragment))
+def repology_url(env):
+    return env.get('IX_UPDATER_REPOLOGY_URL') or env['S3_ENDPOINT'] + REPOLOGY_PROJECTS
 
 
-def fetch_repology_page(url):
+def outdated_in(data, repo):
+    """Projects where repo has a package classified outdated: what the
+    upstream API returned for inrepo=<repo>&outdated=1."""
+    return {
+        name: records
+        for name, records in data.items()
+        if any(rec.get('repo') == repo and rec.get('status') == 'outdated' for rec in records)
+    }
+
+
+def fetch_repology(url):
     log(f'fetch {url}')
     req = urllib.request.Request(url, headers={'User-Agent': 'ix-updater/1'})
 
@@ -238,27 +246,6 @@ def fetch_repology_page(url):
 
     with urllib.request.urlopen(req, timeout=60, context=ctx) as resp:
         return json.load(resp)
-
-
-def fetch_repology(url):
-    result = {}
-    bound = None
-
-    while True:
-        page = fetch_repology_page(repology_page_url(url, bound))
-        result.update(page)
-
-        if len(page) < REPOLOGY_PAGE_SIZE:
-            break
-
-        next_bound = max(page)
-
-        if next_bound == bound:
-            break
-
-        bound = next_bound
-
-    return result
 
 
 def is_sha(value):
@@ -697,8 +684,7 @@ def require_run_env(env):
 
 def run_updater(env):
     require_run_env(env)
-    repology_url = env.get('IX_UPDATER_REPOLOGY_URL', REPOLOGY_URL)
-    data = fetch_repology(repology_url)
+    data = outdated_in(fetch_repology(repology_url(env)), REPOLOGY_INREPO)
     candidates = list(candidates_from_repology(data))
     log(f'Repology candidates after filters: {len(candidates)}')
 
