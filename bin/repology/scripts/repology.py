@@ -101,10 +101,12 @@ def patch(updater):
     )
 
     # GNU tar picks the decompressor by magic; -z breaks void's zstd repodata.
+    # gorn runs us as root of a user namespace: tar would chown to the
+    # archive's uids, which are not mapped there (arch: uid 1055).
     replace_once(
         updater / 'repology' / 'fetchers' / 'fetchers' / 'tar.py',
         "['tar', '-x', '-z', '-f', tarpath",
-        "['tar', '-x', '-f', tarpath",
+        "['tar', '-x', '--no-same-owner', '-f', tarpath",
     )
 
 
