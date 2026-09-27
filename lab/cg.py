@@ -663,6 +663,20 @@ class S3Service:
             'pkg': 'bin/s3/store',
         }
 
+        if self.kind == 'repair':
+            # The scan is the repair's lookout for puts whose front died
+            # before settling; it needs the same config. Padded to a
+            # multiple of three so the base64 has no '=' for ix's k=v.
+            conf = json.dumps(self.config(), sort_keys=True)
+            conf += ' ' * (-len(conf) % 3)
+
+            yield {
+                'pkg': 'bin/sched/s3/scan',
+                'delay': '1000',
+                'host': self.host,
+                'config': base64.b64encode(conf.encode()).decode(),
+            }
+
     def proxies(self):
         if self.kind == 'front':
             yield {'name': 's3', 'port': int(self.listen[0].rsplit(':', 1)[1])}
