@@ -46,15 +46,23 @@ class MemoryStore:
 class ValidationTests(unittest.TestCase):
     def test_upload_subprocess_reads_from_start_after_validation(self):
         data = bundle()
-        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryFile() as file:
+        with tempfile.TemporaryDirectory() as tmp, os.fdopen(os.memfd_create('upload'), 'w+b') as file:
             file.write(data)
             file.seek(0)
             app.validate_zip(file)
+            file.seek(0, os.SEEK_END)
             store = app.Store(tmp)
-            def child_read(*args, stdin, **kwargs):
-                self.assertEqual(os.read(stdin.fileno(), len(data) + 1), data)
-            with patch.object(store, 'mc', side_effect=child_read):
-                store.put(hashlib.sha256(data).hexdigest(), file)
+            sha = hashlib.sha256(data).hexdigest()
+            def child_cp(*args, pass_fds, **kwargs):
+                # One sized PUT from the memfd's path, never a multipart pipe.
+                self.assertEqual(args[:2], ('cp', '--disable-multipart'))
+                self.assertEqual(args[3], 'view/view/' + sha)
+                self.assertEqual(pass_fds, (file.fileno(),))
+                with open(args[2], 'rb') as child:
+                    self.assertEqual(child.read(), data)
+            with patch.object(store, 'mc', side_effect=child_cp) as mc:
+                store.put(sha, file)
+            self.assertEqual(mc.call_count, 1)
 
     def test_valid_archive(self):
         src = io.BytesIO(bundle())

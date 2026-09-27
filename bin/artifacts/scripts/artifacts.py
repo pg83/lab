@@ -115,12 +115,14 @@ class Store:
         return proc
 
     def put(self, sha, file):
-        # subprocess reads the OS descriptor, not Python's buffered position.
-        # zipfile validation may leave that descriptor at EOF despite seek(0).
+        # Our s3 has no multipart, so no `mc pipe`: one sized PUT from a path.
+        # file is a memfd; the child reopens it through /proc/self/fd, which
+        # starts at offset 0 whatever position validation left behind.
         file.flush()
-        os.lseek(file.fileno(), 0, os.SEEK_SET)
+        fd = file.fileno()
         # Same key always gets the exact same bytes: idempotent CAS publication.
-        self.mc('pipe', 'view/view/' + sha, stdin=file, stdout=subprocess.DEVNULL)
+        self.mc('cp', '--disable-multipart', f'/proc/self/fd/{fd}', 'view/view/' + sha,
+                pass_fds=(fd,), stdout=subprocess.DEVNULL)
 
     @contextlib.contextmanager
     def archive(self, sha):
@@ -300,7 +302,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if not 0 < length <= MAX_ZIP:
                 self.reply(413, b'ZIP limit: 64 MiB\n')
                 return
-            with tempfile.TemporaryFile(dir=self.server.store.cache) as dst:
+            with os.fdopen(os.memfd_create('upload'), 'w+b') as dst:
                 digest = hashlib.sha256()
                 remaining = length
                 while remaining:
