@@ -673,8 +673,9 @@ class S3Service:
             yield {
                 'pkg': 'bin/sched/s3/scan',
                 'delay': '1000',
-                'host': self.host,
-                'config': base64.b64encode(conf.encode()).decode(),
+                # Not host or config: ix templates already mean the platform by host.
+                's3_host': self.host,
+                's3_config': base64.b64encode(conf.encode()).decode(),
             }
 
     def proxies(self):
