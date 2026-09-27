@@ -1415,6 +1415,33 @@ class Artifacts:
         )
 
 
+class RepologyBadge:
+    # repology.homelab.cam: the repository-big badges the repology aggregate
+    # writes to s3. Only /badge/repository-big/<repo>.svg maps to a key
+    # (repology/badge/repository-big/<repo>.svg); nothing else of s3 is
+    # reachable through it.
+    def __init__(self, listen, s3_endpoint):
+        self.listen = listen
+        self.s3_endpoint = s3_endpoint
+
+    def name(self):
+        return 'repology_badge'
+
+    def pkgs(self):
+        yield {'pkg': 'bin/repology'}
+
+    def run(self):
+        from urllib.parse import quote
+        key = quote(get_key('/s3/iam/repology/key').decode().strip(), safe='')
+        secret = quote(get_key('/s3/iam/repology/secret').decode().strip(), safe='')
+        scheme, host = self.s3_endpoint.split('://', 1)
+        exec_into(
+            'repology', 'serve', self.listen,
+            PATH='/bin', HOME=os.getcwd(), TMPDIR=os.getcwd(),
+            MC_HOST_minio=f'{scheme}://{key}:{secret}@{host}',
+        )
+
+
 class CloudflaredTunnel:
     # Outbound-only replicas of the locally-managed Cloudflare tunnel
     # publishing molot cache over TLS+CDN. All three hosts run the same
@@ -1429,12 +1456,13 @@ class CloudflaredTunnel:
     TUNNEL_ID = '4b335fae-9cd1-40bb-9868-08deb4a23cb7'
 
     def __init__(self, hostname, upstream_port, socks, nick, view_port,
-                 edge=None, protocol='http2'):
+                 badge_port, edge=None, protocol='http2'):
         self.hostname = hostname
         self.upstream_port = upstream_port
         self.socks = socks
         self.nick = nick
         self.view_port = view_port
+        self.badge_port = badge_port
         self.edge = edge
         self.protocol = protocol
 
@@ -1456,6 +1484,12 @@ class CloudflaredTunnel:
                     'hostname': 'view.homelab.cam',
                     'path': '/view/.*',
                     'service': f'http://127.0.0.1:{self.view_port}',
+                },
+                # Any other path of repology.homelab.cam falls to the 404.
+                {
+                    'hostname': 'repology.homelab.cam',
+                    'path': r'^/badge/repository-big/[a-z0-9_]+\.svg$',
+                    'service': f'http://127.0.0.1:{self.badge_port}',
                 },
                 {
                     'hostname': self.hostname,
@@ -1507,7 +1541,7 @@ class CloudflaredHost(CloudflaredTunnel):
 
     def __init__(self, host, mesh_port, socks, nick, edge=None, protocol='http2'):
         super().__init__(f'{host}.homelab.cam', mesh_port, socks,
-                         f'{host}_{nick}', None, edge=edge, protocol=protocol)
+                         f'{host}_{nick}', None, None, edge=edge, protocol=protocol)
         self.host = host
 
     def credentials(self):
@@ -3144,6 +3178,11 @@ class ClusterMap:
                                   f"http://127.0.0.1:{p['s3_front']}"),
             }
 
+            yield {
+                'host': hn,
+                'serv': RepologyBadge(f"127.0.0.1:{p['repology_badge']}", f"http://127.0.0.1:{p['s3_front']}"),
+            }
+
             for tun in SSH_TUNNELS:
                 k = tun['key']
 
@@ -3155,6 +3194,7 @@ class ClusterMap:
                         '127.0.0.1:' + str(p[k]),
                         k.removeprefix('ssh_').removesuffix('_tunnel'),
                         p['artifacts'],
+                        p['repology_badge'],
                     ),
                 }
 
@@ -3169,6 +3209,7 @@ class ClusterMap:
                         None,
                         f'seal_{proto}',
                         p['artifacts'],
+                        p['repology_badge'],
                         edge=SEAL_EDGE,
                         protocol=proto,
                     ),
@@ -3505,6 +3546,7 @@ def do(code):
         'logovo_collect': 8070,
         'logovo_serve': 8071,
         'logovo_web': 8072,
+        'repology_badge': 8073,
         's3_cell_0': 8090,
         's3_cell_1': 8091,
         's3_cell_2': 8092,
@@ -3538,6 +3580,7 @@ def do(code):
         'etcd_1': 2010,
         'etcd_3': 2011,
         'etcd_2': 2025,
+        'repology_badge': 2026,
         'mesh_web': 2012,
         'ssh_oracle_tunnel': 2013,
         'molot_store': 2017,

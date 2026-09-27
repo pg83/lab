@@ -11,28 +11,38 @@ with s3 instead of PostgreSQL.
                             versions across them and write
                             repology/projects.json — the projects that
                             contain a stalix package, in the shape of
-                            the upstream API — plus projects.meta.json
+                            the upstream API — plus projects.meta.json,
+                            and repology's repository-big badge of our
+                            repositories to
+                            repology/badge/repository-big/<repo>.svg
+    repology serve <addr>   serve those badges, and nothing else of s3,
+                            at repology's paths for repology.homelab.cam
 
 The code is a clone of the ogorod mirror of repology-updater at a pinned
 commit; rules and repos.d are live: master of the repology-rules mirror
-and master of the repology-updater mirror, cloned by branch name. The pinned code is patched in place at start
-(see patch()) and completed by stand-in modules from share/repology/shims
-for libversion, xxhash, yarl, jsonslicer and pydantic, so no wheel beyond
-PyYAML and jinja2 is needed.
+and master of the repology-updater mirror, cloned by branch name. The
+pinned code is patched in place at start (see patch()) and completed by
+stand-in modules from share/repology/shims for libversion, xxhash, yarl,
+jsonslicer and pydantic, so no wheel beyond PyYAML and jinja2 is needed.
+The badge renderer is share/repology/lib/badge.py.
 
 Runs in a fresh gorn tmpfs: the working directory is the state. S3 goes
 through minio-client with the MC_HOST_minio alias; the egress socks proxy
 is REPOLOGY_SOCKS5.
 """
 
+import collections
 import datetime
+import http.server
 import json
 import os
 import pickle
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
+import urllib.parse
 from pathlib import Path
 
 
@@ -239,13 +249,76 @@ def select(packageset, ours=OURS):
     return any(package.repo in ours for package in packageset)
 
 
+class RepositoryStats:
+    """repositories.num_metapackages* and num_maintainers of one repository,
+    counted the way sql.d/update/update_repositories.sql and
+    update_repositories_maintainer_counts.sql count them. Vulnerable needs
+    repology's CVE data, which we do not have: it is not counted."""
+
+    def __init__(self):
+        self.projects = 0
+        self.comparable = 0
+        self.newest = 0
+        self.outdated = 0
+        self.problematic = 0
+        self.maintainers = set()
+
+    def add(self, packages, unique, status):
+        classes = collections.Counter(package.versionclass for package in packages)
+
+        newest = not unique and (classes[status.NEWEST] or classes[status.DEVEL]) and not classes[status.OUTDATED]
+        outdated = classes[status.OUTDATED] > 0
+
+        self.projects += 1
+        self.newest += bool(newest)
+        self.outdated += outdated
+        self.comparable += bool(newest or outdated or classes[status.INCORRECT])
+        self.problematic += bool(classes[status.IGNORED] or classes[status.INCORRECT] or classes[status.UNTRUSTED])
+
+    def as_dict(self):
+        return {
+            'projects': self.projects,
+            'comparable': self.comparable,
+            'newest': self.newest,
+            'outdated': self.outdated,
+            'problematic': self.problematic,
+            'maintainers': len(self.maintainers),
+        }
+
+
+def count(stats, packageset, maintainermgr, status):
+    # Only projects with a non-shadow package count.
+    if all(package.shadow for package in packageset):
+        return
+
+    unique = len({package.family for package in packageset}) == 1
+
+    for repo, repo_stats in stats.items():
+        packages = [package for package in packageset if package.repo == repo]
+
+        if not packages:
+            continue
+
+        repo_stats.add(packages, unique, status)
+
+        for package in packages:
+            for maintainer in package.maintainers or ():
+                if (converted := maintainermgr.convert_maintainer(maintainer)) is not None:
+                    repo_stats.maintainers.add(converted)
+
+
 def aggregate():
     work = Path.cwd()
     updater, rules_commit, repos_commit = checkout(work)
 
+    sys.path.insert(0, str(SHARE / 'lib'))
+
+    import badge
     from repology.classifier import classify_packages
     from repology.logger import StderrLogger
+    from repology.maintainermgr import MaintainerManager
     from repology.package import PackageStatus
+    from repology.yamlloader import YamlConfig
 
     parsed_dir = work / '_parsed'
     parsed_dir.mkdir()
@@ -270,6 +343,10 @@ def aggregate():
         raise SystemExit('nothing parsed yet')
 
     repomgr, repoproc = repomgr_and_proc(work, updater)
+    maintainermgr = MaintainerManager(YamlConfig.from_path(str(work / 'live' / 'maintainers.yaml')))
+    # select() takes every project with a package of ours, so these counts
+    # cover the whole of each of our repositories.
+    stats = {repo: RepositoryStats() for repo in OURS if repo in metas}
     projects = {}
     total = 0
 
@@ -280,6 +357,7 @@ def aggregate():
             continue
 
         classify_packages(packageset)
+        count(stats, packageset, maintainermgr, PackageStatus)
         projects[packageset[0].effname] = [
             record(package, PackageStatus.as_string(package.versionclass))
             for package in packageset
@@ -293,6 +371,7 @@ def aggregate():
         'projects_total': total,
         'projects': len(projects),
         'repos': metas,
+        'stats': {repo: repo_stats.as_dict() for repo, repo_stats in stats.items()},
     }
 
     projects_path = work / 'projects.json'
@@ -303,7 +382,63 @@ def aggregate():
     put(projects_path, 'projects.json')
     put(meta_path, 'projects.meta.json')
 
+    for repo, repo_stats in stats.items():
+        svg_path = work / f'{repo}.svg'
+        svg_path.write_text(badge.repository_big(repo_stats.as_dict()))
+        put(svg_path, f'badge/repository-big/{repo}.svg')
+        log(f'{repo}: {repo_stats.as_dict()}')
+
     log(f'{len(projects)} of {total} projects written')
+
+
+# The only paths served; the key is built from the match, so nothing but
+# repology/badge/repository-big/*.svg can be read through serve.
+BADGE_PATH = re.compile(r'/badge/repository-big/([a-z0-9_]+)\.svg')
+
+
+def badge_key(path):
+    match = BADGE_PATH.fullmatch(urllib.parse.urlsplit(path).path)
+
+    return f'badge/repository-big/{match.group(1)}.svg' if match else None
+
+
+def serve(listen):
+    host, port = listen.rsplit(':', 1)
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def reply(self, with_body):
+            key = badge_key(self.path)
+            body = None
+
+            if key:
+                res = subprocess.run(['minio-client', 'cat', f'{BUCKET}/{key}'], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+
+                if res.returncode == 0:
+                    body = res.stdout
+
+            if body is None:
+                self.send_response(404)
+                self.send_header('Content-Length', '0')
+                self.end_headers()
+                return
+
+            self.send_response(200)
+            self.send_header('Content-Type', 'image/svg+xml')
+            self.send_header('Content-Length', str(len(body)))
+            self.send_header('Cache-Control', 'max-age=3600')
+            self.send_header('X-Content-Type-Options', 'nosniff')
+            self.end_headers()
+
+            if with_body:
+                self.wfile.write(body)
+
+        def do_GET(self):
+            self.reply(True)
+
+        def do_HEAD(self):
+            self.reply(False)
+
+    http.server.ThreadingHTTPServer((host, int(port)), Handler).serve_forever()
 
 
 def main():
@@ -314,8 +449,10 @@ def main():
             fetch(repo)
         case ['aggregate']:
             aggregate()
+        case ['serve', listen]:
+            serve(listen)
         case _:
-            raise SystemExit('usage: repology fetch <repo> | repology aggregate')
+            raise SystemExit('usage: repology fetch <repo> | repology aggregate | repology serve <host:port>')
 
 
 if __name__ == '__main__':

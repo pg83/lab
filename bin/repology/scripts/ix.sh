@@ -1,7 +1,7 @@
 {% extends '//die/gen.sh' %}
 
 {% block install %}
-mkdir -p ${out}/bin ${out}/share/repology/overlay ${out}/share/repology/shims/libversion ${out}/share/repology/shims/pydantic
+mkdir -p ${out}/bin ${out}/share/repology/overlay ${out}/share/repology/lib ${out}/share/repology/shims/libversion ${out}/share/repology/shims/pydantic
 
 base64 -d << EOF > ${out}/bin/repology
 {% include 'repology.py/base64' %}
@@ -9,8 +9,12 @@ EOF
 
 chmod +x ${out}/bin/repology
 
+base64 -d << EOF > ${out}/share/repology/lib/badge.py
+{% include 'badge.py/base64' %}
+EOF
+
 base64 -d << EOF > ${out}/share/repology/overlay/http.py
-{% include 'http.py/base64' %}
+{% include 'overlay_http.py/base64' %}
 EOF
 
 base64 -d << EOF > ${out}/share/repology/shims/libversion/__init__.py

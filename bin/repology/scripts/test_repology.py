@@ -22,7 +22,7 @@ sys.modules.setdefault('repology', types.ModuleType('repology'))
 sys.modules['repology.config'] = types.SimpleNamespace(config={'REPOLOGY_HOME': 'https://repology.example'})
 
 jsonslicer = load('jsonslicer', 'jsonslicer.py')
-http = load('http', 'http.py')
+http = load('overlay_http', 'overlay_http.py')
 repology = load('repology_job', 'repology.py')
 
 
@@ -148,6 +148,73 @@ class Record(unittest.TestCase):
 
             repology.replace_once(path, 'b\n', 'c\n')
             self.assertEqual(path.read_text(), 'a\nc\na\n')
+
+
+class ServePaths(unittest.TestCase):
+    def test_only_repository_big_badges_map_to_keys(self):
+        key = repology.badge_key
+        self.assertEqual(key('/badge/repository-big/stalix_dev.svg'), 'badge/repository-big/stalix_dev.svg')
+        self.assertEqual(key('/badge/repository-big/stalix.svg?header=x'), 'badge/repository-big/stalix.svg')
+
+        for path in (
+            '/', '/projects.json', '/repology/projects.json', '/parsed/', '/badge/repository-big/',
+            '/badge/repository-big/stalix', '/badge/repository-big/Stalix.svg',
+            '/badge/repository-big/../projects.json', '/badge/repository-big/%2e%2e.svg',
+            '/badge/repository-big/a/b.svg', '/badge/repository-big/stalix.svg/x',
+            '//badge/repository-big/stalix.svg', '/badge/vertical-allrepos/zlib.svg',
+        ):
+            self.assertIsNone(key(path), path)
+
+
+class Status:
+    NEWEST, OUTDATED, IGNORED, UNIQUE, DEVEL, LEGACY, INCORRECT, UNTRUSTED, NOSCHEME, ROLLING = range(1, 11)
+
+
+def pkg(repo, versionclass, family=None, shadow=False, maintainers=()):
+    return types.SimpleNamespace(repo=repo, versionclass=versionclass, family=family or repo,
+                                 shadow=shadow, maintainers=list(maintainers))
+
+
+class Maintainers:
+    def convert_maintainer(self, maintainer):
+        return {'hidden@x': None}.get(maintainer, maintainer.replace('old@', 'new@'))
+
+
+class Stats(unittest.TestCase):
+    """The per-project rules of sql.d/update/update_repositories.sql."""
+
+    def counted(self, *packagesets):
+        stats = {'stalix': repology.RepositoryStats()}
+
+        for packageset in packagesets:
+            repology.count(stats, packageset, Maintainers(), Status)
+
+        return stats['stalix'].as_dict()
+
+    def test_rules(self):
+        s = Status
+        got = self.counted(
+            [pkg('stalix', s.NEWEST, 'stalix'), pkg('arch', s.NEWEST)],                     # newest
+            [pkg('stalix', s.OUTDATED, 'stalix'), pkg('stalix', s.NEWEST, 'stalix'), pkg('arch', s.NEWEST)],  # outdated only
+            [pkg('stalix', s.DEVEL, 'stalix'), pkg('arch', s.NEWEST)],                      # devel counts as newest
+            [pkg('stalix', s.UNIQUE, 'stalix')],                                             # unique: neither
+            [pkg('stalix', s.NEWEST, 'stalix'), pkg('stalix_dev', s.NEWEST, 'stalix')],     # one family: unique
+            [pkg('stalix', s.INCORRECT, 'stalix'), pkg('arch', s.NEWEST)],                  # comparable and problematic
+            [pkg('stalix', s.IGNORED, 'stalix'), pkg('arch', s.NEWEST)],                    # problematic only
+            [pkg('stalix', s.NEWEST, 'stalix', shadow=True), pkg('arch', s.NEWEST, shadow=True)],  # shadow-only: skipped
+            [pkg('arch', s.NEWEST)],                                                         # not ours
+        )
+        self.assertEqual(got, {
+            'projects': 7, 'comparable': 4, 'newest': 2, 'outdated': 1, 'problematic': 2, 'maintainers': 0,
+        })
+
+    def test_maintainers_are_distinct_after_conversion(self):
+        s = Status
+        got = self.counted(
+            [pkg('stalix', s.NEWEST, maintainers=['a@x', 'old@x']), pkg('arch', s.NEWEST, maintainers=['z@x'])],
+            [pkg('stalix', s.NEWEST, maintainers=['a@x', 'new@x', 'hidden@x'])],
+        )
+        self.assertEqual(got['maintainers'], 2)
 
 
 if __name__ == '__main__':
