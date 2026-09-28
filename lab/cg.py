@@ -1341,8 +1341,10 @@ class LogovoWeb:
 class MolotCache:
     # Shared IX package cache. Public inside the ordinary/overlay networks:
     # the uid index and artifacts are content-addressed and contain no secrets.
-    def __init__(self, listen, s3_endpoint, s3_bucket):
+    def __init__(self, listen, s3_endpoint, s3_bucket, also_listen=()):
         self.listen = listen
+        # More addresses for the same process (molot 44 repeats --listen).
+        self.also_listen = list(also_listen)
         self.s3_endpoint = s3_endpoint
         self.s3_bucket = s3_bucket
 
@@ -1365,9 +1367,14 @@ class MolotCache:
         aws_key = get_key('/s3/iam/molot/key').decode().strip()
         aws_secret = get_key('/s3/iam/molot/secret').decode().strip()
 
+        listens = []
+
+        for addr in [self.listen] + self.also_listen:
+            listens += ['--listen', addr]
+
         exec_into(
             'molot', self.command(),
-            '--listen', self.listen,
+            *listens,
             '--index-bucket', self.s3_bucket,
             '--index-key', 'complete',
             '--index-ttl', '30s',
@@ -2077,7 +2084,7 @@ class SamogonBot:
 class JobScheduler:
     # Cluster cron; singleton via etcd_lock /lock/job/scheduler.
     def __init__(self, gorn_api, s3_endpoint, etcd_endpoints, etcd_persist_endpoints,
-                 codex_gorn_api, codex_s3_endpoint, logovo_s3_endpoint, socks5):
+                 codex_gorn_api, codex_s3_endpoint, codex_molot_resolve, logovo_s3_endpoint, socks5):
         self.gorn_api = gorn_api
         self.s3_endpoint = s3_endpoint
         # Egress for jobs that fetch from the internet (repology).
@@ -2090,6 +2097,7 @@ class JobScheduler:
         self.etcd_persist_endpoints = list(etcd_persist_endpoints)
         self.codex_gorn_api = codex_gorn_api
         self.codex_s3_endpoint = codex_s3_endpoint
+        self.codex_molot_resolve = codex_molot_resolve
 
     def name(self):
         return 'job_scheduler'
@@ -2135,6 +2143,7 @@ class JobScheduler:
             # Wirez gives 192.* a direct route; loopback is a different netns.
             'CODEX_GORN_API': self.codex_gorn_api,
             'CODEX_S3_ENDPOINT': self.codex_s3_endpoint,
+            'CODEX_MOLOT_RESOLVE': self.codex_molot_resolve,
             'LOGOVO_S3_ENDPOINT': self.logovo_s3_endpoint,
             'SOCKS5_PROXY': self.socks5,
         }
@@ -2947,6 +2956,7 @@ class ClusterMap:
                     etcd_persist_endpoints=[f"127.0.0.1:{p['etcd_1_client']}"],
                     codex_gorn_api=f"http://{h['gofra']['ip']}:{p['gorn_ctl_mesh']}",
                     codex_s3_endpoint=f"http://{h['gofra']['ip']}:{p['s3_front']}",
+                    codex_molot_resolve=f"http://{h['gofra']['ip']}:{p['molot_store']}",
                     logovo_s3_endpoint=f"http://127.0.0.1:{p['s3_front']}",
                     socks5=f"127.0.0.1:{p['socks_proxy']}",
                 ),
@@ -3167,7 +3177,10 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': MolotStore(f"127.0.0.1:{p['molot_store']}", f"http://127.0.0.1:{p['s3_front']}", 'molot'),
+                # Loopback for the workers, the gofra address for the fixer's
+                # Codex agent: wirez puts it in its own network namespace.
+                'serv': MolotStore(f"127.0.0.1:{p['molot_store']}", f"http://127.0.0.1:{p['s3_front']}", 'molot',
+                                   also_listen=[f"{h['gofra']['ip']}:{p['molot_store']}"]),
             }
 
             # One connector per socks exit, pinned directly to its ssh

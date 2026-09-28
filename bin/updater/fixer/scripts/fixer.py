@@ -51,7 +51,7 @@ REGENERATED_PATHS = (
     'pkgs/die/scripts/dump.json',
     'pkgs/die/scripts/urls.txt',
 )
-FIXER_GENERATION = '6'
+FIXER_GENERATION = '7'
 CODEX_MODEL = 'gpt-5.6-sol'
 CODEX_REASONING_EFFORT = 'xhigh'
 GIT_TOKEN_URL = 'http://127.0.0.1:8022/github/token'
@@ -95,6 +95,7 @@ def require_env(env):
         'GIT_USER',
         'IX_FIXER_CODEX_GORN_API',
         'IX_FIXER_CODEX_S3_ENDPOINT',
+        'IX_FIXER_CODEX_MOLOT_RESOLVE',
         'IX_FIXER_GENERATION',
     )
     missing = [name for name in required if not env.get(name)]
@@ -474,6 +475,10 @@ def codex_agent_env(base_env, codex_home):
     # the codex wrapper explicitly bypasses around SOCKS.
     env['GORN_API'] = base_env['IX_FIXER_CODEX_GORN_API']
     env['S3_ENDPOINT'] = base_env['IX_FIXER_CODEX_S3_ENDPOINT']
+    # The client resolves against the store's gofra listener. The workers
+    # keep MOLOT_STORE_ENDPOINT, their own loopback, which the client
+    # forwards into every task: it must not be overridden here.
+    env['MOLOT_RESOLVE'] = base_env['IX_FIXER_CODEX_MOLOT_RESOLVE']
     env['CODEX_HOME'] = str(codex_home)
     return git_read_env(env)
 

@@ -33,6 +33,7 @@ class FixerTests(unittest.TestCase):
                 'GIT_USER',
                 'IX_FIXER_CODEX_GORN_API',
                 'IX_FIXER_CODEX_S3_ENDPOINT',
+                'IX_FIXER_CODEX_MOLOT_RESOLVE',
                 'IX_FIXER_GENERATION',
             )
         }
@@ -320,12 +321,17 @@ class FixerTests(unittest.TestCase):
         env['S3_ENDPOINT'] = 'http://127.0.0.1:8012'
         env['IX_FIXER_CODEX_GORN_API'] = 'http://192.168.100.16:8027'
         env['IX_FIXER_CODEX_S3_ENDPOINT'] = 'http://192.168.103.16:8012'
+        env['IX_FIXER_CODEX_MOLOT_RESOLVE'] = 'http://192.168.103.16:8064'
+        env['MOLOT_STORE_ENDPOINT'] = 'http://127.0.0.1:8064'
 
         with tempfile.TemporaryDirectory() as td:
             got = fixer.codex_agent_env(env, Path(td) / 'codex-home')
 
         self.assertEqual(got['GORN_API'], 'http://192.168.100.16:8027')
         self.assertEqual(got['S3_ENDPOINT'], 'http://192.168.103.16:8012')
+        self.assertEqual(got['MOLOT_RESOLVE'], 'http://192.168.103.16:8064')
+        # Forwarded into every task: the workers' loopback store stays.
+        self.assertEqual(got['MOLOT_STORE_ENDPOINT'], 'http://127.0.0.1:8064')
         self.assertEqual(got['IX_EXEC_KIND'], 'molot')
         self.assertNotIn('ETCD_PERSIST_ENDPOINTS', got)
         self.assertNotIn('GIT_USER', got)
