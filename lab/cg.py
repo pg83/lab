@@ -595,7 +595,7 @@ mkdir -p $d/load $d/store
 mount -t xfs $load $d/load
 mount -t xfs $store $d/store
 
-exec s3 cell -debug {listen} -load $d/load -store $d/store -hdd $hdd
+exec s3 cell -debug {listen} -metrics 127.0.0.1:{metrics} -load $d/load -store $d/store -hdd $hdd
 '''
 
 
@@ -603,12 +603,17 @@ class S3Cell:
     # One append-only log per disk; the front puts object pieces here. It
     # listens on loopback for the repair of its own host and on the gofra
     # address for everyone else.
-    def __init__(self, index, ipv4, port):
+    def __init__(self, index, ipv4, port, metrics):
         self.index = index
         self.listen = f'-listen 127.0.0.1:{port} -listen {ipv4}:{port}'
+        # Prometheus on loopback only; the host's collector scrapes it.
+        self.metrics = metrics
 
     def name(self):
         return f's3_cell_{self.index}'
+
+    def prom_port(self):
+        return self.metrics
 
     def user(self):
         return 'root'
@@ -629,7 +634,7 @@ class S3Cell:
     def run(self):
         with memfd('run.sh') as script:
             with open(script, 'w') as f:
-                f.write(S3_CELL_SCRIPT.replace('{listen}', self.listen).replace('{index}', str(self.index)))
+                f.write(S3_CELL_SCRIPT.replace('{listen}', self.listen).replace('{metrics}', str(self.metrics)).replace('{index}', str(self.index)))
 
             exec_into('/bin/unshare', '-m', '/bin/sh', script, PATH='/bin')
 
@@ -644,8 +649,10 @@ class S3Service:
     # front, repair and web share one config: the s3 etcd, the buckets and
     # every cell of the cluster by its gofra name. repair is the exception
     # for its own host: those cells it reaches over loopback and nothing else.
-    def __init__(self, kind, listen, etcd, cell_ports, host, buckets):
+    def __init__(self, kind, listen, etcd, cell_ports, host, buckets, metrics=None):
         self.kind = kind
+        # Prometheus on loopback (front and repair); web serves none.
+        self.metrics = metrics
         # Addresses to serve on; the front also serves on gofra for the
         # processes that live in another network namespace (codex).
         self.listen = list(listen)
@@ -657,6 +664,10 @@ class S3Service:
 
     def name(self):
         return f's3_{self.kind}'
+
+    def prom_ports(self):
+        if self.metrics:
+            yield self.metrics
 
     def pkgs(self):
         yield {
@@ -709,6 +720,9 @@ class S3Service:
 
             if self.kind == 'repair':
                 args += ['-host', self.host]
+
+            if self.metrics:
+                args += ['-metrics', f'127.0.0.1:{self.metrics}']
 
             exec_into(*args, PATH='/bin')
 
@@ -3149,7 +3163,7 @@ class ClusterMap:
             for i in range(3):
                 yield {
                     'host': hn,
-                    'serv': S3Cell(i, h['gofra']['ip'], p[f's3_cell_{i}']),
+                    'serv': S3Cell(i, h['gofra']['ip'], p[f's3_cell_{i}'], p[f's3_cell_{i}_metrics']),
                 }
 
             s3_etcd = f"http://127.0.0.1:{p['etcd_2_client']}"
@@ -3162,7 +3176,7 @@ class ClusterMap:
             ):
                 yield {
                     'host': hn,
-                    'serv': S3Service(kind, listen, s3_etcd, s3_cell_ports, hn, S3_BUCKETS),
+                    'serv': S3Service(kind, listen, s3_etcd, s3_cell_ports, hn, S3_BUCKETS, p.get(f's3_{kind}_metrics')),
                 }
 
             yield {
@@ -3566,6 +3580,11 @@ def do(code):
         's3_front': 8093,
         's3_web': 8094,
         's3_manager': 8095,
+        's3_cell_0_metrics': 8096,
+        's3_cell_1_metrics': 8097,
+        's3_cell_2_metrics': 8098,
+        's3_front_metrics': 8099,
+        's3_repair_metrics': 8100,
         'lab_proxy': 443,
         'lab_proxy_http': 80,
     }
