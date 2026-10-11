@@ -9,7 +9,7 @@ created with bin/xiaomi/api/xapi.py and activated via redirect_apply.
 Also listens on lab1.mesh:8101. Passwords and root login are disabled.
 
 Only the public key in the EvacSsh registration is authorized. Its fingerprint:
-SHA256:NYwD8mRB5IFVy2GOVaoYX2AFz5QNXxR1EFzmdO80Shg
+SHA256:it1w7y0MWB4hJm4DZqoOxXPaMQxco4LIu80+yywqy58
 The server generates a separate persistent host key in /srv/evac-ssh.
 
 Destinations relative to the SSH home (/home/pg):

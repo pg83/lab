@@ -2963,7 +2963,7 @@ class ClusterMap:
                     'host': hn,
                     'serv': EvacSsh(
                         [h['mesh']['ip'], '10.0.0.64'], p['evac_ssh'], 'pg',
-                        'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILVHsuLkcVSf0JpG1mk4DAvsyqavqCRu+xvtxONyOxXO dpaveldev@dpaveldev-osx',
+                        'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC5hKSS+KVpjsildkQ9CvWvz+Sud3Tx+OfEz6qD3CkgSJ7uuB9swCvRa1psf16uFXFXGwK+C+/T3yciHj45TL4tDCvAh0pmN5JOZ0B7pZNSOLHeBajEGOQPaE9u5DTiQmyMTrQ4JYlPFEIeo9gNJHhozylMGLKPZ0wmTXYN+/GzJkTgtw+mrfpEPYgcynQ+iPIaklQo1ibXyijp1wnqH4WW8EM1l9hcOqPcuxaz167QzxdEneAhHeeS771dB3ZL6NECxiPiYNGd4m0M4OtPCSY/QpdXrIcjGEYM+Od4T5bs/RY4HyC2k5DZVNmwFxIMRkseOWAfTDt/eFOxcykICVFlhBX97KpS8wn3hpch5JKA4JeujkaRAFJacoKIKPO5u2DHol9v8EfY29Hlkynzdt4SCuGTbea+v6QijmdvBHtxrrZpZ8t0muYIyvX3haaWkNGbypKOye0cPaaqXPZEztFglWuXVW5xazUZ0s0avxRSvvirkQZKmehuy9DwqlpJis0= pg@merlin.klg.yp-c.yandex.net',
                         [
                             ('seagate-a', '6b194f91-10fc-4ad6-9f30-21581c641d56'),
                             ('seagate-b', '2a39d5d3-80be-4b9c-bb99-0924d597c9e1'),
