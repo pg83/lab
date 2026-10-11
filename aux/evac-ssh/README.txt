@@ -42,7 +42,7 @@ evac_ssh; install the operator's public key on the source account first.
 
 Inspect from an administrator session on lab1:
   cat /var/run/evac_ssh/std/current
-  pid=$(cat /var/run/evac_ssh/dropbear.pid)
+  pid=$(pgrep -f '^dropbear .* /var/run/evac_ssh/dropbear.pid ')
   nsenter -t "$pid" -m -- df -h /home/pg/*
   nsenter -t "$pid" -m -- cat /home/pg/.ssh/authorized_keys
 
