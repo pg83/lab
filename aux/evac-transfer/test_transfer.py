@@ -4,6 +4,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -202,11 +203,13 @@ class SenderTest(unittest.TestCase):
             selected.write_text("".join("SnapshotId: s%d, Stream: banners_remote-%d, Status: Active\n" % (i, i)
                                         for i in range(200, 206)))
             # Two pre-existing placements must never write this target together.
-            for index in (200, 204):
-                module.atomic_json(state / ("banners_remote-%d.placement.json" % index), {"volume": "seagate-b"})
+            module.atomic_json(state / "banners_remote-200.placement.json", {"volume": "seagate-b"})
+            module.atomic_json(state / "banners_remote-200.uploaded.json", {"snapshot": "s200", "compression": "lz4"})
+            module.atomic_json(state / "banners_remote-204.placement.json",
+                               {"volume": "seagate-b", "compression": "none"})
             args = types.SimpleNamespace(start=200, end=205, uploads=4, lanes=2, chunk_mib=1,
                                          state=str(state), staging=str(root / "staging"), snapshots=str(selected),
-                                         keep_source=True, compression="none")
+                                         keep_source=True, compression="zstd")
             lock = threading.Lock()
             first_four = threading.Barrier(4, timeout=8)
             prefetched = threading.Event()
@@ -222,6 +225,8 @@ class SenderTest(unittest.TestCase):
                 return path
 
             def fake_upload(args, namespace, snapshot, source, volume):
+                expected = {"banners_remote-200": "lz4", "banners_remote-204": "none"}.get(namespace, "zstd")
+                self.assertEqual(args.compression, expected)
                 with lock:
                     self.assertNotIn(volume, active)
                     active.add(volume)
@@ -245,6 +250,45 @@ class SenderTest(unittest.TestCase):
             self.assertEqual(assignments["banners_remote-204"], "seagate-b")
             self.assertEqual(len(assignments), 6)
             self.assertFalse((state / "pipeline.pid").exists())
+
+    @unittest.skipUnless(shutil.which("zstd"), "zstd executable is required")
+    def test_zstd_resume_regenerates_identical_compressed_stream(self):
+        spec = importlib.util.spec_from_file_location("evac_zstd", SCRIPT)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "banners_remote-201"
+            source.mkdir()
+            (source / "data").write_bytes(os.urandom(3 * 1024 ** 2) + b"repeating" * 200000)
+            os.link(source / "data", source / "hardlink")
+            tar = subprocess.check_output(["tar", "--sort=name", "--format=gnu", "--numeric-owner",
+                                           "-C", str(root), "-cf", "-", source.name])
+            reference = subprocess.check_output(["zstd", "-1", "-T2", "-c"], input=tar)
+            dest = root / "dest"
+            dest.mkdir()
+            prefix = reference[:1024 ** 2]
+            name = "banners_remote-201--s201.tar.zst"
+            (dest / (name + ".partial")).write_bytes(prefix)
+            module.atomic_json(dest / (name + ".transfer.json"), {
+                "namespace": source.name, "snapshot": "s201", "compression": "zstd",
+                "chunk_size": 1024 ** 2, "chunks": 1, "bytes": len(prefix),
+                "sha256": hashlib.sha256(prefix).hexdigest()})
+            args = types.SimpleNamespace(lanes=4, chunk_mib=1, compression="zstd", zstd="zstd")
+
+            def local_command(args, remote):
+                remote = list(map(str, remote))
+                if remote[0] == "receive":
+                    remote[remote.index("--directory") + 1] = str(dest)
+                    remote += ["--ram-dir", str(root)]
+                return [sys.executable, str(SCRIPT), *remote]
+
+            with mock.patch.object(module, "ssh_command", side_effect=local_command):
+                result = module.upload(args, source.name, "s201", source, "hgst-a")
+            self.assertEqual(Path(result["archive"]).read_bytes(), reference)
+            self.assertEqual(subprocess.check_output(["zstd", "-dc", result["archive"]]), tar)
+            probe = types.SimpleNamespace(directory=str(dest), namespace=source.name, snapshot="s201")
+            self.assertEqual(module.existing_compression(probe), "zstd")
 
 
 class ServiceTest(unittest.TestCase):

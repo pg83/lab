@@ -13,7 +13,8 @@ Incomplete downloads have an ownership marker; on retry only those downloads
 can be discarded and downloaded again. Unmarked existing directories are refused.
 
 GNU tar preserves hardlinks and is generated as a stream. No intermediate
-tar or tar.lz4 file is written on merlin. LZ4 level 1 is enabled by default.
+tar or compressed archive is written on merlin. Zstd level 1 with two
+compression threads per archive is enabled by default.
 Chunks are 64 MiB, with eight SSH transfers in flight per archive and two
 concurrent initial handshakes across all archives. Compression, network
 transfer and target writing overlap. --uploads (1..4) controls concurrent
@@ -39,10 +40,11 @@ seagate-a and seagate-b are scheduled independently even though they share a dis
 
 Destination layout:
   /home/pg/<volume>/banners_remote/
-    banners_remote-<N>--<snapshot>.tar.lz4.partial     unfinished archive
-    banners_remote-<N>--<snapshot>.tar.lz4.transfer.json  durable checkpoint
-    banners_remote-<N>--<snapshot>.tar.lz4             finished archive
-    banners_remote-<N>--<snapshot>.tar.lz4.json        size, SHA-256, identity
+    banners_remote-<N>--<snapshot>.tar.zst.partial       unfinished archive
+    banners_remote-<N>--<snapshot>.tar.zst.transfer.json durable checkpoint
+    banners_remote-<N>--<snapshot>.tar.zst               finished archive
+    banners_remote-<N>--<snapshot>.tar.zst.json          size, SHA-256, identity
+Shard 200 from the initial trial remains a .tar.lz4 archive.
 
 The paths above are visible inside the evacuation SSH service (port 8101).
 Existing host mounts expose the same data at:
@@ -51,12 +53,14 @@ Those host mounts were created during setup. After boot, the supervised SSH
 service mounts each filesystem by UUID in its own namespace, so port 8101
 is the stable way to inspect the archive directories.
 
-Final rename happens only after tar/lz4 exit successfully and both ends agree
+Final rename happens only after tar and the compressor exit successfully and both ends agree
 on total bytes, chunks and SHA-256. A receiver failure leaves a partial file.
 Resume verifies the durable prefix, truncates any uncommitted tail and
 regenerates the same stream from the immutable downloaded snapshot, discarding
-the already received prefix. Changing compression or chunk size while resuming
-is refused. A completed archive is never silently overwritten.
+the already received prefix. Compression is pinned in each shard's placement:
+changing the plan affects only new shards. Old completed or partial archives
+keep their existing format. Changing chunk size while resuming is refused.
+A completed archive is never silently overwritten.
 
 After confirmed completion, source staging is removed unless --keep-source
 was specified (which retains completed snapshots too). Remote archive receipts remain available. No source YT data is
@@ -74,12 +78,12 @@ restart automatically after 30 seconds. Successful completion stays in
 active/exited systemd status rather than rerunning the range.
 
 Persistent state on lab1 (root only):
-  /srv/evac-transfer/plan.json       enabled, start/end, uploads, lanes, chunk_mib
+  /srv/evac-transfer/plan.json       enabled, start/end, uploads, lanes, compression, chunk_mib
   /srv/evac-transfer/status.json     last contact, systemd state, completed shards
   /srv/evac-transfer/source-id       dedicated SSH identity, never committed
   /srv/evac-transfer/source-known_hosts
 
-Default plan: enabled, range 200..249, four archives, eight lanes each, LZ4,
+Default plan: enabled, range 200..249, four archives, eight lanes each, Zstd,
 remove verified source staging. Change plan.json atomically to adjust the
 range or concurrency. Setting enabled=false gracefully stops and disables the
 source worker; the controller and reverse connection remain available.
@@ -107,14 +111,16 @@ Manual trial (disable the managed worker in plan.json first):
     --remote-helper /bin/evac-transfer
 The source pipeline has a file lock, so two runners cannot manage it at once.
 
---compression none writes a plain tar. Select the format before starting a
-new transfer; receipts and checkpoints are tied to that format.
+--compression none writes a plain tar; --compression lz4 uses LZ4 -1.
+The selection applies to new shards. Existing shards retain their saved format.
+Zstd is available on merlin as /usr/bin/zstd; --zstd can override the executable.
 
 LZ4 on merlin is extracted from the Ubuntu lz4 package in the user's cache:
   ~/.cache/evac-tools/lz4/root/usr/bin/lz4
 --lz4 can specify another executable. No system package installation is needed.
 
 Read an archive later:
+  zstd -dc banners_remote-201--<snapshot>.tar.zst | tar -tf -
   lz4 -dc banners_remote-200--<snapshot>.tar.lz4 | tar -tf -
 
 Control access from home.mesh:
@@ -128,7 +134,8 @@ corruption, truncation of uncommitted data after interruption, already
 completed archives, and sender resume with hardlinks preserved in tar.
 They also verify concurrent archives on all four targets, bounded prefetch,
 saved placement after restart, and controller reconciliation without an
-unnecessary source worker restart.
+unnecessary source worker restart, mixed compression across shards, and
+regeneration/resume of the compressed Zstd stream followed by decompression.
 
 Measured shard 200, snapshot 20261011T151038Z_603251:
   Native Plutonium download: 25.5 GiB in 29.28 s.
@@ -140,3 +147,11 @@ Measured shard 200, snapshot 20261011T151038Z_603251:
   Trial archive committed on seagate-b with exactly this size and SHA-256.
   A real interruption resumed from 6.5625 GiB; steady transfer after resume
   was about 480 Mbit/s (one archive with 16 lanes).
+
+Zstd comparison on the same shard (tar size unchanged):
+  zstd -1 -T2: 23,243,383,635 bytes (21.65 GiB); 15.26% saved; ratio 1.1801.
+  Time: 78.53 s, 333.13 MiB/s of tar input; child CPU time: 139.05 s.
+  5.72% smaller than the LZ4 archive. LZ4 used one compression thread;
+  Zstd used two. Both are faster than the 1 Gbit/s network path.
+  Compressed stream SHA-256:
+    8be5aaea55213eaac8a6ad79cc5c081fe0f593dbff5f6e2a477e51fe88e6addc

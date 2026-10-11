@@ -41,11 +41,15 @@ def worker_unit(home, script, plan):
         raise ValueError("Invalid concurrency")
     if not 1 <= plan["chunk_mib"] <= 256:
         raise ValueError("Invalid chunk size")
+    compression = plan.get("compression", "zstd")
+    if compression not in ("none", "lz4", "zstd"):
+        raise ValueError("Invalid compression")
     # Only fixed paths and checked integers enter the systemd command line.
     options = " ".join("--%s %d" % (name.replace("_", "-"), plan[name])
                        for name in ("start", "end", "uploads", "lanes", "chunk_mib"))
     if plan.get("keep_source", False):
         options += " --keep-source"
+    options += " --compression " + compression
     return f"""[Unit]
 Description=Plutonium evacuation managed by lab1
 StartLimitIntervalSec=0

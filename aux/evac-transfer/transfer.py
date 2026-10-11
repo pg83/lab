@@ -2,6 +2,7 @@
 """Bounded Plutonium -> streaming tar -> parallel SSH -> sequential HDD pipeline."""
 import argparse
 import concurrent.futures as cf
+import copy
 import fcntl
 import hashlib
 import json
@@ -90,8 +91,22 @@ def receiver_paths(args):
     name = safe_name(args.namespace) + "--" + safe_name(args.snapshot) + ".tar"
     if args.compression == "lz4":
         name += ".lz4"
+    elif args.compression == "zstd":
+        name += ".zst"
     final = base / name
     return final, base / (name + ".partial"), base / (name + ".transfer.json"), base / (name + ".json")
+
+
+def existing_compression(args):
+    found = []
+    for compression in ("none", "lz4", "zstd"):
+        probe = copy.copy(args)
+        probe.compression = compression
+        if any(p.exists() for p in receiver_paths(probe)):
+            found.append(compression)
+    if len(found) > 1:
+        raise RuntimeError("Multiple archive formats exist for this snapshot")
+    return found[0] if found else None
 
 
 def receive_archive(args):
@@ -363,6 +378,11 @@ def upload(args, namespace, snapshot, source, volume=None):
             compressor = spawn([str(Path(args.lz4).expanduser()), "-1", "-c"], stdin=tar.stdout, stdout=sp.PIPE)
             tar.stdout.close()
             stream = compressor.stdout
+        elif args.compression == "zstd":
+            compressor = spawn([str(Path(args.zstd).expanduser()), "-1", "-T2", "-c"],
+                               stdin=tar.stdout, stdout=sp.PIPE)
+            tar.stdout.close()
+            stream = compressor.stdout
         digest = hashlib.sha256()
         skipped = 0
         while skipped < status["bytes"]:
@@ -404,7 +424,7 @@ def upload(args, namespace, snapshot, source, volume=None):
         if tar.wait() != 0:
             raise RuntimeError("tar reported an error; archive remains partial")
         if compressor is not None and compressor.wait() != 0:
-            raise RuntimeError("lz4 reported an error; archive remains partial")
+            raise RuntimeError("Compressor reported an error; archive remains partial")
         finish = {"chunks": index, "bytes": count, "sha256": digest.hexdigest()}
         receiver.stdin.write((json.dumps(finish) + "\n").encode())
         receiver.stdin.close()
@@ -539,7 +559,7 @@ def run_pipeline(args):
                 completed = state_dir / (namespace + ".uploaded.json")
                 if completed.exists():
                     result = read_json(completed)
-                    if result["snapshot"] != snapshot or result.get("compression") != args.compression:
+                    if result["snapshot"] != snapshot:
                         raise RuntimeError("Completed snapshot differs from requested snapshot")
                     source = Path(args.staging).expanduser() / namespace
                 else:
@@ -550,9 +570,11 @@ def run_pipeline(args):
         finally:
             jobs.put(None)
 
-    def upload_and_release(job, volume):
+    def upload_and_release(job, volume, compression):
         namespace, snapshot, source = job
-        result = upload(args, namespace, snapshot, source, volume)
+        job_args = copy.copy(args)
+        job_args.compression = compression
+        result = upload(job_args, namespace, snapshot, source, volume)
         atomic_json(state_dir / (namespace + ".uploaded.json"), result, durable=True)
         if not args.keep_source and source.exists():
             marker = state_dir / (namespace + ".download.json")
@@ -596,20 +618,36 @@ def run_pipeline(args):
                 namespace, snapshot, source = job
                 placement = state_dir / (namespace + ".placement.json")
                 if placement.exists():
-                    volume = read_json(placement)["volume"]
+                    saved = read_json(placement)
+                    volume = saved["volume"]
                     if volume not in VOLUMES:
                         raise RuntimeError("Unknown target volume: " + volume)
                     if volume in busy:
                         continue
+                    compression = saved.get("compression")
+                    if compression is None:
+                        completed = state_dir / (namespace + ".uploaded.json")
+                        if completed.exists():
+                            compression = read_json(completed)["compression"]
+                        else:
+                            # Upgrade old placement records without changing the
+                            # byte stream of an unfinished archive.
+                            located = json.loads(sp.check_output(ssh_command(args, [
+                                "locate", "--directory", "/home/pg/" + volume + "/banners_remote",
+                                "--namespace", namespace, "--snapshot", snapshot]), text=True))
+                            compression = located["compression"] or args.compression
                 else:
                     # Each partition is an independent target, including both
                     # Seagate partitions. Never run two archives on one target.
                     free = json.loads(sp.check_output(ssh_command(args, ["space"]), text=True))
                     volume = max((v for v in VOLUMES if v not in busy), key=lambda v: free[v])
-                    atomic_json(placement, {"volume": volume}, durable=True)
+                    compression = args.compression
+                if compression not in ("none", "lz4", "zstd"):
+                    raise RuntimeError("Unknown saved compression: " + str(compression))
+                atomic_json(placement, {"volume": volume, "compression": compression}, durable=True)
                 busy.add(volume)
                 pending.remove(job)
-                active[pool.submit(upload_and_release, job, volume)] = volume
+                active[pool.submit(upload_and_release, job, volume, compression)] = volume
         log("Completed requested range %d..%d" % (args.start, args.end))
     finally:
         STOP.set()
@@ -635,7 +673,11 @@ def main():
     receive.add_argument("--chunk-size", type=int, required=True)
     receive.add_argument("--lanes", type=int, required=True)
     receive.add_argument("--ram-dir", default="/dev/shm")
-    receive.add_argument("--compression", choices=("none", "lz4"), default="none")
+    receive.add_argument("--compression", choices=("none", "lz4", "zstd"), default="none")
+    locate = commands.add_parser("locate")
+    locate.add_argument("--directory", required=True)
+    locate.add_argument("--namespace", required=True)
+    locate.add_argument("--snapshot", required=True)
     block = commands.add_parser("block")
     block.add_argument("--session", required=True)
     block.add_argument("--index", type=int, required=True)
@@ -656,8 +698,9 @@ def main():
     run.add_argument("--chunk-mib", type=int, default=64)
     run.add_argument("--reserve-gib", type=int, default=20)
     run.add_argument("--keep-source", action="store_true")
-    run.add_argument("--compression", choices=("none", "lz4"), default="lz4")
+    run.add_argument("--compression", choices=("none", "lz4", "zstd"), default="zstd")
     run.add_argument("--lz4", default="~/.cache/evac-tools/lz4/root/usr/bin/lz4")
+    run.add_argument("--zstd", default="zstd")
     args = parser.parse_args()
     if args.command == "receive":
         def receiver_stop(signum, frame):
@@ -669,6 +712,8 @@ def main():
         receive_block(args)
     elif args.command == "space":
         emit({v: shutil.disk_usage("/home/pg/" + v).free for v in VOLUMES})
+    elif args.command == "locate":
+        emit({"compression": existing_compression(args)})
     else:
         def stop_signal(signum, frame):
             STOP.set()
