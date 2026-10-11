@@ -1050,6 +1050,17 @@ class EvacSsh:
         exec_into(*args)
 
 
+class EvacTransfer:
+    def user(self):
+        return 'root'
+
+    def pkgs(self):
+        yield {'pkg': 'aux/evac-transfer'}
+
+    def run(self):
+        exec_into('evac-transfer-controller', '--state', '/srv/evac-transfer')
+
+
 class GornSsh:
     def __init__(self, uniq, host, port, nebula_host, store_endpoint):
         self.uniq = uniq
@@ -2959,6 +2970,10 @@ class ClusterMap:
             hn = h['hostname']
 
             if hn == 'lab1':
+                yield {
+                    'host': hn,
+                    'serv': EvacTransfer(),
+                }
                 yield {
                     'host': hn,
                     'serv': EvacSsh(
