@@ -76,7 +76,8 @@ function render(data) {
   $('completed').textContent = data.summary.completed;
   $('received').textContent = bytes(data.summary.bytes);
   $('speed').textContent = data.summary.mbps == null ? '—' : number(data.summary.mbps);
-  $('speed-note').textContent = data.summary.mbps == null ? 'Собираем первый замер' : 'замер за последние ~40 секунд';
+  $('speed-note').textContent = data.summary.mbps == null ? 'Собираем первый замер' :
+    'средняя за ' + number(data.summary.window_seconds || 40) + ' с';
   $('active').textContent = data.summary.active;
   $('overall').max = data.summary.total;
   $('overall').value = data.summary.completed;

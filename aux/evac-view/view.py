@@ -150,10 +150,12 @@ class Monitor:
         if not good_sample or (self.samples and any(counts[n] < self.samples[-1][1][n] for n in counts)):
             self.samples.clear()
         rates = {}
+        window = None
         if good_sample:
             if self.samples:
                 then, old = self.samples[0]
                 if now > then:
+                    window = now - then
                     rates = {n: max(0, counts[n] - old[n]) * 8 / (now - then) / 1e6 for n in counts}
             self.samples.append((now, counts))
         shards = []
@@ -198,6 +200,7 @@ class Monitor:
                 "service": {k: service.get(k) for k in ("ActiveState", "SubState", "NRestarts")},
                 "summary": {"completed": completed, "total": LAST - FIRST + 1,
                             "bytes": sum(counts.values()), "mbps": rate,
+                            "window_seconds": window,
                             "active": sum(s["phase"] == "uploading" for s in shards)},
                 "volumes": volumes, "shards": shards, "warnings": warnings,
                 "source": {k: source[k] for k in ("free_bytes", "total_bytes", "checked_at") if k in source}

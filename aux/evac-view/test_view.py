@@ -93,6 +93,7 @@ class MonitorTest(unittest.TestCase):
         records[200]["bytes"] += 50_000_000
         second = monitor.snapshot(status, records, volumes, source, [], 1005)
         self.assertEqual(second["summary"]["mbps"], 80)
+        self.assertEqual(second["summary"]["window_seconds"], 5)
         self.assertNotIn("secret", json.dumps(second))
         self.assertNotIn("private token", json.dumps(second))
         records[200]["complete"] = True
