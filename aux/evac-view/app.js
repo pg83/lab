@@ -46,7 +46,7 @@ function chart(data) {
     if (segment.length > 1) {
       const d = segment.map((p,i) => (i ? 'L' : 'M') + p.join(',')).join(' ');
       line += d + ' ';
-      area += 'M' + segment[0][0] + ',125 ' + segment.map(p=>'L'+p.join(',')).join(' ') + ' L'+segment.at(-1)[0]+',125 Z ';
+      area += 'M' + segment[0][0] + ',125 ' + segment.map(p=>'L'+p.join(',')).join(' ') + ' L'+segment[segment.length-1][0]+',125 Z ';
     }
     segment = [];
   };
@@ -60,7 +60,7 @@ function chart(data) {
   $('chart-area').setAttribute('d',area);
 }
 function detail() {
-  const shard = current?.shards.find(s=>s.id===selected);
+  const shard = current && current.shards.find(s=>s.id===selected);
   if (!shard) return;
   const title = element('div','detail-title');
   title.append(element('strong','',`Шард ${shard.id}`), element('span','',phases[shard.phase]),
@@ -83,7 +83,7 @@ function render(data) {
   $('percent').textContent = number(data.summary.completed/data.summary.total*100) + '% шардов';
   $('connection').textContent = data.connected ? 'На связи' : 'Нет связи';
   $('service').textContent = data.running ? 'Работает' : (data.service.SubState==='exited' && data.summary.completed===data.summary.total ? 'Завершён' : 'Неактивен');
-  $('restarts').textContent = data.service.NRestarts ?? '—';
+  $('restarts').textContent = data.service.NRestarts == null ? '—' : data.service.NRestarts;
   $('source-free').textContent = data.source.available ? bytes(data.source.free_bytes) : 'Нет свежих данных';
   $('volumes').replaceChildren(...data.volumes.map(v => {
     const card = element('article','volume'), title = element('div','volume-title');
@@ -119,12 +119,15 @@ function render(data) {
   chart(data); detail(); health();
 }
 async function refresh() {
+  const controller = new AbortController();
+  const timeout = setTimeout(()=>controller.abort(),12000);
   try {
-    const response=await fetch('/api/status',{cache:'no-store',signal:AbortSignal.timeout(12000)});
+    const response=await fetch('/api/status',{cache:'no-store',signal:controller.signal});
     if (!response.ok) throw new Error('Status '+response.status);
     const data=await response.json();
     failed=false; render(data);
   } catch (_) { failed=true; health(); }
+  finally { clearTimeout(timeout); }
   setTimeout(refresh,5000);
 }
 setInterval(health,1000);
