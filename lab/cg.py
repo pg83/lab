@@ -2962,7 +2962,7 @@ class ClusterMap:
                 yield {
                     'host': hn,
                     'serv': EvacSsh(
-                        [h['mesh']['ip'], '10.0.0.64'], p['evac_ssh'], 'dpaveldev',
+                        [h['mesh']['ip'], '10.0.0.64'], p['evac_ssh'], 'pg',
                         'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILVHsuLkcVSf0JpG1mk4DAvsyqavqCRu+xvtxONyOxXO dpaveldev@dpaveldev-osx',
                         [
                             ('seagate-a', '6b194f91-10fc-4ad6-9f30-21581c641d56'),
@@ -3726,7 +3726,7 @@ def do(code):
         'etcd_3': 2011,
         'etcd_2': 2025,
         'repology_badge': 2026,
-        'dpaveldev': 2027,
+        'pg': 2027,
         'mesh_web': 2012,
         'ssh_oracle_tunnel': 2013,
         'molot_store': 2017,

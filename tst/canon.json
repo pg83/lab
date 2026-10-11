@@ -32,9 +32,9 @@
                 "bin/dropbear/2024(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm)",
                 "bin/openssh/client(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm)",
                 "bin/rsync(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm)",
-                "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,user=dpaveldev,user_home=/home/dpaveldev)",
+                "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,user=pg,user_home=/home/pg)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,srv_dir=evac_ssh,runsh_script=sha256:3f6f5ee15bb023b5,srv_user=root,extra_deps=sha256:419cef343422f951)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,srv_dir=evac_ssh,runsh_script=sha256:0c9ac7f2c3772489,srv_user=root,extra_deps=sha256:79eeb7e9705f33a2)",
                 "bin/dropbear/2024(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,user=root)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,srv_dir=drop_bear_2,runsh_script=sha256:ee1f291433328ae1,srv_user=root,extra_deps=YmluL2Ryb3BiZWFyLzIwMjQ=)",
@@ -356,7 +356,7 @@
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,user=cloudflared)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,srv_dir=cf_lab1_seal_quic,runsh_script=sha256:e4d114cdfcbb2d37,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:cfe204f96ef4be84)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:26baf4f05800271f)"
             ],
             "gofra": {
                 "hostname": "lab1.gofra",
@@ -735,7 +735,7 @@
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,user=cloudflared)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,srv_dir=cf_lab2_seal_quic,runsh_script=sha256:6d4681cbab9bf046,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:cfe204f96ef4be84)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:26baf4f05800271f)"
             ],
             "gofra": {
                 "hostname": "lab2.gofra",
@@ -1084,7 +1084,7 @@
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,user=cloudflared)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,srv_dir=cf_lab3_seal_quic,runsh_script=sha256:23b069f31b6a1d4d,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:cfe204f96ef4be84)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:26baf4f05800271f)"
             ],
             "gofra": {
                 "hostname": "lab3.gofra",
@@ -1157,9 +1157,9 @@
                 "bin/dropbear/2024(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm)",
                 "bin/openssh/client(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm)",
                 "bin/rsync(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm)",
-                "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,user=dpaveldev,user_home=/home/dpaveldev)",
+                "etc/lab/user/home(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,user=pg,user_home=/home/pg)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,user=root)",
-                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,srv_dir=evac_ssh,runsh_script=sha256:3f6f5ee15bb023b5,srv_user=root,extra_deps=sha256:419cef343422f951)",
+                "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,srv_dir=evac_ssh,runsh_script=sha256:0c9ac7f2c3772489,srv_user=root,extra_deps=sha256:79eeb7e9705f33a2)",
                 "bin/dropbear/2024(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,user=root)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,srv_dir=drop_bear_2,runsh_script=sha256:ee1f291433328ae1,srv_user=root,extra_deps=YmluL2Ryb3BiZWFyLzIwMjQ=)",
@@ -1481,7 +1481,7 @@
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,user=cloudflared)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,srv_dir=cf_lab1_seal_quic,runsh_script=sha256:e4d114cdfcbb2d37,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:cfe204f96ef4be84)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:26baf4f05800271f)"
             ],
             "gofra": {
                 "hostname": "lab1.gofra",
@@ -1860,7 +1860,7 @@
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,user=cloudflared)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,srv_dir=cf_lab2_seal_quic,runsh_script=sha256:6d4681cbab9bf046,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:cfe204f96ef4be84)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:26baf4f05800271f)"
             ],
             "gofra": {
                 "hostname": "lab2.gofra",
@@ -2209,7 +2209,7 @@
                 "bin/cloudflared(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm)",
                 "etc/lab/user(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,user=cloudflared)",
                 "bin/run/sh(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,srv_dir=cf_lab3_seal_quic,runsh_script=sha256:23b069f31b6a1d4d,srv_user=cloudflared,extra_deps=YmluL2Nsb3VkZmxhcmVk)",
-                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:cfe204f96ef4be84)"
+                "bin/mk/file(py_extra_modules=pip/PyYAML:pip/filelock:pip/jinja2:pip/markupsafe:pip/requests:pip/tqdm,file_path=bin/runpy,file_data=sha256:26baf4f05800271f)"
             ],
             "gofra": {
                 "hostname": "lab3.gofra",
@@ -2441,7 +2441,6 @@
         "artifacts": 2009,
         "cloudflared": 1028,
         "collector": 1001,
-        "dpaveldev": 2027,
         "etcd_1": 2010,
         "etcd_2": 2025,
         "etcd_3": 2011,
@@ -2562,6 +2561,7 @@
         "ogorod_serve": 2006,
         "ogorod_serve_local": 2008,
         "pf": 1019,
+        "pg": 2027,
         "repology_badge": 2026,
         "s3_front": 2021,
         "s3_manager": 2024,
