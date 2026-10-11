@@ -953,6 +953,103 @@ class DropBear2(DropBear):
     pass
 
 
+class EvacSsh:
+    # Only these existing filesystems are used; never format or resize a disk.
+    def __init__(self, hosts, port, login, public_key, volumes):
+        self.hosts = hosts
+        self.port = port
+        self.login = login
+        self.public_key = public_key
+        self.volumes = volumes
+
+    def user(self):
+        return 'root'
+
+    def home_dir(self):
+        return f'/home/{self.login}'
+
+    def pkgs(self):
+        for pkg in ('bin/dropbear/2024', 'bin/openssh/client', 'bin/rsync'):
+            yield {'pkg': pkg}
+
+        yield {
+            'pkg': 'etc/lab/user/home',
+            'user': self.login,
+            'user_home': self.home_dir(),
+        }
+
+    def run(self):
+        # Mounts, authorized_keys and SFTP compatibility path are private to
+        # this service. The normal host SSH daemon cannot use this key.
+        ctx = base64.b64encode(pickle.dumps({'srv': self})).decode()
+        exec_into('unshare', '-m', '--propagation', 'private', 'runpy', ctx, 'serve')
+
+    def serve(self):
+        os.umask(0o077)
+        base = '/var/run/evac_ssh'
+        home = self.home_dir()
+        key_dir = '/srv/evac-ssh'
+        key = f'{key_dir}/host_ed25519'
+        make_dirs(key_dir)
+        os.chmod(key_dir, 0o700)
+        if not os.path.exists(key):
+            subprocess.run(['dropbearkey', '-t', 'ed25519', '-f', key], check=True,
+                           stdout=subprocess.DEVNULL)
+
+        # Resolve all UUIDs and check filesystem signatures before mounting.
+        devices = []
+        for name, uuid in self.volumes:
+            dev = subprocess.check_output(['findfs', f'UUID={uuid}'], text=True).strip()
+            with open(dev, 'rb') as f:
+                if f.read(4) != b'XFSB':
+                    raise RuntimeError(f'{name}: expected an existing XFS filesystem')
+            devices.append((name, dev))
+
+        make_dirs(f'{base}/volumes')
+        os.chmod(f'{base}/volumes', 0o700)
+        make_dirs(home)
+        subprocess.run(['mount', '-t', 'tmpfs', '-o', 'size=4m,mode=0755,nosuid,nodev',
+                        'evac-home', home], check=True)
+        make_dirs(f'{home}/.ssh')
+        os.chmod(f'{home}/.ssh', 0o755)
+        with open(f'{home}/.ssh/authorized_keys', 'w') as f:
+            f.write(self.public_key.strip() + '\n')
+        os.chmod(f'{home}/.ssh/authorized_keys', 0o644)
+
+        for name, dev in devices:
+            volume = f'{base}/volumes/{name}'
+            source = f'{volume}/incoming-{self.login}'
+            target = f'{home}/{name}'
+            make_dirs(volume)
+            subprocess.run(['mount', '-t', 'xfs', '-o', 'nosuid,nodev', dev, volume], check=True)
+            if not os.path.ismount(volume) or os.stat(volume).st_dev != os.stat(dev).st_rdev:
+                raise RuntimeError(f'{name}: mount verification failed')
+            if os.path.islink(source):
+                raise RuntimeError(f'{name}: refusing a symlink as data directory')
+            make_dirs(source, owner=self.login)
+            os.chmod(source, 0o700)
+            make_dirs(target)
+            # An unmounted destination cannot accept writes onto the root disk.
+            os.chmod(target, 0o500)
+            subprocess.run(['mount', '-o', 'bind', source, target], check=True)
+            if os.stat(target).st_dev != os.stat(dev).st_rdev:
+                raise RuntimeError(f'{name}: bind mount verification failed')
+
+        # Dropbear's compiled SFTP path is /usr/libexec/sftp-server; /usr is /.
+        make_dirs('/libexec')
+        subprocess.run(['mount', '-t', 'tmpfs', '-o', 'size=1m,mode=0755,nosuid,nodev',
+                        'evac-sftp', '/libexec'], check=True)
+        os.symlink('/bin/bin_openssh_client/sftp-server', '/libexec/sftp-server')
+        os.chdir(home)
+        # Remote forwarding stays loopback-only (no -a), for the source host's
+        # outbound reverse SSH connection. Local forwarding remains disabled.
+        args = ['dropbear', '-F', '-E', '-s', '-w', '-G', self.login, '-j',
+                '-W', '8388608', '-K', '30', '-P', f'{base}/dropbear.pid', '-r', key]
+        for host in self.hosts:
+            args.extend(['-p', f'{host}:{self.port}'])
+        exec_into(*args)
+
+
 class GornSsh:
     def __init__(self, uniq, host, port, nebula_host, store_endpoint):
         self.uniq = uniq
@@ -2861,6 +2958,21 @@ class ClusterMap:
         for h in self.conf['hosts']:
             hn = h['hostname']
 
+            if hn == 'lab1':
+                yield {
+                    'host': hn,
+                    'serv': EvacSsh(
+                        [h['mesh']['ip'], '10.0.0.64'], p['evac_ssh'], 'dpaveldev',
+                        'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILVHsuLkcVSf0JpG1mk4DAvsyqavqCRu+xvtxONyOxXO dpaveldev@dpaveldev-osx',
+                        [
+                            ('seagate-a', '6b194f91-10fc-4ad6-9f30-21581c641d56'),
+                            ('seagate-b', '2a39d5d3-80be-4b9c-bb99-0924d597c9e1'),
+                            ('hgst-a', '7b654717-6493-4534-90b5-c947fa8b7045'),
+                            ('hgst-b', '2617f25c-d4f5-4f38-acfe-c1cdd5250aed'),
+                        ],
+                    ),
+                }
+
             if False:
                 for i in range(0, 16):
                     yield {
@@ -3585,6 +3697,7 @@ def do(code):
         's3_cell_2_metrics': 8098,
         's3_front_metrics': 8099,
         's3_repair_metrics': 8100,
+        'evac_ssh': 8101,
         'lab_proxy': 443,
         'lab_proxy_http': 80,
     }
@@ -3613,6 +3726,7 @@ def do(code):
         'etcd_3': 2011,
         'etcd_2': 2025,
         'repology_badge': 2026,
+        'dpaveldev': 2027,
         'mesh_web': 2012,
         'ssh_oracle_tunnel': 2013,
         'molot_store': 2017,
