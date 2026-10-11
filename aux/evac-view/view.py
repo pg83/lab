@@ -275,7 +275,9 @@ def main():
     parser.add_argument("command", choices=("collect", "serve"))
     parser.add_argument("--state", type=Path, default=Path("/srv/evac-transfer"))
     parser.add_argument("--data", type=Path, default=PUBLIC)
-    parser.add_argument("--assets", type=Path, default=Path("/share/evac-view"))
+    # Pin assets to the same immutable package as this running executable.
+    parser.add_argument("--assets", type=Path,
+                        default=Path(__file__).resolve().parent.parent / "share/evac-view")
     parser.add_argument("--listen", default="127.0.0.1:8102")
     args = parser.parse_args()
     if args.command == "collect":
