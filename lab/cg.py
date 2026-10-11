@@ -1061,6 +1061,35 @@ class EvacTransfer:
         exec_into('evac-transfer-controller', '--state', '/srv/evac-transfer')
 
 
+class EvacViewData:
+    def user(self):
+        return 'root'
+
+    def pkgs(self):
+        yield {'pkg': 'aux/evac-view'}
+
+    def run(self):
+        make_dirs('/var/run/evac_view_data/public')
+        os.chmod('/var/run/evac_view_data', 0o755)
+        os.chmod('/var/run/evac_view_data/public', 0o755)
+        exec_into('evac-view', 'collect')
+
+
+class EvacView:
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port
+
+    def pkgs(self):
+        yield {'pkg': 'aux/evac-view'}
+
+    def proxies(self):
+        yield {'name': 'reklama', 'host': self.host, 'port': self.port}
+
+    def run(self):
+        exec_into('evac-view', 'serve', '--listen', f'{self.host}:{self.port}')
+
+
 class GornSsh:
     def __init__(self, uniq, host, port, nebula_host, store_endpoint):
         self.uniq = uniq
@@ -1585,7 +1614,7 @@ class CloudflaredTunnel:
     TUNNEL_ID = '4b335fae-9cd1-40bb-9868-08deb4a23cb7'
 
     def __init__(self, hostname, upstream_port, socks, nick, view_port,
-                 badge_port, edge=None, protocol='http2'):
+                 badge_port, edge=None, protocol='http2', reklama_upstream=None):
         self.hostname = hostname
         self.upstream_port = upstream_port
         self.socks = socks
@@ -1594,6 +1623,7 @@ class CloudflaredTunnel:
         self.badge_port = badge_port
         self.edge = edge
         self.protocol = protocol
+        self.reklama_upstream = reklama_upstream
 
     def name(self):
         return f'cf_{self.nick}'
@@ -1609,6 +1639,8 @@ class CloudflaredTunnel:
             'tunnel': self.TUNNEL_ID,
             'credentials-file': creds_path,
             'ingress': [
+                *([{'hostname': 'reklama.homelab.cam',
+                    'service': self.reklama_upstream}] if self.reklama_upstream else []),
                 {
                     'hostname': 'view.homelab.cam',
                     'path': '/view/.*',
@@ -2976,6 +3008,14 @@ class ClusterMap:
                 }
                 yield {
                     'host': hn,
+                    'serv': EvacViewData(),
+                }
+                yield {
+                    'host': hn,
+                    'serv': EvacView(h['gofra']['ip'], p['evac_view']),
+                }
+                yield {
+                    'host': hn,
                     'serv': EvacSsh(
                         [h['mesh']['ip'], '10.0.0.64'], p['evac_ssh'], 'pg',
                         'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC5hKSS+KVpjsildkQ9CvWvz+Sud3Tx+OfEz6qD3CkgSJ7uuB9swCvRa1psf16uFXFXGwK+C+/T3yciHj45TL4tDCvAh0pmN5JOZ0B7pZNSOLHeBajEGOQPaE9u5DTiQmyMTrQ4JYlPFEIeo9gNJHhozylMGLKPZ0wmTXYN+/GzJkTgtw+mrfpEPYgcynQ+iPIaklQo1ibXyijp1wnqH4WW8EM1l9hcOqPcuxaz167QzxdEneAhHeeS771dB3ZL6NECxiPiYNGd4m0M4OtPCSY/QpdXrIcjGEYM+Od4T5bs/RY4HyC2k5DZVNmwFxIMRkseOWAfTDt/eFOxcykICVFlhBX97KpS8wn3hpch5JKA4JeujkaRAFJacoKIKPO5u2DHol9v8EfY29Hlkynzdt4SCuGTbea+v6QijmdvBHtxrrZpZ8t0muYIyvX3haaWkNGbypKOye0cPaaqXPZEztFglWuXVW5xazUZ0s0avxRSvvirkQZKmehuy9DwqlpJis0= pg@merlin.klg.yp-c.yandex.net',
@@ -3349,6 +3389,7 @@ class ClusterMap:
                         k.removeprefix('ssh_').removesuffix('_tunnel'),
                         p['artifacts'],
                         p['repology_badge'],
+                        reklama_upstream=f"http://{self.conf['by_host']['lab1']['gofra']['ip']}:{p['evac_view']}",
                     ),
                 }
 
@@ -3366,6 +3407,7 @@ class ClusterMap:
                         p['repology_badge'],
                         edge=SEAL_EDGE,
                         protocol=proto,
+                        reklama_upstream=f"http://{self.conf['by_host']['lab1']['gofra']['ip']}:{p['evac_view']}",
                     ),
                 }
 
@@ -3713,6 +3755,7 @@ def do(code):
         's3_front_metrics': 8099,
         's3_repair_metrics': 8100,
         'evac_ssh': 8101,
+        'evac_view': 8102,
         'lab_proxy': 443,
         'lab_proxy_http': 80,
     }
@@ -3742,6 +3785,7 @@ def do(code):
         'etcd_2': 2025,
         'repology_badge': 2026,
         'pg': 2027,
+        'evac_view': 2028,
         'mesh_web': 2012,
         'ssh_oracle_tunnel': 2013,
         'molot_store': 2017,
