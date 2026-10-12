@@ -14,7 +14,7 @@
 <main>
   <header>
     <div><div class="eyebrow"><span class="brand-mark">↘</span> REKLAMA <span class="slash">/</span> HOMELAB</div>
-    <h1>Доставка данных</h1><p class="subtitle">merlin <span>→</span> lab1 <span class="dot">·</span> шарды 0–499</p></div>
+    <h1>Доставка данных</h1><p class="subtitle">merlin <span>→</span> lab1 <span class="dot">·</span> шарды <span id="range">—</span></p></div>
     <div class="live"><span id="health" class="badge muted">Подключение…</span><span id="updated" class="subtle">Получаем состояние</span></div>
   </header>
 
@@ -22,7 +22,7 @@
   <noscript><p class="warnings">Для обновления состояния нужен JavaScript.</p></noscript>
 
   <section class="metrics" aria-label="Сводка">
-    <article class="metric"><span class="label">Готовые шарды</span><div class="value"><span id="completed">—</span><span class="unit"> / <span id="total">500</span></span></div><span class="subtle">архив принят целиком</span></article>
+    <article class="metric"><span class="label">Готовые шарды</span><div class="value"><span id="completed">—</span><span class="unit"> / <span id="total">—</span></span></div><span class="subtle">архив принят целиком</span></article>
     <article class="metric"><span class="label">Принято данных</span><div class="value" id="received">—</div><span class="subtle">подтверждённые блоки</span></article>
     <article class="metric"><span class="label">Скорость приёма</span><div class="value"><span id="speed">—</span><span class="unit"> Мбит/с</span></div><span class="subtle" id="speed-note">замер за последние ~40 секунд</span></article>
     <article class="metric"><span class="label">Передаётся сейчас</span><div class="value"><span id="active">—</span><span class="unit"> / 4</span></div><span class="subtle">параллельных архива</span></article>
@@ -31,7 +31,7 @@
   <section class="overview">
     <article class="panel chart-panel">
       <div class="section-top"><h2>Ход доставки</h2><span id="percent" class="accent">—</span></div>
-      <progress id="overall" max="500" value="0" aria-label="Завершено шардов"></progress>
+      <progress id="overall" max="1" value="0" aria-label="Завершено шардов"></progress>
       <div class="chart-caption"><span>Скорость приёма</span><span id="chart-scale">Мбит/с</span></div>
       <svg id="chart" viewBox="0 0 800 130" role="img" aria-label="История скорости за последние 15 минут" preserveAspectRatio="none">
         <path class="gridline" d="M0 15H800 M0 65H800 M0 115H800"/>
@@ -53,7 +53,7 @@
   </section>
 
   <section class="panel shards-panel" aria-labelledby="shards-heading">
-    <div class="section-top shard-heading"><h2 id="shards-heading">Все шарды <span class="subtle">0–499</span></h2>
+    <div class="section-top shard-heading"><h2 id="shards-heading">Все шарды <span class="subtle" id="shard-range">—</span></h2>
       <div class="legend"><span><i class="legend-dot complete"></i>Готово</span><span><i class="legend-dot uploading"></i>Передача</span><span><i class="legend-dot ready"></i>Подготовка</span><span><i class="legend-dot waiting"></i>Ожидание</span></div>
     </div>
     <div id="shards" class="shards"></div>

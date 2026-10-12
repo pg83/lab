@@ -75,6 +75,10 @@ function render(data) {
   current = data;
   $('completed').textContent = data.summary.completed;
   $('total').textContent = data.summary.total;
+  const ids = data.shards.map(s => s.id);
+  const range = ids.length ? Math.min(...ids) + '–' + Math.max(...ids) : '—';
+  $('range').textContent = range;
+  $('shard-range').textContent = range;
   $('received').textContent = bytes(data.summary.bytes);
   $('speed').textContent = data.summary.mbps == null ? '—' : number(data.summary.mbps);
   $('speed-note').textContent = data.summary.mbps == null ? 'Собираем первый замер' :
