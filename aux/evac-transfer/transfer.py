@@ -118,8 +118,12 @@ def receive_archive(args):
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     identity = {"namespace": args.namespace, "snapshot": args.snapshot, "compression": args.compression,
                 "chunk_size": args.chunk_size}
+    if args.compression == "zstd":
+        identity["zstd_level"] = args.zstd_level
     if receipt.exists():
         result = read_json(receipt)
+        if result.get("compression") == "zstd":
+            result.setdefault("zstd_level", 1)  # All legacy streams used -1 -T2.
         if any(result.get(k) != v for k, v in identity.items()):
             raise RuntimeError("Completed archive identity differs")
         if not final.exists() and partial.exists():
@@ -138,6 +142,8 @@ def receive_archive(args):
              "sha256": hashlib.sha256().hexdigest()}
     if checkpoint.exists():
         state = read_json(checkpoint)
+        if state.get("compression") == "zstd":
+            state.setdefault("zstd_level", 1)
         if any(state.get(k) != v for k, v in identity.items()):
             raise RuntimeError("Partial archive identity differs")
     elif partial.exists():
@@ -359,6 +365,8 @@ def upload(args, namespace, snapshot, source, volume=None):
     directory = "/home/pg/" + volume + "/banners_remote"
     remote = ["receive", "--directory", directory, "--namespace", namespace, "--snapshot", snapshot,
               "--chunk-size", args.chunk_mib * MIB, "--lanes", args.lanes, "--compression", args.compression]
+    if args.compression == "zstd":
+        remote += ["--zstd-level", args.zstd_level]
     receiver = spawn(ssh_command(args, remote), stdin=sp.PIPE, stdout=sp.PIPE)
     tar = None
     compressor = None
@@ -379,7 +387,7 @@ def upload(args, namespace, snapshot, source, volume=None):
             tar.stdout.close()
             stream = compressor.stdout
         elif args.compression == "zstd":
-            compressor = spawn([str(Path(args.zstd).expanduser()), "-1", "-T2", "-c"],
+            compressor = spawn([str(Path(args.zstd).expanduser()), "-" + str(args.zstd_level), "-T2", "-c"],
                                stdin=tar.stdout, stdout=sp.PIPE)
             tar.stdout.close()
             stream = compressor.stdout
@@ -394,7 +402,9 @@ def upload(args, namespace, snapshot, source, volume=None):
         if digest.hexdigest() != status["sha256"]:
             raise RuntimeError("Regenerated tar prefix differs; refusing to resume")
         count, index, acknowledged = skipped, status["chunks"], skipped
-        log("Uploading %s to %s; resume=%d bytes, lanes=%d" % (namespace, volume, skipped, args.lanes))
+        compression = args.compression + (" -%d" % args.zstd_level if args.compression == "zstd" else "")
+        log("Uploading %s to %s; resume=%d bytes, lanes=%d, compression=%s" %
+            (namespace, volume, skipped, args.lanes, compression))
         last_report = time.monotonic()
         last_report_bytes = acknowledged
         with cf.ThreadPoolExecutor(max_workers=args.lanes) as pool:
@@ -538,6 +548,9 @@ def run_pipeline(args):
         raise RuntimeError("Invalid transfer bounds")
     if not 1 <= args.uploads <= len(VOLUMES):
         raise RuntimeError("Concurrent archives must be between 1 and 4")
+    zstd_level = getattr(args, "zstd_level", 4)
+    if type(zstd_level) is not int or not 1 <= zstd_level <= 19:
+        raise RuntimeError("Zstd level must be between 1 and 19")
     state_dir = Path(args.state).expanduser()
     state_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
     lock = (state_dir / "pipeline.lock").open("a")
@@ -570,10 +583,11 @@ def run_pipeline(args):
         finally:
             jobs.put(None)
 
-    def upload_and_release(job, volume, compression):
+    def upload_and_release(job, volume, compression, level):
         namespace, snapshot, source = job
         job_args = copy.copy(args)
         job_args.compression = compression
+        job_args.zstd_level = level
         result = upload(job_args, namespace, snapshot, source, volume)
         atomic_json(state_dir / (namespace + ".uploaded.json"), result, durable=True)
         if not args.keep_source and source.exists():
@@ -625,6 +639,8 @@ def run_pipeline(args):
                     if volume in busy:
                         continue
                     compression = saved.get("compression")
+                    # Placements predating level selection always generated -1.
+                    level = saved.get("zstd_level", 1)
                     if compression is None:
                         completed = state_dir / (namespace + ".uploaded.json")
                         if completed.exists():
@@ -642,12 +658,18 @@ def run_pipeline(args):
                     free = json.loads(sp.check_output(ssh_command(args, ["space"]), text=True))
                     volume = max((v for v in VOLUMES if v not in busy), key=lambda v: free[v])
                     compression = args.compression
+                    level = zstd_level
                 if compression not in ("none", "lz4", "zstd"):
                     raise RuntimeError("Unknown saved compression: " + str(compression))
-                atomic_json(placement, {"volume": volume, "compression": compression}, durable=True)
+                settings = {"volume": volume, "compression": compression}
+                if compression == "zstd":
+                    if type(level) is not int or not 1 <= level <= 19:
+                        raise RuntimeError("Invalid saved Zstd level")
+                    settings["zstd_level"] = level
+                atomic_json(placement, settings, durable=True)
                 busy.add(volume)
                 pending.remove(job)
-                active[pool.submit(upload_and_release, job, volume, compression)] = volume
+                active[pool.submit(upload_and_release, job, volume, compression, level)] = volume
         log("Completed requested range %d..%d" % (args.start, args.end))
     finally:
         STOP.set()
@@ -674,6 +696,7 @@ def main():
     receive.add_argument("--lanes", type=int, required=True)
     receive.add_argument("--ram-dir", default="/dev/shm")
     receive.add_argument("--compression", choices=("none", "lz4", "zstd"), default="none")
+    receive.add_argument("--zstd-level", type=int, choices=range(1, 20), default=1)
     locate = commands.add_parser("locate")
     locate.add_argument("--directory", required=True)
     locate.add_argument("--namespace", required=True)
@@ -701,6 +724,7 @@ def main():
     run.add_argument("--compression", choices=("none", "lz4", "zstd"), default="zstd")
     run.add_argument("--lz4", default="~/.cache/evac-tools/lz4/root/usr/bin/lz4")
     run.add_argument("--zstd", default="zstd")
+    run.add_argument("--zstd-level", type=int, choices=range(1, 20), default=4)
     args = parser.parse_args()
     if args.command == "receive":
         def receiver_stop(signum, frame):

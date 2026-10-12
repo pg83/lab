@@ -47,7 +47,7 @@ def main():
         if not plan_file.exists():
             save_json(plan_file, {"enabled": True, "start": 200, "end": 249,
                                   "uploads": 4, "lanes": 8, "chunk_mib": 64,
-                                  "compression": "zstd", "keep_source": False})
+                                  "compression": "zstd", "zstd_level": 4, "keep_source": False})
         # Read this deployment's files once: an update gets a new servant.
         code = Path("/bin/evac-transfer").read_bytes()
         agent = Path("/bin/evac-transfer-source-agent").read_bytes()

@@ -13,7 +13,7 @@ Incomplete downloads have an ownership marker; on retry only those downloads
 can be discarded and downloaded again. Unmarked existing directories are refused.
 
 GNU tar preserves hardlinks and is generated as a stream. No intermediate
-tar or compressed archive is written on merlin. Zstd level 1 with two
+tar or compressed archive is written on merlin. Zstd level 4 with two
 compression threads per archive is enabled by default.
 Chunks are 64 MiB, with eight SSH transfers in flight per archive and two
 concurrent initial handshakes across all archives. Compression, network
@@ -57,9 +57,12 @@ Final rename happens only after tar and the compressor exit successfully and bot
 on total bytes, chunks and SHA-256. A receiver failure leaves a partial file.
 Resume verifies the durable prefix, truncates any uncommitted tail and
 regenerates the same stream from the immutable downloaded snapshot, discarding
-the already received prefix. Compression is pinned in each shard's placement:
+the already received prefix. Compression and Zstd level are pinned in each shard's placement:
 changing the plan affects only new shards. Old completed or partial archives
-keep their existing format. Changing chunk size while resuming is refused.
+keep their existing format and level. Legacy Zstd records without zstd_level
+mean level 1; new placements use --zstd-level (default 4). The receiver records
+the level in checkpoints and receipts and refuses a mismatch on resume.
+Changing chunk size while resuming is refused.
 A completed archive is never silently overwritten.
 
 After confirmed completion, source staging is removed unless --keep-source
@@ -78,7 +81,7 @@ restart automatically after 30 seconds. Successful completion stays in
 active/exited systemd status rather than rerunning the range.
 
 Persistent state on lab1 (root only):
-  /srv/evac-transfer/plan.json       enabled, start/end, uploads, lanes, compression, chunk_mib
+  /srv/evac-transfer/plan.json       enabled, start/end, uploads, lanes, compression, zstd_level, chunk_mib
   /srv/evac-transfer/status.json     last contact, systemd state, completed shards
   /srv/evac-transfer/source-id       dedicated SSH identity, never committed
   /srv/evac-transfer/source-known_hosts
@@ -88,6 +91,7 @@ remove verified source staging. The active plan was expanded to 0..499 after
 the initial 200..249 completed. Existing completion records skip downloading;
 the receiver confirms the saved archive receipt without retransmitting it.
 Change plan.json atomically to adjust the range (within 0..499) or concurrency.
+zstd_level (1..19, default 4) applies only to shards without saved placements.
 Setting enabled=false gracefully stops and disables the
 source worker; the controller and reverse connection remain available.
 
@@ -139,6 +143,8 @@ They also verify concurrent archives on all four targets, bounded prefetch,
 saved placement after restart, and controller reconciliation without an
 unnecessary source worker restart, mixed compression across shards, and
 regeneration/resume of the compressed Zstd stream followed by decompression.
+Level migration tests cover legacy -1 checkpoints, -4 checkpoints, rejection
+of level changes on an existing archive, and keeping saved levels across plan changes.
 
 Measured shard 200, snapshot 20261011T151038Z_603251:
   Native Plutonium download: 25.5 GiB in 29.28 s.
@@ -158,3 +164,13 @@ Zstd comparison on the same shard (tar size unchanged):
   Zstd used two. Both are faster than the 1 Gbit/s network path.
   Compressed stream SHA-256:
     8be5aaea55213eaac8a6ad79cc5c081fe0f593dbff5f6e2a477e51fe88e6addc
+
+Level selection on 2026-10-12 (zstd 1.4.8, two threads):
+  Same 4 GiB sample: eight evenly spaced 512 MiB ranges of shard 4's tar.
+  -1: 3,617,780,355 bytes, 15.767% saved, 611.53 MiB/s input.
+  -4: 3,514,143,830 bytes, 18.180% saved, 281.37 MiB/s input.
+  -5: 3,501,032,373 bytes, 18.485% saved, 127.19 MiB/s input.
+  Level 4 produces 2.865% fewer bytes than level 1 on this sample;
+  level 5 saves only another 0.373% while more than doubling compression time.
+  These are sampled compression measurements alongside the live transfer,
+  not end-to-end transfer rates. The new default is 4; saved levels stay pinned.

@@ -44,12 +44,16 @@ def worker_unit(home, script, plan):
     compression = plan.get("compression", "zstd")
     if compression not in ("none", "lz4", "zstd"):
         raise ValueError("Invalid compression")
+    zstd_level = plan.get("zstd_level", 4)
+    if type(zstd_level) is not int or not 1 <= zstd_level <= 19:
+        raise ValueError("Invalid Zstd level")
     # Only fixed paths and checked integers enter the systemd command line.
     options = " ".join("--%s %d" % (name.replace("_", "-"), plan[name])
                        for name in ("start", "end", "uploads", "lanes", "chunk_mib"))
     if plan.get("keep_source", False):
         options += " --keep-source"
     options += " --compression " + compression
+    options += " --zstd-level %d" % zstd_level
     return f"""[Unit]
 Description=Plutonium evacuation managed by lab1
 StartLimitIntervalSec=0

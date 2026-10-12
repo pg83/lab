@@ -108,6 +108,32 @@ class ReceiverTest(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "checksum differs"):
             self.start()
 
+    def test_zstd_level_mismatch_never_changes_partial_or_checkpoint(self):
+        folder = self.root / "data"
+        folder.mkdir()
+        archive = folder / "banners_remote-201--s201.tar.zst"
+        partial = Path(str(archive) + ".partial")
+        checkpoint = Path(str(archive) + ".transfer.json")
+        partial.write_bytes(b"confirmed prefix")
+        record = {"namespace": "banners_remote-201", "snapshot": "s201", "compression": "zstd",
+                  "chunk_size": 4096, "chunks": 1, "bytes": partial.stat().st_size,
+                  "sha256": hashlib.sha256(partial.read_bytes()).hexdigest()}
+        # Missing level means legacy -1; an explicit -4 must also resist downgrade.
+        for saved, requested in ((None, 4), (4, 1)):
+            with self.subTest(saved=saved, requested=requested):
+                if saved is not None:
+                    record["zstd_level"] = saved
+                checkpoint.write_text(json.dumps(record))
+                original = checkpoint.read_bytes()
+                result = subprocess.run([sys.executable, str(SCRIPT), "receive", "--directory", str(folder),
+                                         "--namespace", "banners_remote-201", "--snapshot", "s201",
+                                         "--chunk-size", "4096", "--lanes", "1", "--compression", "zstd",
+                                         "--zstd-level", str(requested)], capture_output=True, timeout=10)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(b"Partial archive identity differs", result.stderr)
+                self.assertEqual(checkpoint.read_bytes(), original)
+                self.assertEqual(partial.read_bytes(), b"confirmed prefix")
+
 
 class SenderTest(unittest.TestCase):
     def test_streaming_tar_resume_preserves_hardlinks(self):
@@ -205,11 +231,15 @@ class SenderTest(unittest.TestCase):
             # Two pre-existing placements must never write this target together.
             module.atomic_json(state / "banners_remote-200.placement.json", {"volume": "seagate-b"})
             module.atomic_json(state / "banners_remote-200.uploaded.json", {"snapshot": "s200", "compression": "lz4"})
+            module.atomic_json(state / "banners_remote-201.placement.json",
+                               {"volume": "seagate-a", "compression": "zstd"})
+            module.atomic_json(state / "banners_remote-202.placement.json",
+                               {"volume": "hgst-a", "compression": "zstd", "zstd_level": 4})
             module.atomic_json(state / "banners_remote-204.placement.json",
                                {"volume": "seagate-b", "compression": "none"})
             args = types.SimpleNamespace(start=200, end=205, uploads=4, lanes=2, chunk_mib=1,
                                          state=str(state), staging=str(root / "staging"), snapshots=str(selected),
-                                         keep_source=True, compression="zstd")
+                                         keep_source=True, compression="zstd", zstd_level=7)
             lock = threading.Lock()
             first_four = threading.Barrier(4, timeout=8)
             prefetched = threading.Event()
@@ -227,6 +257,8 @@ class SenderTest(unittest.TestCase):
             def fake_upload(args, namespace, snapshot, source, volume):
                 expected = {"banners_remote-200": "lz4", "banners_remote-204": "none"}.get(namespace, "zstd")
                 self.assertEqual(args.compression, expected)
+                if expected == "zstd":
+                    self.assertEqual(args.zstd_level, {"banners_remote-201": 1, "banners_remote-202": 4}.get(namespace, 7))
                 with lock:
                     self.assertNotIn(volume, active)
                     active.add(volume)
@@ -249,6 +281,9 @@ class SenderTest(unittest.TestCase):
             self.assertEqual(set(assignments["banners_remote-%d" % i] for i in range(200, 204)), set(module.VOLUMES))
             self.assertEqual(assignments["banners_remote-204"], "seagate-b")
             self.assertEqual(len(assignments), 6)
+            self.assertEqual(module.read_json(state / "banners_remote-201.placement.json")["zstd_level"], 1)
+            self.assertEqual(module.read_json(state / "banners_remote-202.placement.json")["zstd_level"], 4)
+            self.assertEqual(module.read_json(state / "banners_remote-203.placement.json")["zstd_level"], 7)
             self.assertFalse((state / "pipeline.pid").exists())
 
     def test_expanded_range_does_not_redownload_completed_batch(self):
@@ -298,6 +333,11 @@ class SenderTest(unittest.TestCase):
 
     @unittest.skipUnless(shutil.which("zstd"), "zstd executable is required")
     def test_zstd_resume_regenerates_identical_compressed_stream(self):
+        for level in (1, 4):
+            with self.subTest(level=level):
+                self.check_zstd_resume(level)
+
+    def check_zstd_resume(self, level):
         spec = importlib.util.spec_from_file_location("evac_zstd", SCRIPT)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
@@ -309,7 +349,7 @@ class SenderTest(unittest.TestCase):
             os.link(source / "data", source / "hardlink")
             tar = subprocess.check_output(["tar", "--sort=name", "--format=gnu", "--numeric-owner",
                                            "-C", str(root), "-cf", "-", source.name])
-            reference = subprocess.check_output(["zstd", "-1", "-T2", "-c"], input=tar)
+            reference = subprocess.check_output(["zstd", "-" + str(level), "-T2", "-c"], input=tar)
             dest = root / "dest"
             dest.mkdir()
             prefix = reference[:1024 ** 2]
@@ -318,8 +358,9 @@ class SenderTest(unittest.TestCase):
             module.atomic_json(dest / (name + ".transfer.json"), {
                 "namespace": source.name, "snapshot": "s201", "compression": "zstd",
                 "chunk_size": 1024 ** 2, "chunks": 1, "bytes": len(prefix),
-                "sha256": hashlib.sha256(prefix).hexdigest()})
-            args = types.SimpleNamespace(lanes=4, chunk_mib=1, compression="zstd", zstd="zstd")
+                "sha256": hashlib.sha256(prefix).hexdigest(),
+                **({"zstd_level": level} if level != 1 else {})})
+            args = types.SimpleNamespace(lanes=4, chunk_mib=1, compression="zstd", zstd="zstd", zstd_level=level)
 
             def local_command(args, remote):
                 remote = list(map(str, remote))
@@ -332,8 +373,19 @@ class SenderTest(unittest.TestCase):
                 result = module.upload(args, source.name, "s201", source, "hgst-a")
             self.assertEqual(Path(result["archive"]).read_bytes(), reference)
             self.assertEqual(subprocess.check_output(["zstd", "-dc", result["archive"]]), tar)
+            self.assertEqual(result["zstd_level"], level)
             probe = types.SimpleNamespace(directory=str(dest), namespace=source.name, snapshot="s201")
             self.assertEqual(module.existing_compression(probe), "zstd")
+            if level == 1:
+                receipt = Path(result["archive"] + ".json")
+                legacy = module.read_json(receipt)
+                del legacy["zstd_level"]
+                module.atomic_json(receipt, legacy)
+            source.rename(root / "removed-staging")
+            with mock.patch.object(module, "ssh_command", side_effect=local_command):
+                confirmed = module.upload(args, source.name, "s201", source, "hgst-a")
+            self.assertEqual(confirmed["sha256"], result["sha256"])
+            self.assertEqual(confirmed["zstd_level"], level)
 
 
 class ServiceTest(unittest.TestCase):
@@ -349,12 +401,15 @@ class ServiceTest(unittest.TestCase):
              mock.patch.object(agent.subprocess, "check_output", return_value="ActiveState=active\nSubState=running\n"):
             agent.reconcile(payload, temp)
             self.assertTrue(any("restart" in c.args[0] for c in run.call_args_list))
+            unit = Path(temp) / ".config/systemd/user/evac-transfer.service"
+            self.assertIn("--zstd-level 4", unit.read_text())
             run.reset_mock()
             agent.reconcile(payload, temp)
             self.assertFalse(any("restart" in c.args[0] or "daemon-reload" in c.args[0] for c in run.call_args_list))
-            payload["plan"]["uploads"] = 2
+            payload["plan"]["zstd_level"] = 7
             agent.reconcile(payload, temp)
             self.assertTrue(any("restart" in c.args[0] for c in run.call_args_list))
+            self.assertIn("--zstd-level 7", unit.read_text())
             run.reset_mock()
             payload["plan"]["enabled"] = False
             agent.reconcile(payload, temp)
