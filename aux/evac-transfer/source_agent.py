@@ -113,8 +113,13 @@ def reconcile(payload, home=None):
         with logfile.open("rb") as log:
             log.seek(max(0, logfile.stat().st_size - 8192))
             tail = log.read().decode(errors="replace").splitlines()[-12:]
+    try:
+        download_retry = json.loads((state / "download-retry.json").read_text())
+    except FileNotFoundError:
+        download_retry = None
     return {"service": dict(line.split("=", 1) for line in service.splitlines()),
-            "version": version, "completed": completed, "tail": tail}
+            "version": version, "completed": completed, "tail": tail,
+            "download_retry": download_retry}
 
 
 if __name__ == "__main__":

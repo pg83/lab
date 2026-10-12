@@ -11,6 +11,11 @@ The downloader estimates required space and leaves at least 20 GiB free.
 It also monitors free space during download and stops before exhausting it.
 Incomplete downloads have an ownership marker; on retry only those downloads
 can be discarded and downloaded again. Unmarked existing directories are refused.
+Upstream stat/download command failures retry the same pinned snapshot with a
+30-second backoff, doubling up to five minutes. Prepared archive uploads keep
+running during these retries; an upstream failure never restarts them. The
+download-retry.json state is reported by the controller and shown as a warning
+in the delivery view. Identity, integrity and local storage errors remain fatal.
 
 GNU tar preserves hardlinks and is generated as a stream. No intermediate
 tar or compressed archive is written on merlin. Zstd level 4 with two

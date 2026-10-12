@@ -31,6 +31,10 @@ CHILD_LOCK = threading.Lock()
 HANDSHAKES = threading.Semaphore(2)
 
 
+class SourceDownloadError(RuntimeError):
+    """An upstream command failed; prepared archives can still be uploaded."""
+
+
 def log(message):
     print(time.strftime("%Y-%m-%d %H:%M:%S"), message, flush=True)
 
@@ -477,7 +481,9 @@ def download(args, namespace, snapshot, state_dir):
     env = yt_environment()
     stat = sp.run(["ya", "tool", "plutonium", "fs", "--yt-proxy", "markov", "--yt-path", YT_FS,
                    "stat-path", "/" + namespace + "/" + snapshot], env=env,
-                  stdout=sp.PIPE, stderr=sp.STDOUT, text=True, check=True)
+                  stdout=sp.PIPE, stderr=sp.STDOUT, text=True)
+    if stat.returncode:
+        raise SourceDownloadError("Plutonium stat failed for " + namespace)
     match = re.search(r"Unique size:\s+([0-9.]+)([KMGT]?i?B)", stat.stdout)
     if not match:
         raise RuntimeError("Cannot estimate download size: " + stat.stdout[-2000:])
@@ -517,13 +523,33 @@ def download(args, namespace, snapshot, state_dir):
                 if shutil.disk_usage(source.parent).free < args.reserve_gib * GIB:
                     raise RuntimeError("Source free space fell below configured reserve")
             if proc.returncode:
-                raise RuntimeError("Plutonium download failed; see " + str(out.name))
+                raise SourceDownloadError("Plutonium download failed; see " + str(out.name))
         finally:
             stop_process(proc)
     atomic_json(marker, identity, durable=True)
     in_progress.unlink()
     log("Download complete: " + namespace)
     return source
+
+
+def download_with_retry(args, namespace, snapshot, state_dir):
+    retry = state_dir / "download-retry.json"
+    attempt, delay = 0, 30
+    while not STOP.is_set():
+        try:
+            source = download(args, namespace, snapshot, state_dir)
+            retry.unlink(missing_ok=True)
+            return source
+        except SourceDownloadError as error:
+            attempt += 1
+            atomic_json(retry, {"namespace": namespace, "snapshot": snapshot,
+                                "attempt": attempt, "retry_at": time.time() + delay}, durable=True)
+            log("Source download failed for %s (attempt %d): %s; retry in %ds; uploads continue" %
+                (namespace, attempt, error, delay))
+            if STOP.wait(delay):
+                break
+            delay = min(300, delay * 2)
+    raise RuntimeError("Download cancelled")
 
 
 def snapshots(args):
@@ -556,6 +582,7 @@ def run_pipeline(args):
     lock = (state_dir / "pipeline.lock").open("a")
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     (state_dir / "pipeline.pid").write_text(str(os.getpid()) + "\n")
+    (state_dir / "download-retry.json").unlink(missing_ok=True)
     selected = snapshots(args)
     jobs = queue.Queue()
     slots = threading.Semaphore(args.uploads + 1)
@@ -576,7 +603,7 @@ def run_pipeline(args):
                         raise RuntimeError("Completed snapshot differs from requested snapshot")
                     source = Path(args.staging).expanduser() / namespace
                 else:
-                    source = download(args, namespace, snapshot, state_dir)
+                    source = download_with_retry(args, namespace, snapshot, state_dir)
                 jobs.put((namespace, snapshot, source))
         except BaseException as error:
             jobs.put(error)

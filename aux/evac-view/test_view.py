@@ -145,6 +145,17 @@ class MonitorTest(unittest.TestCase):
         self.assertEqual(error.exception.code, 501)
         error.exception.close()
 
+    def test_source_retry_warning_does_not_publish_raw_failure_details(self):
+        status = {"checked_at": 1000, "connected": True,
+                  "service": {"ActiveState": "active", "SubState": "running"},
+                  "download_retry": {"namespace": "banners_remote-301", "attempt": 2,
+                                     "error": "private details"}}
+        data = view.Monitor().snapshot(status, {}, [], {}, [], 1000)
+        self.assertTrue(any("№301" in w for w in data["warnings"]))
+        self.assertNotIn("private details", json.dumps(data))
+        stale = view.Monitor().snapshot(status, {}, [], {}, [], 1200)
+        self.assertFalse(any("№301" in w for w in stale["warnings"]))
+
 
 if __name__ == "__main__":
     unittest.main()

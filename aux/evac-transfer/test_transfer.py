@@ -136,6 +136,82 @@ class ReceiverTest(unittest.TestCase):
 
 
 class SenderTest(unittest.TestCase):
+    def test_upstream_failure_does_not_cancel_four_prepared_uploads(self):
+        spec = importlib.util.spec_from_file_location("evac_retry_pipeline", SCRIPT)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            selected = root / "snapshots.txt"
+            selected.write_text("".join(
+                f"SnapshotId: s{i}, Stream: banners_remote-{i}, Status: Active\n"
+                for i in range(200, 205)))
+            state = root / "state"
+            args = types.SimpleNamespace(start=200, end=204, uploads=4, lanes=2, chunk_mib=1,
+                                         state=str(state), staging=str(root / "staging"),
+                                         snapshots=str(selected), keep_source=True, compression="none")
+            retry_started, uploads_done = threading.Event(), threading.Event()
+            first_four = threading.Barrier(4, timeout=5)
+            lock = threading.Lock()
+            attempts, uploaded, volumes, delays = {}, [], set(), []
+
+            def fake_download(args, namespace, snapshot, state):
+                attempts[namespace] = attempts.get(namespace, 0) + 1
+                if namespace == "banners_remote-204" and attempts[namespace] == 1:
+                    raise module.SourceDownloadError("upstream HTTP 500")
+                return Path(args.staging) / namespace
+
+            def retry_wait(delay):
+                delays.append(delay)
+                record = module.read_json(state / "download-retry.json")
+                self.assertEqual(record["namespace"], "banners_remote-204")
+                self.assertEqual(record["attempt"], 1)
+                retry_started.set()
+                self.assertTrue(uploads_done.wait(5), "Ready uploads were cancelled by a download failure")
+                self.assertFalse(module.STOP.is_set())
+                return False
+
+            def fake_upload(args, namespace, snapshot, source, volume):
+                if namespace != "banners_remote-204":
+                    self.assertTrue(retry_started.wait(5))
+                    first_four.wait()
+                with lock:
+                    uploaded.append(namespace)
+                    volumes.add(volume)
+                    if len(uploaded) == 4:
+                        self.assertEqual(len(volumes), 4)
+                        uploads_done.set()
+                return {"namespace": namespace, "snapshot": snapshot, "compression": "none"}
+
+            with mock.patch.object(module, "download", side_effect=fake_download), \
+                 mock.patch.object(module, "upload", side_effect=fake_upload), \
+                 mock.patch.object(module.STOP, "wait", side_effect=retry_wait), \
+                 mock.patch.object(module, "ssh_command", return_value=["space"]), \
+                 mock.patch.object(module.sp, "check_output", return_value=json.dumps({v: 100 for v in module.VOLUMES})):
+                module.run_pipeline(args)
+            self.assertEqual(delays, [30])
+            self.assertEqual(attempts, {f"banners_remote-{n}": 2 if n == 204 else 1 for n in range(200, 205)})
+            self.assertEqual(len(list(state.glob("*.uploaded.json"))), 5)
+            self.assertFalse((state / "download-retry.json").exists())
+
+    def test_download_retry_backoff_is_capped_and_cancellable(self):
+        spec = importlib.util.spec_from_file_location("evac_retry_cancel", SCRIPT)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as temp:
+            state = Path(temp)
+            with mock.patch.object(module, "download", side_effect=module.SourceDownloadError("HTTP 500")), \
+                 mock.patch.object(module.STOP, "wait", side_effect=[False] * 5 + [True]) as wait:
+                with self.assertRaisesRegex(RuntimeError, "Download cancelled"):
+                    module.download_with_retry(None, "banners_remote-301", "s301", state)
+            self.assertEqual([c.args[0] for c in wait.call_args_list], [30, 60, 120, 240, 300, 300])
+            self.assertEqual(module.read_json(state / "download-retry.json")["attempt"], 6)
+            with mock.patch.object(module, "download", side_effect=RuntimeError("Identity mismatch")), \
+                 mock.patch.object(module.STOP, "wait") as wait:
+                with self.assertRaisesRegex(RuntimeError, "Identity mismatch"):
+                    module.download_with_retry(None, "banners_remote-301", "s301", state)
+                wait.assert_not_called()
+
     def test_streaming_tar_resume_preserves_hardlinks(self):
         spec = importlib.util.spec_from_file_location("evac_transfer", SCRIPT)
         module = importlib.util.module_from_spec(spec)
