@@ -182,11 +182,14 @@ class Monitor:
             warnings.append("Нет свежей связи с источником")
         elif not running and completed < LAST - FIRST + 1:
             warnings.append("Сервис передачи сейчас не работает")
-        retry = status.get("download_retry")
-        if connected and isinstance(retry, dict):
-            match = re.fullmatch(r"banners_remote-(\d+)", str(retry.get("namespace", "")))
-            if match and FIRST <= int(match[1]) <= LAST:
-                warnings.append("Ошибка скачивания шарда №%d на источнике; автоматический повтор" % int(match[1]))
+        retries = status.get("download_retries", [status.get("download_retry")])
+        if connected and isinstance(retries, list):
+            for retry in retries:
+                if not isinstance(retry, dict):
+                    continue
+                match = re.fullmatch(r"banners_remote-(\d+)", str(retry.get("namespace", "")))
+                if match and FIRST <= int(match[1]) <= LAST:
+                    warnings.append("Ошибка скачивания шарда №%d на источнике; автоматический повтор" % int(match[1]))
         if any(s["phase"] == "paused" for s in shards):
             warnings.append("Есть незавершённые архивы без свежего прогресса")
         if not staging_fresh:

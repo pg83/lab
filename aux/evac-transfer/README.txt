@@ -5,17 +5,20 @@ Installed script: ~/down2.py (copy of transfer.py managed by lab1).
 ~/down2.sh delegates to it; old script is ~/down2.sh.sandbox-original.
 Snapshot IDs are pinned by ~/pluto.txt. YT is read only by this pipeline.
 
-One source downloader runs alongside up to four archive uploaders. At most
-five active snapshots occupy staging: current uploads and one download ahead.
-The downloader estimates required space and leaves at least 20 GiB free.
-It also monitors free space during download and stops before exhausting it.
+Two source downloader threads take shards from one shared queue alongside up
+to four archive uploaders. At most six snapshots occupy staging: uploads plus
+two preparations/downloads ahead. Each thread estimates required space and
+reserves its estimate under a shared lock, leaving at least 20 GiB free.
+Both monitor free space during download and stop before exhausting it.
 Incomplete downloads have an ownership marker; on retry only those downloads
 can be discarded and downloaded again. Unmarked existing directories are refused.
 Upstream stat/download command failures retry the same pinned snapshot with a
-30-second backoff, doubling up to five minutes. Prepared archive uploads keep
-running during these retries; an upstream failure never restarts them. The
-download-retry.json state is reported by the controller and shown as a warning
-in the delivery view. Identity, integrity and local storage errors remain fatal.
+30-second backoff, doubling up to five minutes. Each thread retries its own shard;
+the other thread continues preparing subsequent shards. Both threads can wait
+if both current shards fail. Prepared archive uploads keep running during these
+retries; an upstream failure never restarts them. Per-shard *.retry.json state
+is reported by the controller and shown as warnings in the delivery view.
+Identity, integrity and explicit local storage checks remain fatal.
 
 GNU tar preserves hardlinks and is generated as a stream. No intermediate
 tar or compressed archive is written on merlin. Zstd level 4 with two

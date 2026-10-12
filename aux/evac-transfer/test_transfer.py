@@ -136,6 +136,81 @@ class ReceiverTest(unittest.TestCase):
 
 
 class SenderTest(unittest.TestCase):
+    def test_concurrent_downloads_reserve_space_and_release_it_on_failure(self):
+        spec = importlib.util.spec_from_file_location("evac_space", SCRIPT)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            args = types.SimpleNamespace(reserve_gib=20, keep_source=True)
+            for free_gib in (80, 150):
+                with self.subTest(free_gib=free_gib):
+                    waiting, entered, release = threading.Event(), threading.Event(), threading.Event()
+
+                    def space_wait(delay):
+                        waiting.set()
+                        self.assertTrue(release.wait(5))
+                        return False
+
+                    def second_download():
+                        with module.reserve_staging(args, root / "second", 60 * module.GIB, root):
+                            entered.set()
+                            self.assertTrue(release.wait(5))
+                            raise RuntimeError("simulated download failure")
+
+                    disk = types.SimpleNamespace(total=200 * module.GIB, free=free_gib * module.GIB)
+                    with mock.patch.object(module.shutil, "disk_usage", return_value=disk), \
+                         mock.patch.object(module.STOP, "wait", side_effect=space_wait), \
+                         concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                        with module.reserve_staging(args, root / "first", 60 * module.GIB, root):
+                            future = pool.submit(second_download)
+                            try:
+                                if free_gib == 80:
+                                    self.assertTrue(waiting.wait(5))
+                                    self.assertFalse(entered.is_set())
+                                    self.assertEqual(len(module.DOWNLOAD_RESERVATIONS), 1)
+                                else:
+                                    self.assertTrue(entered.wait(5), "Ample space should allow both downloads")
+                                    self.assertEqual(len(module.DOWNLOAD_RESERVATIONS), 2)
+                            except BaseException:
+                                release.set()
+                                raise
+                        release.set()
+                        with self.assertRaisesRegex(RuntimeError, "simulated download failure"):
+                            future.result(timeout=5)
+                    self.assertFalse(module.DOWNLOAD_RESERVATIONS)
+
+    def test_retry_records_are_independent_between_downloaders(self):
+        spec = importlib.util.spec_from_file_location("evac_retry_records", SCRIPT)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as temp:
+            state = Path(temp)
+            barrier = threading.Barrier(2, timeout=5)
+            attempts = {}
+
+            def fake_download(args, namespace, snapshot, state_dir):
+                attempts[namespace] = attempts.get(namespace, 0) + 1
+                if attempts[namespace] == 1:
+                    raise module.SourceDownloadError("HTTP 500")
+                return state_dir / namespace
+
+            def retry_wait(delay):
+                barrier.wait()
+                records = [module.read_json(p) for p in state.glob("*.retry.json")]
+                self.assertEqual({r["namespace"] for r in records}, {"banners_remote-303", "banners_remote-304"})
+                barrier.wait()
+                return False
+
+            with mock.patch.object(module, "download", side_effect=fake_download), \
+                 mock.patch.object(module.STOP, "wait", side_effect=retry_wait), \
+                 concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+                futures = [pool.submit(module.download_with_retry, None, f"banners_remote-{i}", f"s{i}", state)
+                           for i in (303, 304)]
+                for f in futures:
+                    f.result(timeout=8)
+            self.assertFalse(list(state.glob("*.retry.json")))
+
     def test_upstream_failure_does_not_cancel_four_prepared_uploads(self):
         spec = importlib.util.spec_from_file_location("evac_retry_pipeline", SCRIPT)
         module = importlib.util.module_from_spec(spec)
@@ -163,7 +238,7 @@ class SenderTest(unittest.TestCase):
 
             def retry_wait(delay):
                 delays.append(delay)
-                record = module.read_json(state / "download-retry.json")
+                record = module.read_json(state / "banners_remote-204.retry.json")
                 self.assertEqual(record["namespace"], "banners_remote-204")
                 self.assertEqual(record["attempt"], 1)
                 retry_started.set()
@@ -192,7 +267,7 @@ class SenderTest(unittest.TestCase):
             self.assertEqual(delays, [30])
             self.assertEqual(attempts, {f"banners_remote-{n}": 2 if n == 204 else 1 for n in range(200, 205)})
             self.assertEqual(len(list(state.glob("*.uploaded.json"))), 5)
-            self.assertFalse((state / "download-retry.json").exists())
+            self.assertFalse(list(state.glob("*.retry.json")))
 
     def test_download_retry_backoff_is_capped_and_cancellable(self):
         spec = importlib.util.spec_from_file_location("evac_retry_cancel", SCRIPT)
@@ -205,7 +280,7 @@ class SenderTest(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "Download cancelled"):
                     module.download_with_retry(None, "banners_remote-301", "s301", state)
             self.assertEqual([c.args[0] for c in wait.call_args_list], [30, 60, 120, 240, 300, 300])
-            self.assertEqual(module.read_json(state / "download-retry.json")["attempt"], 6)
+            self.assertEqual(module.read_json(state / "banners_remote-301.retry.json")["attempt"], 6)
             with mock.patch.object(module, "download", side_effect=RuntimeError("Identity mismatch")), \
                  mock.patch.object(module.STOP, "wait") as wait:
                 with self.assertRaisesRegex(RuntimeError, "Identity mismatch"):
@@ -250,7 +325,7 @@ class SenderTest(unittest.TestCase):
             self.assertLess(len(reference), 6 * 1024 ** 2)  # Hardlink payload was stored once.
             self.assertEqual(result["sha256"], hashlib.sha256(reference).hexdigest())
 
-    def test_download_overlaps_upload_with_only_one_snapshot_ahead(self):
+    def test_second_downloader_passes_a_retrying_shard_with_bounded_staging(self):
         spec = importlib.util.spec_from_file_location("evac_pipeline", SCRIPT)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
@@ -258,40 +333,49 @@ class SenderTest(unittest.TestCase):
             root = Path(temp)
             selected = root / "snapshots.txt"
             selected.write_text("".join("SnapshotId: snapshot%d, Stream: banners_remote-%d, Status: Active\n" %
-                                        (i, i) for i in range(200, 203)))
-            args = types.SimpleNamespace(start=200, end=202, lanes=4, chunk_mib=1,
+                                        (i, i) for i in range(200, 207)))
+            args = types.SimpleNamespace(start=200, end=206, lanes=4, chunk_mib=1,
                                          state=str(root / "state"), staging=str(root / "staging"),
                                          snapshots=str(selected), keep_source=True, compression="none", uploads=1)
-            uploading = threading.Event()
-            prefetched = threading.Event()
-            third_started = threading.Event()
-            order = []
+            others_done = threading.Event()
+            lock = threading.Lock()
+            order, attempts, threads, staged = [], {}, set(), set()
 
             def fake_download(args, namespace, snapshot, state):
-                if namespace.endswith("201"):
-                    if not uploading.wait(5):
-                        raise RuntimeError("Downloader did not overlap uploader")
-                    prefetched.set()
-                if namespace.endswith("202"):
-                    third_started.set()
-                path = Path(args.staging) / namespace
-                path.mkdir(parents=True)
-                return path
+                with lock:
+                    threads.add(threading.get_ident())
+                    staged.add(namespace)
+                    self.assertLessEqual(len(staged), args.uploads + 2)
+                    attempts[namespace] = attempts.get(namespace, 0) + 1
+                if namespace == "banners_remote-200" and attempts[namespace] == 1:
+                    raise module.SourceDownloadError("HTTP 500")
+                return Path(args.staging) / namespace
+
+            def retry_wait(delay):
+                self.assertEqual(delay, 30)
+                self.assertTrue(others_done.wait(5), "One failed shard blocked the second downloader")
+                return False
 
             def fake_upload(args, namespace, snapshot, source, volume):
-                if namespace.endswith("200"):
-                    uploading.set()
-                    self.assertTrue(prefetched.wait(5))
-                    self.assertFalse(third_started.is_set())
-                order.append(namespace)
+                with lock:
+                    staged.remove(namespace)
+                    order.append(namespace)
+                    if len(order) == 6:
+                        self.assertNotIn("banners_remote-200", order)
+                        others_done.set()
                 return {"namespace": namespace, "snapshot": snapshot, "compression": "none"}
 
             with mock.patch.object(module, "download", side_effect=fake_download), \
                  mock.patch.object(module, "upload", side_effect=fake_upload), \
+                 mock.patch.object(module.STOP, "wait", side_effect=retry_wait), \
                  mock.patch.object(module, "ssh_command", return_value=["space"]), \
                  mock.patch.object(module.sp, "check_output", return_value=json.dumps({v: 100 for v in module.VOLUMES})):
                 module.run_pipeline(args)
-            self.assertEqual(order, ["banners_remote-200", "banners_remote-201", "banners_remote-202"])
+            self.assertEqual(order, [f"banners_remote-{n}" for n in range(201, 207)] + ["banners_remote-200"])
+            self.assertEqual(len(threads), 2)
+            self.assertEqual(attempts["banners_remote-200"], 2)
+            self.assertEqual(len(attempts), 7)
+            self.assertFalse(staged)
 
     def test_four_archives_use_distinct_volumes_and_resume_existing_placement(self):
         spec = importlib.util.spec_from_file_location("evac_parallel", SCRIPT)
@@ -303,7 +387,7 @@ class SenderTest(unittest.TestCase):
             state.mkdir()
             selected = root / "snapshots.txt"
             selected.write_text("".join("SnapshotId: s%d, Stream: banners_remote-%d, Status: Active\n" % (i, i)
-                                        for i in range(200, 206)))
+                                        for i in range(200, 207)))
             # Two pre-existing placements must never write this target together.
             module.atomic_json(state / "banners_remote-200.placement.json", {"volume": "seagate-b"})
             module.atomic_json(state / "banners_remote-200.uploaded.json", {"snapshot": "s200", "compression": "lz4"})
@@ -313,7 +397,7 @@ class SenderTest(unittest.TestCase):
                                {"volume": "hgst-a", "compression": "zstd", "zstd_level": 4})
             module.atomic_json(state / "banners_remote-204.placement.json",
                                {"volume": "seagate-b", "compression": "none"})
-            args = types.SimpleNamespace(start=200, end=205, uploads=4, lanes=2, chunk_mib=1,
+            args = types.SimpleNamespace(start=200, end=206, uploads=4, lanes=2, chunk_mib=1,
                                          state=str(state), staging=str(root / "staging"), snapshots=str(selected),
                                          keep_source=True, compression="zstd", zstd_level=7)
             lock = threading.Lock()
@@ -324,8 +408,8 @@ class SenderTest(unittest.TestCase):
             def fake_download(args, namespace, snapshot, state):
                 with lock:
                     downloaded.append(namespace)
-                if namespace.endswith("204"):
-                    prefetched.set()
+                    if all("banners_remote-%d" % i in downloaded for i in (204, 205)):
+                        prefetched.set()
                 path = Path(args.staging) / namespace
                 path.mkdir(parents=True)
                 return path
@@ -343,7 +427,7 @@ class SenderTest(unittest.TestCase):
                     first_four.wait()
                     self.assertTrue(prefetched.wait(5))
                     with lock:
-                        self.assertNotIn("banners_remote-205", downloaded)
+                        self.assertNotIn("banners_remote-206", downloaded)
                     first_four.wait()
                 with lock:
                     active.remove(volume)
@@ -356,7 +440,7 @@ class SenderTest(unittest.TestCase):
                 module.run_pipeline(args)
             self.assertEqual(set(assignments["banners_remote-%d" % i] for i in range(200, 204)), set(module.VOLUMES))
             self.assertEqual(assignments["banners_remote-204"], "seagate-b")
-            self.assertEqual(len(assignments), 6)
+            self.assertEqual(len(assignments), 7)
             self.assertEqual(module.read_json(state / "banners_remote-201.placement.json")["zstd_level"], 1)
             self.assertEqual(module.read_json(state / "banners_remote-202.placement.json")["zstd_level"], 4)
             self.assertEqual(module.read_json(state / "banners_remote-203.placement.json")["zstd_level"], 7)

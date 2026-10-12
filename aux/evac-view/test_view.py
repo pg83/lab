@@ -155,6 +155,13 @@ class MonitorTest(unittest.TestCase):
         self.assertNotIn("private details", json.dumps(data))
         stale = view.Monitor().snapshot(status, {}, [], {}, [], 1200)
         self.assertFalse(any("№301" in w for w in stale["warnings"]))
+        status["download_retries"] = [{"namespace": "banners_remote-303", "error": "private details"},
+                                      {"namespace": "banners_remote-304", "error": "private details"}]
+        concurrent = view.Monitor().snapshot(status, {}, [], {}, [], 1000)
+        self.assertTrue(any("№303" in w for w in concurrent["warnings"]))
+        self.assertTrue(any("№304" in w for w in concurrent["warnings"]))
+        self.assertFalse(any("№301" in w for w in concurrent["warnings"]))
+        self.assertNotIn("private details", json.dumps(concurrent))
 
 
 if __name__ == "__main__":

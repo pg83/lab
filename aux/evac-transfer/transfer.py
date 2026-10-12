@@ -2,6 +2,7 @@
 """Bounded Plutonium -> streaming tar -> parallel SSH -> sequential HDD pipeline."""
 import argparse
 import concurrent.futures as cf
+from contextlib import contextmanager
 import copy
 import fcntl
 import hashlib
@@ -29,6 +30,9 @@ STOP = threading.Event()
 CHILDREN = set()
 CHILD_LOCK = threading.Lock()
 HANDSHAKES = threading.Semaphore(2)
+DOWNLOADERS = 2
+DOWNLOAD_SPACE_LOCK = threading.Lock()
+DOWNLOAD_RESERVATIONS = {}
 
 
 class SourceDownloadError(RuntimeError):
@@ -464,6 +468,42 @@ def yt_environment():
     return env
 
 
+@contextmanager
+def reserve_staging(args, source, required, state_dir):
+    """Reserve each downloader's estimate before either can consume free space."""
+    if required > shutil.disk_usage(source.parent).total:
+        raise RuntimeError("Snapshot cannot fit on source staging filesystem")
+    while True:
+        with DOWNLOAD_SPACE_LOCK:
+            reserved = sum(DOWNLOAD_RESERVATIONS.values())
+            if shutil.disk_usage(source.parent).free >= required + reserved:
+                DOWNLOAD_RESERVATIONS[str(source)] = required - args.reserve_gib * GIB
+                break
+        # The other downloader or any uploader can free space, regardless of
+        # shard order. Count full estimates conservatively until download ends.
+        reclaim_pending = bool(reserved)
+        if not args.keep_source:
+            for other_marker in state_dir.glob("*.download.json"):
+                try:
+                    other = read_json(other_marker)
+                    other_index = int(other["namespace"].rsplit("-", 1)[1])
+                    if args.start <= other_index <= args.end and Path(other["source"]).is_dir():
+                        reclaim_pending = True
+                except FileNotFoundError:
+                    pass
+        if not reclaim_pending:
+            raise RuntimeError("Insufficient source space for %s: need %.1f GiB including reserve; free %.1f GiB" %
+                               (source.name, required / GIB, shutil.disk_usage(source.parent).free / GIB))
+        log("Waiting for staging space for " + source.name)
+        if STOP.wait(10):
+            raise RuntimeError("Download cancelled")
+    try:
+        yield
+    finally:
+        with DOWNLOAD_SPACE_LOCK:
+            del DOWNLOAD_RESERVATIONS[str(source)]
+
+
 def download(args, namespace, snapshot, state_dir):
     source = Path(args.staging).expanduser() / namespace
     marker = state_dir / (namespace + ".download.json")
@@ -490,50 +530,32 @@ def download(args, namespace, snapshot, state_dir):
     unit = {"B": 1, "KiB": 1024, "MiB": MIB, "GiB": GIB, "TiB": 1024 * GIB}[match[2]]
     required = int(float(match[1]) * unit * 1.2) + args.reserve_gib * GIB
     source.parent.mkdir(parents=True, exist_ok=True)
-    if required > shutil.disk_usage(source.parent).total:
-        raise RuntimeError("Snapshot cannot fit on source staging filesystem")
-    while shutil.disk_usage(source.parent).free < required:
-        current_index = int(namespace.rsplit("-", 1)[1])
-        reclaim_pending = False
-        if not args.keep_source:
-            for other_marker in state_dir.glob("*.download.json"):
-                try:
-                    other = read_json(other_marker)
-                    other_index = int(other["namespace"].rsplit("-", 1)[1])
-                    if args.start <= other_index < current_index and Path(other["source"]).is_dir():
-                        reclaim_pending = True
-                except FileNotFoundError:
-                    pass  # The uploader finished cleaning that snapshot.
-        if not reclaim_pending:
-            raise RuntimeError("Insufficient source space for %s: need %.1f GiB including reserve; free %.1f GiB" %
-                               (namespace, required / GIB, shutil.disk_usage(source.parent).free / GIB))
-        log("Waiting for staging space for " + namespace)
-        if STOP.wait(10):
-            raise RuntimeError("Download cancelled")
     cmd = ["ya", "tool", "plutonium", "download", "--yt-proxy", "markov", "--yt-worker-path", YT_WORKER,
            "--yt-fs-path", YT_FS, "--namespace", namespace, "--state-id", snapshot, "--out-dir", str(source)]
-    log("Downloading " + namespace)
-    atomic_json(in_progress, identity, durable=True)
-    with (state_dir / (namespace + ".download.log")).open("a") as out:
-        proc = spawn(cmd, env=env, stdout=out, stderr=sp.STDOUT)
-        try:
-            while proc.poll() is None:
-                if STOP.wait(1):
-                    raise RuntimeError("Download cancelled")
-                if shutil.disk_usage(source.parent).free < args.reserve_gib * GIB:
-                    raise RuntimeError("Source free space fell below configured reserve")
-            if proc.returncode:
-                raise SourceDownloadError("Plutonium download failed; see " + str(out.name))
-        finally:
-            stop_process(proc)
-    atomic_json(marker, identity, durable=True)
-    in_progress.unlink()
+    with reserve_staging(args, source, required, state_dir):
+        log("Downloading " + namespace)
+        atomic_json(in_progress, identity, durable=True)
+        with (state_dir / (namespace + ".download.log")).open("a") as out:
+            proc = spawn(cmd, env=env, stdout=out, stderr=sp.STDOUT)
+            try:
+                while proc.poll() is None:
+                    if STOP.wait(1):
+                        raise RuntimeError("Download cancelled")
+                    if shutil.disk_usage(source.parent).free < args.reserve_gib * GIB:
+                        raise RuntimeError("Source free space fell below configured reserve")
+                if proc.returncode:
+                    raise SourceDownloadError("Plutonium download failed; see " + str(out.name))
+            finally:
+                stop_process(proc)
+        atomic_json(marker, identity, durable=True)
+        in_progress.unlink()
     log("Download complete: " + namespace)
     return source
 
 
 def download_with_retry(args, namespace, snapshot, state_dir):
-    retry = state_dir / "download-retry.json"
+    retry = state_dir / (namespace + ".retry.json")
+    retry.unlink(missing_ok=True)
     attempt, delay = 0, 30
     while not STOP.is_set():
         try:
@@ -584,16 +606,25 @@ def run_pipeline(args):
     (state_dir / "pipeline.pid").write_text(str(os.getpid()) + "\n")
     (state_dir / "download-retry.json").unlink(missing_ok=True)
     selected = snapshots(args)
+    requests = queue.Queue()
+    for item in sorted(selected.items()):
+        requests.put(item)
     jobs = queue.Queue()
-    slots = threading.Semaphore(args.uploads + 1)
+    slots = threading.Semaphore(args.uploads + DOWNLOADERS)
 
     def producer():
         try:
-            for index, snapshot in sorted(selected.items()):
+            while not STOP.is_set():
                 while not slots.acquire(timeout=1):
                     if STOP.is_set():
                         return
                 if STOP.is_set():
+                    slots.release()
+                    return
+                try:
+                    index, snapshot = requests.get_nowait()
+                except queue.Empty:
+                    slots.release()
                     return
                 namespace = "banners_remote-" + str(index)
                 completed = state_dir / (namespace + ".uploaded.json")
@@ -628,14 +659,17 @@ def run_pipeline(args):
         slots.release()
         return result
 
-    producer_thread = threading.Thread(target=producer, daemon=True)
+    producer_threads = [threading.Thread(target=producer, name="prepare-%d" % i, daemon=True)
+                        for i in range(DOWNLOADERS)]
     pool = cf.ThreadPoolExecutor(max_workers=args.uploads)
-    producer_thread.start()
+    for thread in producer_threads:
+        thread.start()
     pending, active = [], {}
-    producer_done = False
-    log("Pipeline: up to %d archives on separate volumes, %d SSH lanes each" % (args.uploads, args.lanes))
+    producers_done = 0
+    log("Pipeline: up to %d archives on separate volumes, %d SSH lanes each; %d downloaders" %
+        (args.uploads, args.lanes, DOWNLOADERS))
     try:
-        while not producer_done or pending or active:
+        while producers_done < DOWNLOADERS or pending or active:
             if STOP.is_set():
                 raise RuntimeError("Transfer cancelled")
             for future in list(active):
@@ -645,7 +679,7 @@ def run_pipeline(args):
             try:
                 job = jobs.get(timeout=0.1)
                 if job is None:
-                    producer_done = True
+                    producers_done += 1
                 elif isinstance(job, BaseException):
                     raise job
                 else:
@@ -704,7 +738,8 @@ def run_pipeline(args):
             children = list(CHILDREN)
         for proc in children:
             stop_process(proc)
-        producer_thread.join(timeout=20)
+        for thread in producer_threads:
+            thread.join(timeout=20)
         pool.shutdown(wait=True, cancel_futures=True)
         pid_file = state_dir / "pipeline.pid"
         if pid_file.exists() and pid_file.read_text().strip() == str(os.getpid()):

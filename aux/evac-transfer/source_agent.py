@@ -117,9 +117,18 @@ def reconcile(payload, home=None):
         download_retry = json.loads((state / "download-retry.json").read_text())
     except FileNotFoundError:
         download_retry = None
+    download_retries = []
+    for path in sorted(state.glob("banners_remote-*.retry.json")):
+        try:
+            retry = json.loads(path.read_text())
+        except FileNotFoundError:
+            continue  # A successful download removed its retry record.
+        index = int(retry["namespace"].rsplit("-", 1)[1])
+        if plan["start"] <= index <= plan["end"]:
+            download_retries.append(retry)
     return {"service": dict(line.split("=", 1) for line in service.splitlines()),
             "version": version, "completed": completed, "tail": tail,
-            "download_retry": download_retry}
+            "download_retry": download_retry, "download_retries": download_retries}
 
 
 if __name__ == "__main__":
