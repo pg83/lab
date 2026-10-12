@@ -12,7 +12,7 @@ import threading
 import time
 
 VOLUMES = ("seagate-a", "seagate-b", "hgst-a", "hgst-b")
-FIRST, LAST = 200, 249
+FIRST, LAST = 0, 499
 PUBLIC = Path("/var/run/evac_view_data/public/status.json")
 SOURCE_PROBE = r'''
 import json, os

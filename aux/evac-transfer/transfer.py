@@ -532,8 +532,8 @@ def snapshots(args):
 
 
 def run_pipeline(args):
-    if not 200 <= args.start <= args.end <= 249:
-        raise RuntimeError("Allowed shard range is 200..249 inclusive")
+    if not 0 <= args.start <= args.end <= 499:
+        raise RuntimeError("Allowed shard range is 0..499 inclusive")
     if not 1 <= args.lanes <= 32 or not 1 <= args.chunk_mib <= 256:
         raise RuntimeError("Invalid transfer bounds")
     if not 1 <= args.uploads <= len(VOLUMES):

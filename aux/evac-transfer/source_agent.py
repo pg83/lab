@@ -35,8 +35,8 @@ def replace_if_changed(path, data, mode=0o600):
 
 
 def worker_unit(home, script, plan):
-    if not 200 <= plan["start"] <= plan["end"] <= 249:
-        raise ValueError("Allowed range is 200..249")
+    if not 0 <= plan["start"] <= plan["end"] <= 499:
+        raise ValueError("Allowed range is 0..499")
     if not 1 <= plan["uploads"] <= 4 or not 1 <= plan["lanes"] <= 32:
         raise ValueError("Invalid concurrency")
     if not 1 <= plan["chunk_mib"] <= 256:

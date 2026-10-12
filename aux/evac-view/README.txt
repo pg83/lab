@@ -1,5 +1,7 @@
 Evacuation view: https://reklama.homelab.cam
 
+Covers shards 0..499, including the completed initial batch 200..249.
+
 EvacViewData (root, lab1) reads the controller status and the existing
 receiver checkpoint/receipt files. It discovers the supervised evacuation
 SSH daemon's mount namespace through /proc/PID/root, so it works after a

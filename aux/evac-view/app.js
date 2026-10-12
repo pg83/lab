@@ -74,6 +74,7 @@ function detail() {
 function render(data) {
   current = data;
   $('completed').textContent = data.summary.completed;
+  $('total').textContent = data.summary.total;
   $('received').textContent = bytes(data.summary.bytes);
   $('speed').textContent = data.summary.mbps == null ? '—' : number(data.summary.mbps);
   $('speed-note').textContent = data.summary.mbps == null ? 'Собираем первый замер' :

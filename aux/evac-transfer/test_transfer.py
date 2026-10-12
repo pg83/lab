@@ -251,6 +251,51 @@ class SenderTest(unittest.TestCase):
             self.assertEqual(len(assignments), 6)
             self.assertFalse((state / "pipeline.pid").exists())
 
+    def test_expanded_range_does_not_redownload_completed_batch(self):
+        spec = importlib.util.spec_from_file_location("evac_expanded", SCRIPT)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            state = root / "state"
+            state.mkdir()
+            selected = root / "snapshots.txt"
+            selected.write_text("".join(
+                f"SnapshotId: s{i}, Stream: banners_remote-{i}, Status: Active\n"
+                for i in range(500)))
+            for i in range(200, 250):
+                compression = "lz4" if i == 200 else "zstd"
+                module.atomic_json(state / f"banners_remote-{i}.uploaded.json",
+                                   {"snapshot": f"s{i}", "compression": compression})
+                module.atomic_json(state / f"banners_remote-{i}.placement.json",
+                                   {"volume": module.VOLUMES[i % 4], "compression": compression})
+            args = types.SimpleNamespace(start=0, end=499, uploads=4, lanes=8, chunk_mib=64,
+                                         state=str(state), staging=str(root / "staging"),
+                                         snapshots=str(selected), keep_source=True, compression="zstd")
+            downloaded, confirmed = set(), set()
+
+            def fake_download(args, namespace, snapshot, state):
+                index = int(namespace.rsplit("-", 1)[1])
+                self.assertFalse(200 <= index <= 249)
+                downloaded.add(index)
+                return Path(args.staging) / namespace
+
+            def fake_upload(args, namespace, snapshot, source, volume):
+                index = int(namespace.rsplit("-", 1)[1])
+                self.assertEqual(args.compression, "lz4" if index == 200 else "zstd")
+                confirmed.add(index)
+                return {"namespace": namespace, "snapshot": snapshot,
+                        "compression": args.compression, "volume": volume}
+
+            with mock.patch.object(module, "download", side_effect=fake_download), \
+                 mock.patch.object(module, "upload", side_effect=fake_upload), \
+                 mock.patch.object(module, "ssh_command", return_value=["space"]), \
+                 mock.patch.object(module.sp, "check_output", return_value=json.dumps({v: 100 for v in module.VOLUMES})), \
+                 mock.patch.object(module, "log"):
+                module.run_pipeline(args)
+            self.assertEqual(downloaded, set(range(500)) - set(range(200, 250)))
+            self.assertEqual(confirmed, set(range(500)))
+
     @unittest.skipUnless(shutil.which("zstd"), "zstd executable is required")
     def test_zstd_resume_regenerates_identical_compressed_stream(self):
         spec = importlib.util.spec_from_file_location("evac_zstd", SCRIPT)
@@ -298,7 +343,7 @@ class ServiceTest(unittest.TestCase):
         agent = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(agent)
         payload = {"worker_b64": base64.b64encode(SCRIPT.read_bytes()).decode(),
-                   "plan": {"enabled": True, "start": 200, "end": 249, "uploads": 4, "lanes": 8, "chunk_mib": 64}}
+                   "plan": {"enabled": True, "start": 0, "end": 499, "uploads": 4, "lanes": 8, "chunk_mib": 64}}
         with tempfile.TemporaryDirectory() as temp, \
              mock.patch.object(agent.subprocess, "run") as run, \
              mock.patch.object(agent.subprocess, "check_output", return_value="ActiveState=active\nSubState=running\n"):

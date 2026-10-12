@@ -35,14 +35,26 @@ class MonitorTest(unittest.TestCase):
         self.mount_patch.start()
         self.addCleanup(self.mount_patch.stop)
 
-    def archive(self, complete=False, size=128):
+    def archive(self, complete=False, size=128, index=200):
         folder = self.roots["hgst-a"] / "banners_remote"
-        archive = "banners_remote-200--snapshot.tar.zst"
-        data = {"namespace": "banners_remote-200", "bytes": 128, "sha256": "a" * 64,
+        archive = f"banners_remote-{index}--snapshot.tar.zst"
+        data = {"namespace": f"banners_remote-{index}", "bytes": 128, "sha256": "a" * 64,
                 "compression": "zstd", "session": "/private/secret"}
         (folder / (archive + ("" if complete else ".partial"))).write_bytes(b"x" * size)
         (folder / (archive + (".json" if complete else ".transfer.json"))).write_text(json.dumps(data))
         return folder, archive
+
+    def test_expanded_range_includes_boundary_receipts_and_existing_batch(self):
+        for index in (0, 200, 249, 499):
+            self.archive(complete=True, index=index)
+        records, volumes, issues = view.scan_volumes(self.roots)
+        self.assertFalse(issues)
+        self.assertEqual(set(records), {0, 200, 249, 499})
+        data = view.Monitor().snapshot({}, records, volumes, {}, issues, 1000)
+        self.assertEqual([s["id"] for s in data["shards"]], list(range(500)))
+        self.assertEqual(data["summary"]["total"], 500)
+        self.assertEqual(data["summary"]["completed"], 4)
+        self.assertEqual(data["summary"]["bytes"], 512)
 
     def test_receipt_required_and_no_double_count_at_completion(self):
         folder, archive = self.archive()
@@ -88,8 +100,8 @@ class MonitorTest(unittest.TestCase):
                   "ready": [201], "downloading": [202], "private": "secret"}
         first = monitor.snapshot(status, records, volumes, source, [], 1000)
         self.assertIsNone(first["summary"]["mbps"])
-        self.assertEqual(first["shards"][1]["phase"], "ready")
-        self.assertEqual(first["shards"][2]["phase"], "downloading")
+        self.assertEqual(first["shards"][201]["phase"], "ready")
+        self.assertEqual(first["shards"][202]["phase"], "downloading")
         records[200]["bytes"] += 50_000_000
         second = monitor.snapshot(status, records, volumes, source, [], 1005)
         self.assertEqual(second["summary"]["mbps"], 80)
@@ -107,7 +119,7 @@ class MonitorTest(unittest.TestCase):
         stale = monitor.snapshot(status, records, volumes, source, [], 1200)
         self.assertFalse(stale["connected"])
         self.assertFalse(stale["source"]["available"])
-        self.assertEqual(stale["shards"][1]["phase"], "waiting")
+        self.assertEqual(stale["shards"][201]["phase"], "waiting")
 
     def test_http_serves_only_explicit_public_routes(self):
         public = self.root / "public.json"

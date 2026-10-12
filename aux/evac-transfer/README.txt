@@ -1,4 +1,4 @@
-Plutonium evacuation, shards 200..249
+Plutonium evacuation, shards 0..499
 
 Source: merlin.klg.yp-c.yandex.net, account pg.
 Installed script: ~/down2.py (copy of transfer.py managed by lab1).
@@ -83,9 +83,12 @@ Persistent state on lab1 (root only):
   /srv/evac-transfer/source-id       dedicated SSH identity, never committed
   /srv/evac-transfer/source-known_hosts
 
-Default plan: enabled, range 200..249, four archives, eight lanes each, Zstd,
-remove verified source staging. Change plan.json atomically to adjust the
-range or concurrency. Setting enabled=false gracefully stops and disables the
+Bootstrap plan: enabled, range 200..249, four archives, eight lanes each, Zstd,
+remove verified source staging. The active plan was expanded to 0..499 after
+the initial 200..249 completed. Existing completion records skip downloading;
+the receiver confirms the saved archive receipt without retransmitting it.
+Change plan.json atomically to adjust the range (within 0..499) or concurrency.
+Setting enabled=false gracefully stops and disables the
 source worker; the controller and reverse connection remain available.
 
 Progress:
