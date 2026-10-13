@@ -25,6 +25,7 @@ No persistent state — each event handles its own diff window.
 """
 
 import hashlib
+import ipaddress
 import json
 import os
 import random
@@ -32,6 +33,7 @@ import shutil
 import subprocess
 import sys
 import time
+import urllib.parse
 
 
 URLS_PATH = 'pkgs/die/scripts/urls.txt'
@@ -83,6 +85,24 @@ def added_urls(sha):
                 out.append(u)
 
     return out
+
+
+# Hosts only our own networks resolve. Everything this worker fetches lands
+# in the CAS that hf/ghcr push to the public pkgsrc mirrors, so a recipe that
+# fetches from the lab's private s3 (s3.lab.mesh) must never be mirrored.
+PRIVATE_SUFFIXES = ('.mesh', '.local', '.gofra', '.localdomain')
+
+
+def private_url(url):
+    host = (urllib.parse.urlsplit(url).hostname or '').lower()
+
+    if not host or host == 'localhost' or host.endswith(PRIVATE_SUFFIXES):
+        return True
+
+    try:
+        return not ipaddress.ip_address(host).is_global
+    except ValueError:
+        return False
 
 
 def iter_tout():
@@ -189,6 +209,10 @@ def main():
     new_content_shas = set()
 
     for url in urls:
+        if private_url(url):
+            log(f'skip private {url}: never mirrored')
+            continue
+
         try:
             cs = fetch_one(url)
         except subprocess.CalledProcessError as e:

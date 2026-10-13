@@ -641,8 +641,10 @@ class S3Cell:
 
 # The buckets of our s3 are static: the front, repair and web read them
 # from the config, nothing about them lives in etcd, and the API makes
-# none. A new consumer of s3 gets its bucket here first.
-S3_BUCKETS = ('cas', 'cix', 'etcd', 'geesefs', 'gorn', 'logovo', 'loki', 'mirror', 'molot', 'ogorod', 'repology', 'samogon', 'view')
+# none. A new consumer of s3 gets its bucket here first. pg holds personal
+# artifacts that must stay inside our networks (the arc client ix fetches
+# through s3.lab.mesh); nothing mirrors it.
+S3_BUCKETS = ('cas', 'cix', 'etcd', 'geesefs', 'gorn', 'logovo', 'loki', 'mirror', 'molot', 'ogorod', 'pg', 'repology', 'samogon', 'view')
 
 
 class S3Service:
