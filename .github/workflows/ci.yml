@@ -36,12 +36,6 @@ jobs:
       - name: Artifact server
         run: python3 -m unittest tst.test_artifacts
 
-      - name: Evacuation pipeline
-        run: python3 aux/evac-transfer/test_transfer.py
-
-      - name: Evacuation view
-        run: python3 aux/evac-view/test_view.py
-
       - name: Package unit tests
         run: |
           python3 -m unittest discover -s bin/job/scheduler/scripts -p 'test_*.py'

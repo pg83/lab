@@ -1,32 +1,15 @@
 Historical VPN prototype, retained for the Keychain helper and experiments.
-The completed merlin -> lab1 evacuation is documented in ../evac-transfer/README.txt
-and did not use this VPN or the laptop. The supervised home.mesh VPN is the
-set/pg/yandex/vpn overlay in the ix repository. The setup and measurements below
-record the initial 2026-10-11 experiment, not the current deployment.
+The supervised home.mesh VPN is the set/pg/yandex/vpn overlay in the ix
+repository. The setup and measurements below record the initial 2026-10-11
+experiment, not the current deployment.
 
-Evacuation setup, 2026-10-11
+Yandex VPN prototype, 2026-10-11
 
 Data plane: source -> Yandex OpenVPN -> lab1 wired Ethernet -> existing XFS.
 Authentication: OpenVPN management socket -> SSH via home -> work Keychain.
 The Mac private key is not exported. The Mac must stay awake and its temporary
 SSH server must remain available for TLS renegotiation (observed several minutes
 apart). Bulk data does not travel through work or home.
-
-Storage on lab1 (mounted read/write; write+sync probes passed):
-  /srv/evac/seagate-a/incoming-evac-20261011  /dev/sdb2  ~3.78 TB free
-  /srv/evac/seagate-b/incoming-evac-20261011  /dev/sdb3  ~3.96 TB free
-  /srv/evac/hgst-a/incoming-evac-20261011     /dev/sdc1  ~3.78 TB free
-  /srv/evac/hgst-b/incoming-evac-20261011     /dev/sdd1  ~3.78 TB free
-Total: 15.3087 TB / 13.9232 TiB. These are four independent filesystems: split
-objects larger than an individual volume or choose a suitable transfer layout.
-No RAID; other source copy exists. Existing files and active S3 partitions remain.
-Seagate has 64 reallocated sectors, zero pending/offline-uncorrectable sectors.
-
-Inspect/remount after reboot:
-  ssh root@lab1.mesh /srv/evac/storage.sh --check
-  ssh root@lab1.mesh /srv/evac/storage.sh
-There is no boot service for this temporary setup. UUIDs and mount guards are in
-storage.sh. Check the destination mount before starting a transfer.
 
 VPN runtime, profile and logs are under /srv/evac-vpn on lab1 (root-only).
 Runtime: official openvpn_2.6.12-ya_22.04_amd64.deb, no installer execution.
@@ -104,6 +87,5 @@ Tests:
   format, permissions, real throughput and transfer/checksum strategy remain
   to be established when the source is supplied.
 
-After evacuation: stop both processes, remove temporary SSH authorization/key
-and Keychain helper as appropriate, and remove the protected VPN profile/runtime
-when no longer needed. Do not delete or unmount incoming data as part of cleanup.
+The Keychain helper on work and the VPN helper sources are retained by the
+operator's request. They are independent of the retired data-transfer services.
