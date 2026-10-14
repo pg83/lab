@@ -1,4 +1,19 @@
-Plutonium evacuation, shards 0..499
+Completed Plutonium evacuation, shards 0..499
+
+Retired on 2026-10-14 after all 500 shards arrived successfully:
+11,317,817,449,517 compressed bytes. The evac_transfer, evac_ssh,
+evac_view_data and evac_view servants and the dashboard ingress were removed
+from the cluster configuration. The source worker/reverse services and local
+reminder are disabled. The four target XFS partitions are unmounted.
+Archives and receipts remain under incoming-pg/banners_remote on those disks;
+the filesystem UUIDs and readback paths are in ../evac-ssh/README.txt.
+UID 2027 remains reserved for the archived files' pg ownership.
+Controller state and verification reports remain in /srv/evac-transfer on lab1.
+The random samples 329 and 475 were fully decompressed and extracted into RAM;
+both archive SHA-256 hashes matched their receipts, zstd/tar exited 0, and each
+extraction contained 1,767 files. The temporary extracted copies were removed.
+Report: /srv/evac-transfer/verification-20261014T223153Z/report.json.
+The documentation below describes the historical deployment.
 
 Source: merlin.klg.yp-c.yandex.net, account pg.
 Installed script: ~/down2.py (copy of transfer.py managed by lab1).

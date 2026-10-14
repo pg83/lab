@@ -1,4 +1,9 @@
-Evacuation view: https://reklama.homelab.cam
+Retired evacuation view: https://reklama.homelab.cam
+
+2026-10-14: all 500 shards completed. EvacViewData and EvacView were removed
+from the cluster configuration along with the dashboard route in the shared
+Cloudflare tunnel and the mesh proxy. The implementation remains here as a
+record of the completed transfer; the deployment description below is historical.
 
 Covers shards 0..499, including the completed initial batch 200..249.
 

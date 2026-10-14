@@ -1,6 +1,6 @@
 Historical VPN prototype, retained for the Keychain helper and experiments.
-The active merlin -> lab1 evacuation is documented in ../evac-transfer/README.txt
-and does not use this VPN or the laptop. The supervised home.mesh VPN is the
+The completed merlin -> lab1 evacuation is documented in ../evac-transfer/README.txt
+and did not use this VPN or the laptop. The supervised home.mesh VPN is the
 set/pg/yandex/vpn overlay in the ix repository. The setup and measurements below
 record the initial 2026-10-11 experiment, not the current deployment.
 

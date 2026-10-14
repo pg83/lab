@@ -1,4 +1,10 @@
-Evacuation SSH on lab1
+Retired evacuation SSH on lab1
+
+2026-10-14: the transfer completed (500/500 shards). EvacSsh was removed from
+the cluster configuration, the evac_ssh_lab1 router redirect was removed,
+and all four target filesystems were unmounted. Archives and their receipts
+remain on disk; the paths and UUIDs below are retained for later readback.
+The SSH access and supervised mounts described below are historical.
 
 Service: EvacSsh in lab/cg.py, supervised as evac_ssh through the normal
 commit/push/autoupdate deployment. Account: pg (UID/GID 2027).

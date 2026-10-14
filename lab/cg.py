@@ -955,143 +955,6 @@ class DropBear2(DropBear):
     pass
 
 
-class EvacSsh:
-    # Only these existing filesystems are used; never format or resize a disk.
-    def __init__(self, hosts, port, login, public_key, volumes):
-        self.hosts = hosts
-        self.port = port
-        self.login = login
-        self.public_key = public_key
-        self.volumes = volumes
-
-    def user(self):
-        return 'root'
-
-    def home_dir(self):
-        return f'/home/{self.login}'
-
-    def pkgs(self):
-        for pkg in ('bin/dropbear/2024', 'bin/openssh/client', 'bin/rsync'):
-            yield {'pkg': pkg}
-
-        yield {
-            'pkg': 'etc/lab/user/home',
-            'user': self.login,
-            'user_home': self.home_dir(),
-        }
-
-    def run(self):
-        # Mounts, authorized_keys and SFTP compatibility path are private to
-        # this service. The normal host SSH daemon cannot use this key.
-        ctx = base64.b64encode(pickle.dumps({'srv': self})).decode()
-        exec_into('unshare', '-m', '--propagation', 'private', 'runpy', ctx, 'serve')
-
-    def serve(self):
-        os.umask(0o077)
-        base = '/var/run/evac_ssh'
-        home = self.home_dir()
-        key_dir = '/srv/evac-ssh'
-        key = f'{key_dir}/host_ed25519'
-        make_dirs(key_dir)
-        os.chmod(key_dir, 0o700)
-        if not os.path.exists(key):
-            subprocess.run(['dropbearkey', '-t', 'ed25519', '-f', key], check=True,
-                           stdout=subprocess.DEVNULL)
-
-        # Resolve all UUIDs and check filesystem signatures before mounting.
-        devices = []
-        for name, uuid in self.volumes:
-            dev = subprocess.check_output(['findfs', f'UUID={uuid}'], text=True).strip()
-            with open(dev, 'rb') as f:
-                if f.read(4) != b'XFSB':
-                    raise RuntimeError(f'{name}: expected an existing XFS filesystem')
-            devices.append((name, dev))
-
-        make_dirs(f'{base}/volumes')
-        os.chmod(f'{base}/volumes', 0o700)
-        make_dirs(home)
-        subprocess.run(['mount', '-t', 'tmpfs', '-o', 'size=4m,mode=0755,nosuid,nodev',
-                        'evac-home', home], check=True)
-        make_dirs(f'{home}/.ssh')
-        os.chmod(f'{home}/.ssh', 0o755)
-        with open(f'{home}/.ssh/authorized_keys', 'w') as f:
-            f.write(self.public_key.strip() + '\n')
-        os.chmod(f'{home}/.ssh/authorized_keys', 0o644)
-
-        for name, dev in devices:
-            volume = f'{base}/volumes/{name}'
-            source = f'{volume}/incoming-{self.login}'
-            target = f'{home}/{name}'
-            make_dirs(volume)
-            subprocess.run(['mount', '-t', 'xfs', '-o', 'nosuid,nodev', dev, volume], check=True)
-            if not os.path.ismount(volume) or os.stat(volume).st_dev != os.stat(dev).st_rdev:
-                raise RuntimeError(f'{name}: mount verification failed')
-            if os.path.islink(source):
-                raise RuntimeError(f'{name}: refusing a symlink as data directory')
-            make_dirs(source, owner=self.login)
-            os.chmod(source, 0o700)
-            make_dirs(target)
-            # An unmounted destination cannot accept writes onto the root disk.
-            os.chmod(target, 0o500)
-            subprocess.run(['mount', '-o', 'bind', source, target], check=True)
-            if os.stat(target).st_dev != os.stat(dev).st_rdev:
-                raise RuntimeError(f'{name}: bind mount verification failed')
-
-        # Dropbear's compiled SFTP path is /usr/libexec/sftp-server; /usr is /.
-        make_dirs('/libexec')
-        subprocess.run(['mount', '-t', 'tmpfs', '-o', 'size=1m,mode=0755,nosuid,nodev',
-                        'evac-sftp', '/libexec'], check=True)
-        os.symlink('/bin/bin_openssh_client/sftp-server', '/libexec/sftp-server')
-        os.chdir(home)
-        # Remote forwarding stays loopback-only (no -a), for the source host's
-        # outbound reverse SSH connection. Local forwarding remains disabled.
-        args = ['dropbear', '-F', '-E', '-s', '-w', '-G', self.login, '-j',
-                '-W', '8388608', '-K', '30', '-P', f'{base}/dropbear.pid', '-r', key]
-        for host in self.hosts:
-            args.extend(['-p', f'{host}:{self.port}'])
-        exec_into(*args)
-
-
-class EvacTransfer:
-    def user(self):
-        return 'root'
-
-    def pkgs(self):
-        yield {'pkg': 'aux/evac-transfer'}
-
-    def run(self):
-        exec_into('evac-transfer-controller', '--state', '/srv/evac-transfer')
-
-
-class EvacViewData:
-    def user(self):
-        return 'root'
-
-    def pkgs(self):
-        yield {'pkg': 'aux/evac-view'}
-
-    def run(self):
-        make_dirs('/var/run/evac_view_data/public')
-        os.chmod('/var/run/evac_view_data', 0o755)
-        os.chmod('/var/run/evac_view_data/public', 0o755)
-        exec_into('evac-view', 'collect')
-
-
-class EvacView:
-    def __init__(self, host, port):
-        self.host = host
-        self.port = port
-
-    def pkgs(self):
-        yield {'pkg': 'aux/evac-view'}
-
-    def proxies(self):
-        yield {'name': 'reklama', 'host': self.host, 'port': self.port}
-
-    def run(self):
-        exec_into('evac-view', 'serve', '--listen', f'{self.host}:{self.port}')
-
-
 class GornSsh:
     def __init__(self, uniq, host, port, nebula_host, store_endpoint):
         self.uniq = uniq
@@ -1616,7 +1479,7 @@ class CloudflaredTunnel:
     TUNNEL_ID = '4b335fae-9cd1-40bb-9868-08deb4a23cb7'
 
     def __init__(self, hostname, upstream_port, socks, nick, view_port,
-                 badge_port, edge=None, protocol='http2', reklama_upstream=None):
+                 badge_port, edge=None, protocol='http2'):
         self.hostname = hostname
         self.upstream_port = upstream_port
         self.socks = socks
@@ -1625,7 +1488,6 @@ class CloudflaredTunnel:
         self.badge_port = badge_port
         self.edge = edge
         self.protocol = protocol
-        self.reklama_upstream = reklama_upstream
 
     def name(self):
         return f'cf_{self.nick}'
@@ -1641,8 +1503,6 @@ class CloudflaredTunnel:
             'tunnel': self.TUNNEL_ID,
             'credentials-file': creds_path,
             'ingress': [
-                *([{'hostname': 'reklama.homelab.cam',
-                    'service': self.reklama_upstream}] if self.reklama_upstream else []),
                 {
                     'hostname': 'view.homelab.cam',
                     'path': '/view/.*',
@@ -3003,33 +2863,6 @@ class ClusterMap:
         for h in self.conf['hosts']:
             hn = h['hostname']
 
-            if hn == 'lab1':
-                yield {
-                    'host': hn,
-                    'serv': EvacTransfer(),
-                }
-                yield {
-                    'host': hn,
-                    'serv': EvacViewData(),
-                }
-                yield {
-                    'host': hn,
-                    'serv': EvacView(h['gofra']['ip'], p['evac_view']),
-                }
-                yield {
-                    'host': hn,
-                    'serv': EvacSsh(
-                        [h['mesh']['ip'], '10.0.0.64'], p['evac_ssh'], 'pg',
-                        'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC5hKSS+KVpjsildkQ9CvWvz+Sud3Tx+OfEz6qD3CkgSJ7uuB9swCvRa1psf16uFXFXGwK+C+/T3yciHj45TL4tDCvAh0pmN5JOZ0B7pZNSOLHeBajEGOQPaE9u5DTiQmyMTrQ4JYlPFEIeo9gNJHhozylMGLKPZ0wmTXYN+/GzJkTgtw+mrfpEPYgcynQ+iPIaklQo1ibXyijp1wnqH4WW8EM1l9hcOqPcuxaz167QzxdEneAhHeeS771dB3ZL6NECxiPiYNGd4m0M4OtPCSY/QpdXrIcjGEYM+Od4T5bs/RY4HyC2k5DZVNmwFxIMRkseOWAfTDt/eFOxcykICVFlhBX97KpS8wn3hpch5JKA4JeujkaRAFJacoKIKPO5u2DHol9v8EfY29Hlkynzdt4SCuGTbea+v6QijmdvBHtxrrZpZ8t0muYIyvX3haaWkNGbypKOye0cPaaqXPZEztFglWuXVW5xazUZ0s0avxRSvvirkQZKmehuy9DwqlpJis0= pg@merlin.klg.yp-c.yandex.net',
-                        [
-                            ('seagate-a', '6b194f91-10fc-4ad6-9f30-21581c641d56'),
-                            ('seagate-b', '2a39d5d3-80be-4b9c-bb99-0924d597c9e1'),
-                            ('hgst-a', '7b654717-6493-4534-90b5-c947fa8b7045'),
-                            ('hgst-b', '2617f25c-d4f5-4f38-acfe-c1cdd5250aed'),
-                        ],
-                    ),
-                }
-
             if False:
                 for i in range(0, 16):
                     yield {
@@ -3391,7 +3224,6 @@ class ClusterMap:
                         k.removeprefix('ssh_').removesuffix('_tunnel'),
                         p['artifacts'],
                         p['repology_badge'],
-                        reklama_upstream=f"http://{self.conf['by_host']['lab1']['gofra']['ip']}:{p['evac_view']}",
                     ),
                 }
 
@@ -3409,7 +3241,6 @@ class ClusterMap:
                         p['repology_badge'],
                         edge=SEAL_EDGE,
                         protocol=proto,
-                        reklama_upstream=f"http://{self.conf['by_host']['lab1']['gofra']['ip']}:{p['evac_view']}",
                     ),
                 }
 
@@ -3756,8 +3587,6 @@ def do(code):
         's3_cell_2_metrics': 8098,
         's3_front_metrics': 8099,
         's3_repair_metrics': 8100,
-        'evac_ssh': 8101,
-        'evac_view': 8102,
         'lab_proxy': 443,
         'lab_proxy_http': 80,
     }
@@ -3787,7 +3616,6 @@ def do(code):
         'etcd_2': 2025,
         'repology_badge': 2026,
         'pg': 2027,
-        'evac_view': 2028,
         'mesh_web': 2012,
         'ssh_oracle_tunnel': 2013,
         'molot_store': 2017,
