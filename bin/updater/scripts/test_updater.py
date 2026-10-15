@@ -9,6 +9,8 @@ from pathlib import Path
 from unittest import mock
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'repology' / 'scripts'))
+
 SPEC = importlib.util.spec_from_file_location('updater', Path(__file__).with_name('updater.py'))
 updater = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = updater
@@ -210,6 +212,42 @@ class UpdaterTests(unittest.TestCase):
             ],
         )
 
+    def test_repology_never_offers_a_version_below_ours(self):
+        data = {
+            'premake': [
+                {'repo': 'stalix', 'version': '5.0.0-beta6', 'srcname': 'bin/premake'},
+                {'status': 'newest', 'version': '4.3'},
+                {'status': 'devel', 'version': '5.0.0-beta8'},
+            ],
+            'old': [
+                {'repo': 'stalix', 'version': '2.0', 'srcname': 'bin/old'},
+                {'status': 'newest', 'version': '1.9'},
+            ],
+            'zlib': [
+                {'repo': 'stalix', 'version': '1.2', 'srcname': 'lib/zlib'},
+                {'status': 'newest', 'version': '1.3'},
+                {'status': 'devel', 'version': '1.4-rc1'},
+            ],
+        }
+
+        self.assertEqual(
+            list(updater.candidates_from_repology(data)),
+            [
+                updater.Candidate('5.0.0-beta6', '5.0.0-beta8', ('bin/premake',)),
+                updater.Candidate('1.2', '1.3', ('lib/zlib',)),
+            ],
+        )
+
+    def test_dependency_files_render_with_the_build_flags(self):
+        with mock.patch.object(updater.subprocess, 'run') as run:
+            run.return_value = mock.Mock(stdout='bin/foo/ix.sh\n')
+            worker = updater.PackageUpdater('/work/ix', None, env={'X': '1'})
+
+            self.assertEqual(worker.dependency_files(('bin/foo',)), ['bin/foo/ix.sh'])
+
+        self.assertEqual(run.call_args.args[0], ('./ix', 'dep', 'bin/foo'))
+        self.assertEqual(run.call_args.kwargs['env'], {'X': '1', 'IX_FLAGS': 'opengl=fake,vulkan=fake,seed=1'})
+
     def test_repology_url_is_the_projects_file_in_our_s3(self):
         self.assertEqual(
             updater.repology_url({'S3_ENDPOINT': 'http://127.0.0.1:8093'}),
@@ -263,7 +301,7 @@ class UpdaterTests(unittest.TestCase):
             data = path.read_text()
             self.assertIn('2.0', data)
             self.assertIn(self.probe, data)
-            self.assertIn('bin/go/lang/26', data)
+            self.assertIn('bin/go/lang/27', data)
             self.assertIn('{% block go_tool %}', data)
 
     def test_prepare_recipe_uses_current_cargo_toolchain(self):
@@ -545,6 +583,61 @@ class UpdaterTests(unittest.TestCase):
             self.assertIn(new_second, data)
             self.assertNotIn(old_first, data)
             self.assertNotIn(old_second, data)
+
+    def test_variant_recipe_reprobes_its_own_checksum(self):
+        first_probe = '0' * 64
+        patch_probe = '1' * 64
+        old_tarball = 'a' * 64
+        old_patch = 'b' * 64
+        new_tarball = 'd' * 64
+        new_patch = 'e' * 64
+        builder = FakeBuilder([
+            updater.BuildResult(0, b'ok'),
+            updater.BuildResult(
+                2,
+                b'molot exec: predict mismatch: predict mismatch: /x expected=' +
+                first_probe.encode() + b' actual=' + new_tarball.encode(),
+            ),
+            updater.BuildResult(
+                2,
+                b'molot exec: predict mismatch: predict mismatch: /y expected=' +
+                patch_probe.encode() + b' actual=' + new_patch.encode(),
+            ),
+        ])
+
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            stock = repo / 'pkgs/lib/foo/stock/ix.sh'
+            variant = repo / 'pkgs/lib/foo/a/ix.sh'
+            stock.parent.mkdir(parents=True)
+            variant.parent.mkdir(parents=True)
+            stock.write_text(
+                "{% block version %}\n1.0\n{% endblock %}\n"
+                "{% block fetch %}\nhttps://x/foo-{{self.version().strip()}}.tar.gz\n" +
+                old_tarball + "\n{% endblock %}\n"
+            )
+            variant.write_text(
+                "{% extends '//lib/foo/stock/ix.sh' %}\n"
+                "{% block fetch %}\n{{super()}}\n"
+                "https://x/foo-{{self.version().strip()}}.patch\n" +
+                old_patch + "\n{% endblock %}\n"
+            )
+            worker = FakePackageUpdater(repo, builder)
+            worker.dependency_files = lambda packages: ['lib/foo/a/ix.sh', 'lib/foo/stock/ix.sh']
+            candidate = updater.Candidate('1.0', '2.0', ('lib/foo/a', 'lib/foo/stock'))
+
+            with mock.patch.object(
+                updater.secrets,
+                'token_hex',
+                side_effect=(first_probe, patch_probe),
+            ):
+                self.assertTrue(worker.process(candidate))
+
+            self.assertEqual(builder.calls, [['lib/foo/a', 'lib/foo/stock']] * 3)
+            self.assertEqual(worker.commits, [candidate])
+            self.assertIn(new_tarball, stock.read_text())
+            self.assertIn(new_patch, variant.read_text())
+            self.assertNotIn(old_patch, variant.read_text())
 
     def test_unevaluated_second_checksum_survives_reprobe(self):
         first_probe = '0' * 64

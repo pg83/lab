@@ -42,6 +42,12 @@ import urllib.parse
 from dataclasses import dataclass
 from pathlib import Path
 
+# libversion is the port bin/repology uses, installed next to this script by
+# ix.sh: candidate versions are compared the way repology classified them.
+sys.path.insert(0, str(Path(os.path.realpath(__file__)).parent.parent / 'share' / 'updater'))
+
+import libversion
+
 
 # Our repology (bin/repology): the aggregate job writes the projects that
 # contain a stalix package, in the upstream API shape, into the repology
@@ -58,9 +64,12 @@ REGENERATED_PATHS = (
 
 GOOD_SHA_CHARS = frozenset('0123456789abcdef')
 BUILD_FLAGS = ('--opengl=fake', '--vulkan=fake', '--seed=1')
+# ix dep renders a recipe without the command line flags; IX_FLAGS carries
+# them, or a recipe that demands an opengl driver does not render at all.
+DEP_FLAGS = ','.join(flag.removeprefix('--') for flag in BUILD_FLAGS)
 GIT_MIRROR_RETRY_DELAY_S = 15
 
-GO_LATEST = 26
+GO_LATEST = 27
 GO_TOOL = (
     '\n' + chr(123) + '% block go_tool %}\n'
     f'bin/go/lang/{GO_LATEST}\n'
@@ -172,13 +181,21 @@ def levenshtein(left, right):
 
 
 def newest_versions(records, old):
-    versions = {
-        rec.get('version')
-        for rec in records
-        if rec.get('status') == 'newest' and rec.get('version')
-    }
+    """Versions above ours, closest spelling first: the newest ones, or the
+    devel ones when ours is already past every stable release (premake ships
+    5.0.0-beta while 4.3 is the newest stable)."""
+    for status in ('newest', 'devel'):
+        versions = {
+            rec.get('version')
+            for rec in records
+            if rec.get('status') == status and rec.get('version')
+            and libversion.version_compare(rec['version'], old) > 0
+        }
 
-    return tuple(sorted(versions, key=lambda version: (levenshtein(old, version), version)))
+        if versions:
+            return tuple(sorted(versions, key=lambda version: (levenshtein(old, version), version)))
+
+    return ()
 
 
 def our_version(records):
@@ -430,12 +447,13 @@ class PackageUpdater:
 
     def dependency_files(self, packages):
         files = set()
+        env = dict(self.env, IX_FLAGS=DEP_FLAGS)
 
         for package in packages:
             res = subprocess.run(
                 ('./ix', 'dep', package),
                 cwd=self.repo,
-                env=self.env,
+                env=env,
                 check=True,
                 stdout=subprocess.PIPE,
                 text=True,
@@ -609,7 +627,12 @@ class PackageUpdater:
                 if len(changed) != 1:
                     raise CandidateFailure(f'expected one probe-sha recipe, got {len(changed)}')
 
-                self.resolve_remaining_checksums(changed[0], build_packages, {sha})
+                # A variant recipe (lib/png/a over lib/png/stock) takes the
+                # version from the changed one and pins a patch of its own.
+                resolved = {sha}
+
+                for path in (changed[0], *(p for p in paths if p != changed[0])):
+                    self.resolve_remaining_checksums(path, build_packages, resolved)
             except (OSError, CandidateFailure) as exc:
                 failures.append(f'{new}: {exc}')
                 log(f'version spelling failed {new}: {exc}')
