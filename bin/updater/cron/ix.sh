@@ -28,4 +28,28 @@ cat << 'EOF' > ${out}/etc/cron/3600-updater.json
     ]
 }
 EOF
+
+cat << 'EOF' > ${out}/etc/cron/21600-updater-lines.json
+{
+    "cmd": [
+        "etcd_lock", "/lock/updater/lines/schedule", "--",
+        "dedup", "/updater/lines/v1", "--",
+        "gorn", "ignite",
+        "--root", "updater",
+        "--env", "GORN_API=$GORN_API",
+        "--env", "S3_ENDPOINT=$S3_ENDPOINT",
+        "--env", "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID_MOLOT",
+        "--env", "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY_MOLOT",
+        "--env", "ETCDCTL_ENDPOINTS=$ETCDCTL_ENDPOINTS",
+        "--env", "SOCKS5_PROXY=$SOCKS5_PROXY",
+        "--env", "GIT_USER=pg83",
+        "--env", "GIT_PASS=$GITHUB_TOKEN",
+        "--env", "MOLOT_QUIET=1",
+        "--",
+        "/bin/env", "PATH=/bin",
+        "etcd_lock", "/lock/updater/lines/work", "--",
+        "updater", "lines"
+    ]
+}
+EOF
 {% endblock %}

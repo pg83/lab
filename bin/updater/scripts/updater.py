@@ -47,6 +47,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(os.path.realpath(__file__)).parent.parent / 'share' / 'updater'))
 
 import libversion
+import lines
 
 
 # Our repology (bin/repology): the aggregate job writes the projects that
@@ -69,12 +70,22 @@ BUILD_FLAGS = ('--opengl=fake', '--vulkan=fake', '--seed=1')
 DEP_FLAGS = ','.join(flag.removeprefix('--') for flag in BUILD_FLAGS)
 GIT_MIRROR_RETRY_DELAY_S = 15
 
+# The newest bin/go/lang line of the tree a run works on; this is the fallback.
 GO_LATEST = 27
-GO_TOOL = (
-    '\n' + chr(123) + '% block go_tool %}\n'
-    f'bin/go/lang/{GO_LATEST}\n'
-    + chr(123) + '% endblock %}\n'
-)
+
+
+def go_tool(latest):
+    return (
+        '\n' + chr(123) + '% block go_tool %}\n'
+        f'bin/go/lang/{latest}\n'
+        + chr(123) + '% endblock %}\n'
+    )
+
+
+def go_latest(repo):
+    found = [int(p.name) for p in (Path(repo) / 'pkgs/bin/go/lang').iterdir() if p.name.isdigit()]
+
+    return max(found, default=GO_LATEST)
 
 CARGO_LATEST = 96
 CARGO_TOOL = (
@@ -299,7 +310,7 @@ def recipe_context(path, data=None):
     return data
 
 
-def prepare_recipe(path, old, new, probe_sha):
+def prepare_recipe(path, old, new, probe_sha, go=GO_LATEST):
     data = path.read_text()
     context = recipe_context(path, data)
     old_line = f'\n{old}\n'
@@ -319,13 +330,29 @@ def prepare_recipe(path, old, new, probe_sha):
             updated = updated.replace(f'bld/cargo/{version}', f'bld/cargo/{CARGO_LATEST}')
     elif 'go_url' in updated:
         if 'go_tool' not in context:
-            updated += GO_TOOL
+            updated += go_tool(go)
 
-        for version in range(21, GO_LATEST):
-            updated = updated.replace(f'bin/go/lang/{version}', f'bin/go/lang/{GO_LATEST}')
+        for version in range(21, go):
+            updated = updated.replace(f'bin/go/lang/{version}', f'bin/go/lang/{go}')
 
     path.write_text(updated)
     return True
+
+
+def rewrite_version(data, old, new, probe_sha, literal):
+    """A line's version holder at new, its first checksum a probe: the
+    version is a line of its own, or for a literal holder (lib/llvm/21/ver.sh)
+    a part of the fetch URL."""
+    if literal:
+        if old not in data:
+            raise CandidateFailure(f'{old} is not in the recipe')
+
+        return data.replace(recipe_sha(data), probe_sha).replace(old, new)
+
+    if f'\n{old}\n' not in data:
+        raise CandidateFailure(f'{old} is not a line of the recipe')
+
+    return data.replace(recipe_sha(data), probe_sha).replace(f'\n{old}\n', f'\n{new}\n')
 
 
 def recipe_accepts_update(path, old):
@@ -428,6 +455,7 @@ class MolotBuilder:
 class PackageUpdater:
     def __init__(self, repo, builder, branch=IX_BRANCH, source_revision='HEAD', env=None):
         self.repo = Path(repo)
+        self.go_latest = GO_LATEST
         self.builder = builder
         self.branch = branch
         self.source_revision = source_revision
@@ -465,6 +493,8 @@ class PackageUpdater:
 
     def restore(self):
         self.git('restore', '--source=HEAD', '--staged', '--worktree', '--', '.')
+        # A new line leaves directories of its own behind.
+        self.git('clean', '-fdq', '--', 'pkgs')
         self.git('switch', '--detach', self.source_revision)
 
     def show_diff(self):
@@ -491,6 +521,9 @@ class PackageUpdater:
         self.git('commit', '--amend', '--no-edit')
 
     def commit_and_push(self, candidate):
+        self.publish(f'up {candidate.line}')
+
+    def publish(self, message):
         self.git('add', '-A')
         clean = self.git('diff', '--cached', '--quiet', check=False)
 
@@ -500,7 +533,7 @@ class PackageUpdater:
         if clean.returncode != 1:
             raise InfrastructureFailure(f'git diff --cached failed with {clean.returncode}')
 
-        self.git('commit', '-m', f'up {candidate.line}')
+        self.git('commit', '-m', message)
 
         push_env = dict(self.env)
         push_env['GIT_ASKPASS'] = 'passenv'
@@ -534,6 +567,44 @@ class PackageUpdater:
                 time.sleep(GIT_MIRROR_RETRY_DELAY_S)
 
         raise InfrastructureFailure('git push failed after rebase retries')
+
+    def bump(self, holder, old, new, packages, literal=False):
+        """Move one version holder from old to new, its checksums probed the
+        way process() does; for lines, which name their holder themselves."""
+        path = self.repo / 'pkgs' / holder
+        original = path.read_bytes()
+        build_packages = list(packages_to_build(self.repo, packages))
+        probe_sha = secrets.token_hex(32)
+
+        try:
+            path.write_text(rewrite_version(path.read_text(), old, new, probe_sha, literal))
+            self.show_diff()
+            sha = extract_reported_sha(self.builder.build(build_packages).output, probe_sha)
+
+            if not install_sha(path, probe_sha, sha):
+                raise CandidateFailure('cannot install the reported checksum')
+
+            self.resolve_remaining_checksums(path, build_packages, {sha})
+        except (OSError, CandidateFailure):
+            path.write_bytes(original)
+            raise
+
+        self.show_diff()
+
+    def render(self, packages, flags=BUILD_FLAGS):
+        """The tree still renders: a new line must not break the CI graph."""
+        res = subprocess.run(
+            ('./ix', 'build', *flags, *packages),
+            cwd=self.repo,
+            env=dict(self.env, IX_EXEC_KIND='fake'),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+        )
+
+        if res.returncode != 0:
+            tail = res.stdout.decode(errors='replace').strip().splitlines()[-3:]
+            raise CandidateFailure('does not render: ' + ' | '.join(tail))
 
     def resolve_remaining_checksums(self, path, build_packages, resolved):
         # prepare_recipe probes only the first checksum, but the version bump
@@ -612,7 +683,7 @@ class PackageUpdater:
 
             try:
                 fixed = sum(
-                    prepare_recipe(path, candidate.old, new, probe_sha)
+                    prepare_recipe(path, candidate.old, new, probe_sha, self.go_latest)
                     for path in paths
                 )
 
@@ -705,6 +776,28 @@ def require_run_env(env):
         raise InfrastructureFailure('missing required environment: ' + ', '.join(missing))
 
 
+def pinned_updater(repo, env):
+    branch = clone_ix(repo, env)
+    source_revision = subprocess.check_output(
+        ('git', 'rev-parse', 'HEAD'),
+        cwd=repo,
+        env=env,
+        text=True,
+    ).strip()
+    log(f'pinned IX source revision {source_revision}')
+    updater = PackageUpdater(
+        repo,
+        MolotBuilder(repo, env),
+        branch=branch,
+        source_revision=source_revision,
+        env=env,
+    )
+    updater.go_latest = go_latest(repo)
+    updater.restore()
+
+    return updater
+
+
 def run_updater(env):
     require_run_env(env)
     data = outdated_in(fetch_repology(repology_url(env)), REPOLOGY_INREPO)
@@ -712,32 +805,18 @@ def run_updater(env):
     log(f'Repology candidates after filters: {len(candidates)}')
 
     with tempfile.TemporaryDirectory(prefix='updater.', dir=os.getcwd()) as work:
-        work = Path(work).resolve()
-        repo = work / 'ix'
-
-        branch = clone_ix(repo, env)
-        source_revision = subprocess.check_output(
-            ('git', 'rev-parse', 'HEAD'),
-            cwd=repo,
-            env=env,
-            text=True,
-        ).strip()
-        log(f'pinned IX source revision {source_revision}')
-        builder = MolotBuilder(repo, env)
-        updater = PackageUpdater(
-            repo,
-            builder,
-            branch=branch,
-            source_revision=source_revision,
-            env=env,
-        )
+        updater = pinned_updater(Path(work).resolve() / 'ix', env)
         updated = 0
         failed = 0
 
-        updater.restore()
-
         for candidate in candidates:
             log(f'candidate {candidate.line}')
+
+            # Lines are lines.py's: repology sees one version of a family
+            # and would move a line directory across its prefix.
+            if lines.owned(candidate.packages):
+                log(f'skip line family {candidate.line}')
+                continue
 
             try:
                 if updater.process(candidate):
@@ -751,8 +830,16 @@ def run_updater(env):
         log(f'updater done: candidates={len(candidates)} updated={updated} failed={failed}')
 
 
+def run_lines(env):
+    require_run_env(env)
+
+    with tempfile.TemporaryDirectory(prefix='updater.', dir=os.getcwd()) as work:
+        updater = pinned_updater(Path(work).resolve() / 'ix', env)
+        lines.Lines(updater, lines.Net(env), log, CandidateFailure).run()
+
+
 def usage():
-    print('usage: updater run', file=sys.stderr)
+    print('usage: updater run | updater lines', file=sys.stderr)
     raise SystemExit(2)
 
 
@@ -764,6 +851,10 @@ def main():
 
     if command == 'run' and len(sys.argv) == 2:
         run_updater(os.environ.copy())
+        return
+
+    if command == 'lines' and len(sys.argv) == 2:
+        run_lines(os.environ.copy())
         return
 
     usage()

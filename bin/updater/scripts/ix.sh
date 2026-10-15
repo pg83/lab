@@ -11,5 +11,9 @@ base64 -d << EOF > ${out}/share/updater/libversion.py
 {% include '//bin/repology/scripts/libversion.py/base64' %}
 EOF
 
+base64 -d << EOF > ${out}/share/updater/lines.py
+{% include 'lines.py/base64' %}
+EOF
+
 chmod +x ${out}/bin/updater
 {% endblock %}

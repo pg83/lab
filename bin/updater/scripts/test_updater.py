@@ -143,6 +143,7 @@ class UpdaterTests(unittest.TestCase):
             [call.args for call in git.call_args_list],
             [
                 ('restore', '--source=HEAD', '--staged', '--worktree', '--', '.'),
+                ('clean', '-fdq', '--', 'pkgs'),
                 ('switch', '--detach', '0123456789abcdef'),
             ],
         )
