@@ -223,6 +223,20 @@ class LinesTests(unittest.TestCase):
             published = [c[1] for c in up.calls if c[0] == 'publish']
             self.assertEqual(published, ['foo 3: new line 3.0.2 (lib/foo/3, bin/foo/3); CI: bin/foo/3'])
 
+    def test_a_new_library_line_without_ci_goes_to_repology(self):
+        net = FakeNet({'foo.git': ['v2.0.0', 'v3.0.1']})
+        fam = lines.Family('foo', 'lib/foo/{0}', '{0}', lines.Tags('foo.git', r'v(\d+\.\d+\.\d+)'))
+
+        with tempfile.TemporaryDirectory() as td:
+            root = self.tree(td)
+            write(root, lines.REPOLOGY, "{% block run_deps %}\n# for repology\nlib/foo/2\n{% endblock %}\n")
+            up = FakeUpdater(root)
+            lines.Lines(up, net, lambda *a: None, Failure, (fam,)).run()
+
+            self.assertIn('lib/foo/2\nlib/foo/3\n', (root / 'pkgs' / lines.REPOLOGY).read_text())
+            published = [c[1] for c in up.calls if c[0] == 'publish']
+            self.assertEqual(published, ['foo 3: new line 3.0.1 (lib/foo/3); CI: -; repology: lib/foo/3'])
+
     def test_a_line_outside_its_prefix_is_left_alone(self):
         net = FakeNet({'foo.git': ['v1.0.0', 'v2.0.0', 'v2.0.5']})
 
@@ -321,6 +335,23 @@ class RetargetTests(unittest.TestCase):
             self.assertEqual(lines.adopt(root / 'pkgs', fam, ('21',), ('22',)), ['lib/clc/22/ix.sh'])
             self.assertEqual(path.read_text(), 'bin/llvm/spirv/22\nlib/llvm/22\n')
             self.assertEqual((root / 'pkgs/lib/clc/21/ix.sh').read_text(), 'bin/llvm/spirv/21\n')
+
+    def test_a_library_line_is_shown_to_repology(self):
+        fam = lines.Family('fmt', 'lib/fmt/{0}', '{0}')
+        head = "{% extends '//die/hub.sh' %}\n\n{% block run_deps %}\nset/ci/tier/0\n# for repology\n"
+        fonts = "aux/fonts/dejavu\n{% endblock %}\n"
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            path = write(root, lines.REPOLOGY, head + "lib/fmt/11\nlib/botan/3\n" + fonts)
+
+            self.assertEqual(lines.add_to_repology(root / 'pkgs', fam, ('11',), ('12',)), ['lib/fmt/12'])
+            self.assertEqual(path.read_text(), head + "lib/fmt/11\nlib/fmt/12\nlib/botan/3\n" + fonts)
+            self.assertEqual(lines.add_to_repology(root / 'pkgs', fam, ('11',), ('12',)), [])
+
+            ffmpeg = lines.Family('ffmpeg', 'lib/ffmpeg/{0}', '{0}')
+            self.assertEqual(lines.add_to_repology(root / 'pkgs', ffmpeg, ('8',), ('9',)), ['lib/ffmpeg/9'])
+            self.assertEqual(path.read_text(), head + "lib/fmt/11\nlib/fmt/12\nlib/botan/3\nlib/ffmpeg/9\n" + fonts)
 
     def test_ci_mirrors_what_it_built_of_the_old_line(self):
         fam = lines.Family('llvm', 'lib/llvm/{0}', '{0}', group=('bin/clang/{0}',), ci=('bin/clang/{0}',),

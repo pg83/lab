@@ -26,6 +26,10 @@ from dataclasses import dataclass
 HOLDERS = ('ver.sh', 't/ver.sh', 't/t/ix.sh', 't/ix.sh', 'unwrap/ix.sh', 'impl/ix.sh', 'ix.sh')
 VERSION_BLOCK = re.compile(r'\{% block (?:kernel_)?version %\}\s*\n\s*([0-9][^\s{}]*)\s*\n')
 CI = 'set/ci/unwrap/linux/x86_64/ix.sh'
+# What set/ci reaches is what IX shows repology (ix_repo_export); a library
+# line no CI build pulls in is listed under "# for repology" there.
+REPOLOGY = 'set/ci/ix.sh'
+REPOLOGY_MARK = '# for repology'
 # The socks egress restarts its haproxy every few minutes; a listing that
 # lands in the restart is asked again past it.
 NET_ATTEMPTS = 5
@@ -472,6 +476,37 @@ def add_to_ci(pkgs, family, old, new):
     return added
 
 
+def add_to_repology(pkgs, family, old, new):
+    """List the new line of a library family under "# for repology", next
+    to its previous line if that is listed, else after the libraries there."""
+    path = pkgs / REPOLOGY
+    rows = path.read_text().split('\n')
+    entry = family.line.format(*new)
+
+    if entry in (r.strip() for r in rows) or REPOLOGY_MARK not in rows:
+        return []
+
+    start = rows.index(REPOLOGY_MARK) + 1
+    end = start
+
+    while end < len(rows) and rows[end].strip() and not rows[end].startswith('{%'):
+        end += 1
+
+    block = [r.strip() for r in rows[start:end]]
+    previous = family.line.format(*old)
+
+    if previous in block:
+        at = start + block.index(previous) + 1
+    else:
+        libs = [i for i, r in enumerate(block) if r.startswith('lib/')]
+        at = start + (libs[-1] + 1 if libs else 0)
+
+    rows.insert(at, entry)
+    path.write_text('\n'.join(rows))
+
+    return [entry]
+
+
 class Lines:
     def __init__(self, updater, net, log, failure, families=FAMILIES):
         self.updater = updater
@@ -576,10 +611,17 @@ class Lines:
         self.updater.bump(holder, ours, target, [family.line.format(*new)], literal)
         made += adopt(self.pkgs, family, old, new)
         ci = add_to_ci(self.pkgs, family, old, new)
+        # A library line with no bin part in CI is shown to repology alone.
+        shown = [] if family.ci else add_to_repology(self.pkgs, family, old, new)
         self.updater.render(made)
         # What CI builds, the way it builds it.
         self.updater.render(['set/ci'], ('--seed=1',))
-        self.updater.publish(f'{family.name} {key}: new line {target} ({", ".join(made)}); CI: {", ".join(ci) or "-"}')
+        message = f'{family.name} {key}: new line {target} ({", ".join(made)}); CI: {", ".join(ci) or "-"}'
+
+        if shown:
+            message += f'; repology: {", ".join(shown)}'
+
+        self.updater.publish(message)
         self.log(f'new line {family.name} {key}: {", ".join(made)}')
 
         return True
