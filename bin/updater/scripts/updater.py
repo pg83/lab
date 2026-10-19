@@ -103,38 +103,52 @@ ATTR_RELEASE_URL = (
     'attr-{{self.version().strip()}}.tar.gz'
 )
 
-# This is the grep -v chain from IX's bin/ix/tools/upver/scripts/fix.
-# Match against the complete "old new pkg..." line to preserve its exact
-# (occasionally broad) semantics rather than reinterpret it as package paths.
-SKIP_SUBSTRINGS = (
-    'mesa',
-    'bld/',
-    'lib/qt',
-    'meson',
-    'musl',
-    'python',
-    'perl',
-    'rio',
-    'ruby',
-    'firmware',
-    'chromium',
-    'protobuf',
-    'spirv',
-    'vulkan',
-    'webkit',
-    'wlroots',
-    'coreutils',
-    'auto/make',
+# Packages the repology updater leaves alone: big or bootstrap-bound ones,
+# and line families (lines.py owns those too). An entry is a package path
+# prefix, checked against every package of a candidate: 'lib/qt/6' takes
+# lib/qt/6/base but not lib/qt/keychain. The grep -v chain of IX's upver
+# matched substrings of the whole candidate line and so also hid
+# tree-sitter-python, qtkeychain, llama.cpp/vulkan and the lua modules.
+SKIP_PACKAGES = (
+    'bld',
+    'lib/mesa',
+    'lib/qt/6',
+    'bin/meson',
+    'lib/musl',
+    'bin/python',
+    'lib/python',
+    'bin/perl',
+    'bin/rio',
+    'lib/firmware',
+    'bin/chromium',
+    'bin/protoc',
+    'lib/protobuf',
+    'lib/protoc',
+    'lib/spirv',
+    'bin/llvm/spirv',
+    'lib/vulkan',
+    'bin/vulkan',
+    'lib/web/kit',
+    'bin/webkitproc',
+    'lib/wlroots',
+    'bin/coreutils',
+    'bin/auto/make',
     'bin/kernel',
     'bin/glslang/old',
     'lib/ffmpeg',
-    'go/lang',
+    'bin/go/lang',
     'lib/fmt',
     'bin/mariadb',
-    'dmidecode',
-    'lib/lua',
-    'grpc',
+    'bin/dmidecode',
+    'lib/lua/puc',
+    'bin/grpc',
+    'lib/grpc',
 )
+
+
+def skipped(package):
+    return any(package == p or package.startswith(p + '/') for p in SKIP_PACKAGES)
+
 
 ANSI_RE = re.compile(rb'\x1b\[[0-9;?]*[ -/]*[@-~]')
 
@@ -219,17 +233,22 @@ def newest_versions(records, old):
     return ()
 
 
+# Ours is the tree the updater pushes to: stalix_dev is pg83/ix, stalix is
+# stal-ix/ix, which takes it by merges and lags behind.
 def our_version(records):
     for rec in records:
-        if rec.get('repo') == 'stalix':
+        if rec.get('repo') == REPOLOGY_INREPO:
             return rec.get('version')
 
     return None
 
 
 def our_packages(records):
+    seen = set()
+
     for rec in records:
-        if rec.get('repo') == 'stalix' and rec.get('srcname'):
+        if rec.get('repo') == REPOLOGY_INREPO and rec.get('srcname') and rec['srcname'] not in seen:
+            seen.add(rec['srcname'])
             yield rec['srcname']
 
 
@@ -253,7 +272,7 @@ def candidates_from_repology(data):
             versions[1:],
         )
 
-        if any(part in candidate.line for part in SKIP_SUBSTRINGS):
+        if any(skipped(p) for p in candidate.packages):
             log(f'skip filtered {candidate.line}')
             continue
 

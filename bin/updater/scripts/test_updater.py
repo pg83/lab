@@ -164,15 +164,15 @@ class UpdaterTests(unittest.TestCase):
     def test_repology_filter_keeps_original_skip_semantics(self):
         data = {
             'zlib': [
-                {'repo': 'stalix', 'version': '1.2', 'srcname': 'lib/zlib'},
+                {'repo': 'stalix_dev', 'version': '1.2', 'srcname': 'lib/zlib'},
                 {'status': 'newest', 'version': '1.3'},
             ],
             'python': [
-                {'repo': 'stalix', 'version': '3.13', 'srcname': 'bin/python'},
+                {'repo': 'stalix_dev', 'version': '3.13', 'srcname': 'bin/python'},
                 {'status': 'newest', 'version': '3.14'},
             ],
             'unclassified/foo': [
-                {'repo': 'stalix', 'version': '1', 'srcname': 'bin/foo'},
+                {'repo': 'stalix_dev', 'version': '1', 'srcname': 'bin/foo'},
                 {'status': 'newest', 'version': '2'},
             ],
         }
@@ -181,6 +181,39 @@ class UpdaterTests(unittest.TestCase):
             list(updater.candidates_from_repology(data)),
             [updater.Candidate('1.2', '1.3', ('lib/zlib',))],
         )
+
+    def test_ours_is_stalix_dev_not_the_lagging_stalix(self):
+        data = {
+            'sqlite': [
+                {'repo': 'stalix', 'version': '3.51.0', 'srcname': 'lib/sqlite/3'},
+                {'repo': 'stalix_dev', 'version': '3.54.0', 'srcname': 'bin/sqlite3'},
+                {'repo': 'stalix_dev', 'version': '3.54.0', 'srcname': 'lib/sqlite/3'},
+                {'repo': 'stalix_dev', 'version': '3.54.0', 'srcname': 'lib/sqlite/3'},
+                {'status': 'newest', 'version': '3.54.1'},
+            ],
+            'perses': [
+                {'repo': 'stalix_dev', 'version': '0.53.1', 'srcname': 'bin/perses'},
+                {'status': 'newest', 'version': '0.54.0'},
+            ],
+        }
+
+        self.assertEqual(
+            list(updater.candidates_from_repology(data)),
+            [
+                updater.Candidate('0.53.1', '0.54.0', ('bin/perses',)),
+                updater.Candidate('3.54.0', '3.54.1', ('bin/sqlite3', 'lib/sqlite/3')),
+            ],
+        )
+
+    def test_skips_are_package_prefixes(self):
+        self.assertTrue(updater.skipped('lib/qt/6/base'))
+        self.assertTrue(updater.skipped('bld/python'))
+        self.assertTrue(updater.skipped('lib/vulkan/headers'))
+        self.assertFalse(updater.skipped('lib/qt/keychain'))
+        self.assertFalse(updater.skipped('lib/tree/sitter/plugins/python'))
+        self.assertFalse(updater.skipped('bin/llama/cpp/vulkan'))
+        self.assertFalse(updater.skipped('lib/lua/modules/bitop'))
+        self.assertFalse(updater.skipped('bin/perlx'))
 
     def test_levenshtein(self):
         self.assertEqual(updater.levenshtein('7.1.2.15', '7.1.2.30'), 2)
@@ -191,7 +224,7 @@ class UpdaterTests(unittest.TestCase):
         data = {
             'imagemagick': [
                 {
-                    'repo': 'stalix',
+                    'repo': 'stalix_dev',
                     'version': '7.1.2.15',
                     'srcname': 'lib/image/magick',
                 },
@@ -216,16 +249,16 @@ class UpdaterTests(unittest.TestCase):
     def test_repology_never_offers_a_version_below_ours(self):
         data = {
             'premake': [
-                {'repo': 'stalix', 'version': '5.0.0-beta6', 'srcname': 'bin/premake'},
+                {'repo': 'stalix_dev', 'version': '5.0.0-beta6', 'srcname': 'bin/premake'},
                 {'status': 'newest', 'version': '4.3'},
                 {'status': 'devel', 'version': '5.0.0-beta8'},
             ],
             'old': [
-                {'repo': 'stalix', 'version': '2.0', 'srcname': 'bin/old'},
+                {'repo': 'stalix_dev', 'version': '2.0', 'srcname': 'bin/old'},
                 {'status': 'newest', 'version': '1.9'},
             ],
             'zlib': [
-                {'repo': 'stalix', 'version': '1.2', 'srcname': 'lib/zlib'},
+                {'repo': 'stalix_dev', 'version': '1.2', 'srcname': 'lib/zlib'},
                 {'status': 'newest', 'version': '1.3'},
                 {'status': 'devel', 'version': '1.4-rc1'},
             ],
@@ -242,25 +275,25 @@ class UpdaterTests(unittest.TestCase):
     def test_a_pre_release_only_replaces_a_pre_release(self):
         data = {
             'avahi': [
-                {'repo': 'stalix', 'version': '0.8', 'srcname': 'bin/avahi/daemon'},
+                {'repo': 'stalix_dev', 'version': '0.8', 'srcname': 'bin/avahi/daemon'},
                 {'status': 'newest', 'version': '0.9rc5'},
                 {'status': 'newest', 'version': '0.9-rc5'},
             ],
             'python': [
-                {'repo': 'stalix', 'version': '3.14.8', 'srcname': 'lib/py'},
+                {'repo': 'stalix_dev', 'version': '3.14.8', 'srcname': 'lib/py'},
                 {'status': 'devel', 'version': '3.15.0b1'},
             ],
             'sfwbar': [
-                {'repo': 'stalix', 'version': '1.0_beta16', 'srcname': 'bin/sfwbar'},
+                {'repo': 'stalix_dev', 'version': '1.0_beta16', 'srcname': 'bin/sfwbar'},
                 {'status': 'newest', 'version': '1.0_beta17'},
             ],
             'zlib': [
-                {'repo': 'stalix', 'version': '1.2', 'srcname': 'lib/zlib'},
+                {'repo': 'stalix_dev', 'version': '1.2', 'srcname': 'lib/zlib'},
                 {'status': 'newest', 'version': '1.3-rc1'},
                 {'status': 'newest', 'version': '1.3'},
             ],
             'readline': [
-                {'repo': 'stalix', 'version': '8.2', 'srcname': 'lib/readline'},
+                {'repo': 'stalix_dev', 'version': '8.2', 'srcname': 'lib/readline'},
                 {'status': 'newest', 'version': '8.3p6'},
             ],
         }
