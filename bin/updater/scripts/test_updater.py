@@ -239,6 +239,41 @@ class UpdaterTests(unittest.TestCase):
             ],
         )
 
+    def test_a_pre_release_only_replaces_a_pre_release(self):
+        data = {
+            'avahi': [
+                {'repo': 'stalix', 'version': '0.8', 'srcname': 'bin/avahi/daemon'},
+                {'status': 'newest', 'version': '0.9rc5'},
+                {'status': 'newest', 'version': '0.9-rc5'},
+            ],
+            'python': [
+                {'repo': 'stalix', 'version': '3.14.8', 'srcname': 'lib/py'},
+                {'status': 'devel', 'version': '3.15.0b1'},
+            ],
+            'sfwbar': [
+                {'repo': 'stalix', 'version': '1.0_beta16', 'srcname': 'bin/sfwbar'},
+                {'status': 'newest', 'version': '1.0_beta17'},
+            ],
+            'zlib': [
+                {'repo': 'stalix', 'version': '1.2', 'srcname': 'lib/zlib'},
+                {'status': 'newest', 'version': '1.3-rc1'},
+                {'status': 'newest', 'version': '1.3'},
+            ],
+            'readline': [
+                {'repo': 'stalix', 'version': '8.2', 'srcname': 'lib/readline'},
+                {'status': 'newest', 'version': '8.3p6'},
+            ],
+        }
+
+        self.assertEqual(
+            list(updater.candidates_from_repology(data)),
+            [
+                updater.Candidate('8.2', '8.3p6', ('lib/readline',)),
+                updater.Candidate('1.0_beta16', '1.0_beta17', ('bin/sfwbar',)),
+                updater.Candidate('1.2', '1.3', ('lib/zlib',)),
+            ],
+        )
+
     def test_dependency_files_render_with_the_build_flags(self):
         with mock.patch.object(updater.subprocess, 'run') as run:
             run.return_value = mock.Mock(stdout='bin/foo/ix.sh\n')

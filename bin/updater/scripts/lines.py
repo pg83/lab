@@ -17,6 +17,7 @@ egress.
 import re
 import shutil
 import subprocess
+import time
 from dataclasses import dataclass
 
 
@@ -25,6 +26,10 @@ from dataclasses import dataclass
 HOLDERS = ('ver.sh', 't/ver.sh', 't/t/ix.sh', 't/ix.sh', 'unwrap/ix.sh', 'impl/ix.sh', 'ix.sh')
 VERSION_BLOCK = re.compile(r'\{% block (?:kernel_)?version %\}\s*\n\s*([0-9][^\s{}]*)\s*\n')
 CI = 'set/ci/unwrap/linux/x86_64/ix.sh'
+# The socks egress restarts its haproxy every few minutes; a listing that
+# lands in the restart is asked again past it.
+NET_ATTEMPTS = 5
+NET_PAUSE = 30
 
 
 def components(version):
@@ -59,10 +64,36 @@ def even(limit=80):
     return stable
 
 
+class NetFailure(OSError):
+    pass
+
+
 class Net:
-    def __init__(self, env):
+    def __init__(self, env, attempts=NET_ATTEMPTS, pause=NET_PAUSE, sleep=time.sleep):
         self.proxy = env.get('SOCKS5_PROXY', '')
         self.env = env
+        self.attempts = attempts
+        self.pause = pause
+        self.sleep = sleep
+
+    def run(self, cmd):
+        for attempt in range(self.attempts):
+            if attempt:
+                self.sleep(self.pause)
+
+            try:
+                res = subprocess.run(cmd, env=self.env, capture_output=True, timeout=600)
+            except subprocess.TimeoutExpired:
+                why = 'timed out'
+                continue
+
+            if res.returncode == 0:
+                return res.stdout.decode(errors='replace')
+
+            tail = res.stderr.decode(errors='replace').strip().splitlines()[-1:]
+            why = f'exit {res.returncode}: {" ".join(tail)}'
+
+        raise NetFailure(f'{cmd[-1]}: {why} ({self.attempts} attempts)')
 
     def tags(self, repo):
         cmd = ['git']
@@ -70,22 +101,17 @@ class Net:
         if self.proxy:
             cmd += ['-c', f'http.proxy=socks5h://{self.proxy}']
 
-        res = subprocess.run(
-            cmd + ['ls-remote', '--tags', '--refs', repo],
-            env=self.env, check=True, capture_output=True, text=True, timeout=600,
-        )
+        out = self.run(cmd + ['ls-remote', '--tags', '--refs', repo])
 
-        return [l.split('refs/tags/', 1)[1] for l in res.stdout.splitlines() if 'refs/tags/' in l]
+        return [l.split('refs/tags/', 1)[1] for l in out.splitlines() if 'refs/tags/' in l]
 
     def get(self, url):
-        cmd = ['curl', '-sfL', '--retry', '3', '-m', '300']
+        cmd = ['curl', '-sSfL', '-m', '300']
 
         if self.proxy:
             cmd += ['--socks5-hostname', self.proxy]
 
-        res = subprocess.run(cmd + [url], env=self.env, check=True, capture_output=True)
-
-        return res.stdout.decode(errors='replace')
+        return self.run(cmd + [url])
 
 
 @dataclass(frozen=True)

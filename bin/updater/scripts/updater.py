@@ -191,16 +191,26 @@ def levenshtein(left, right):
     return previous[-1]
 
 
+def prerelease(version):
+    """libversion's reading: an alpha, beta, rc or pre component, or any
+    word standing apart (0.9rc5, 3.15.0b1); p is a patch level (8.3p6)."""
+    parts = libversion.parse(version, libversion.P_IS_PATCH)
+
+    return any(rank == libversion._PRE_RELEASE for rank, _ in parts)
+
+
 def newest_versions(records, old):
     """Versions above ours, closest spelling first: the newest ones, or the
     devel ones when ours is already past every stable release (premake ships
-    5.0.0-beta while 4.3 is the newest stable)."""
+    5.0.0-beta while 4.3 is the newest stable). A pre-release only replaces a
+    pre-release: a distro shipping avahi 0.9rc5 marks it newest."""
     for status in ('newest', 'devel'):
         versions = {
             rec.get('version')
             for rec in records
             if rec.get('status') == status and rec.get('version')
             and libversion.version_compare(rec['version'], old) > 0
+            and (prerelease(old) or not prerelease(rec['version']))
         }
 
         if versions:

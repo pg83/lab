@@ -141,6 +141,42 @@ class FamilyTests(unittest.TestCase):
         self.assertFalse(lines.even()('3.99.5'))
 
 
+class NetTests(unittest.TestCase):
+    def run_results(self, *results):
+        it = iter(results)
+
+        def run(cmd, **kw):
+            code, out, err = next(it)
+
+            return mock.Mock(returncode=code, stdout=out.encode(), stderr=err.encode())
+
+        return run
+
+    def test_a_failed_listing_is_asked_again(self):
+        pauses = []
+        net = lines.Net({'SOCKS5_PROXY': '127.0.0.1:8015'}, attempts=3, pause=7, sleep=pauses.append)
+        run = self.run_results(
+            (128, '', 'fatal: unable to access: Failed to connect to 127.0.0.1 port 8015'),
+            (0, 'aaa\trefs/tags/v1.0.0\nbbb\trefs/tags/v1.1.0\n', ''),
+        )
+
+        with mock.patch.object(lines.subprocess, 'run', side_effect=run) as called:
+            self.assertEqual(net.tags('https://x/foo.git'), ['v1.0.0', 'v1.1.0'])
+
+        self.assertEqual(pauses, [7])
+        self.assertEqual(called.call_args.args[0][:3], ['git', '-c', 'http.proxy=socks5h://127.0.0.1:8015'])
+
+    def test_a_listing_gives_up_with_the_reason(self):
+        net = lines.Net({}, attempts=2, pause=0, sleep=lambda s: None)
+        run = self.run_results((7, '', 'curl: (7) Failed to connect'), (7, '', 'curl: (7) Failed to connect'))
+
+        with mock.patch.object(lines.subprocess, 'run', side_effect=run):
+            with self.assertRaises(OSError) as err:
+                net.get('https://ftp.gnu.org/gnu/bash/')
+
+        self.assertEqual(str(err.exception), 'https://ftp.gnu.org/gnu/bash/: exit 7: curl: (7) Failed to connect (2 attempts)')
+
+
 class LinesTests(unittest.TestCase):
     def tree(self, td):
         root = Path(td)
