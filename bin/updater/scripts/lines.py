@@ -321,6 +321,7 @@ FAMILIES = (
       stable=even()),
     F('libsoup', 'lib/soup/{0}', '{0}', Tags(GNOME + 'libsoup.git', r'(\d+\.\d+\.\d+)'), stable=even()),
     F('srtp', 'lib/srtp/{0}', '{0}', Tags(GH + 'cisco/libsrtp', r'v(\d+\.\d+\.\d+)')),
+    F('libtorrent', 'lib/torrent/rasterbar/2/{0}', '2.{0}', Tags(GH + 'arvidn/libtorrent', r'v(2\.\d+\.\d+)')),
     F('gcr', 'lib/gcr/{0}', '{0}', Tags(GNOME + 'gcr.git', r'(\d+\.\d+\.\d+)'), stable=below(90),
       group=('bin/gcr/viewer/{0}',), ci=('bin/gcr/viewer/{0}',)),
     F('fcft', 'lib/fcft/{0}', '{0}', Tags('https://codeberg.org/dnkl/fcft.git', r'(\d+\.\d+\.\d+)')),
