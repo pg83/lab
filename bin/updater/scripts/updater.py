@@ -46,6 +46,7 @@ from pathlib import Path
 # ix.sh: candidate versions are compared the way repology classified them.
 sys.path.insert(0, str(Path(os.path.realpath(__file__)).parent.parent / 'share' / 'updater'))
 
+import groups
 import libversion
 import lines
 
@@ -112,7 +113,6 @@ ATTR_RELEASE_URL = (
 SKIP_PACKAGES = (
     'bld',
     'lib/mesa',
-    'lib/qt/6',
     'bin/meson',
     'lib/musl',
     'bin/python',
@@ -124,10 +124,8 @@ SKIP_PACKAGES = (
     'bin/protoc',
     'lib/protobuf',
     'lib/protoc',
-    'lib/spirv',
+    'lib/spirv/headers/next',
     'bin/llvm/spirv',
-    'lib/vulkan',
-    'bin/vulkan',
     'lib/web/kit',
     'bin/webkitproc',
     'lib/wlroots',
@@ -462,14 +460,14 @@ class MolotBuilder:
         self.env['IX_EXEC_KIND'] = 'molot'
         self.env['S3_BUCKET'] = 'molot'
 
-    def build(self, packages):
+    def build(self, packages, keep_going=False):
         cmd = ('./ix', 'build', *BUILD_FLAGS, *packages)
-        log('run', *cmd, '(molot)')
+        log('run', *cmd, '(molot, keep going)' if keep_going else '(molot)')
 
         res = subprocess.run(
             cmd,
             cwd=self.repo,
-            env=self.env,
+            env=dict(self.env, IX_KEEP_GOING='yes') if keep_going else self.env,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             start_new_session=True,
@@ -616,6 +614,55 @@ class PackageUpdater:
             self.resolve_remaining_checksums(path, build_packages, {sha})
         except (OSError, CandidateFailure):
             path.write_bytes(original)
+            raise
+
+        self.show_diff()
+
+    def bump_group(self, changes, packages):
+        """Move several holders, (holder, old, new, literal), to new at once.
+        One build probes them all: molot keeps going past a failed fetch, so
+        every probe reports its checksum; one that did not is probed again."""
+        originals = {}
+        pending = {}
+        build_packages = list(packages_to_build(self.repo, packages))
+
+        try:
+            for holder, old, new, literal in changes:
+                path = self.repo / 'pkgs' / holder
+                originals.setdefault(path, path.read_bytes())
+                probe = secrets.token_hex(32)
+                path.write_text(rewrite_version(path.read_text(), old, new, probe, literal))
+                pending[path] = probe
+
+            self.show_diff()
+            resolved = set()
+
+            while pending:
+                output = self.builder.build(build_packages, keep_going=True).output
+                reported = {}
+
+                for path, probe in pending.items():
+                    try:
+                        reported[path] = extract_reported_sha(output, probe)
+                    except CandidateFailure:
+                        pass
+
+                if not reported:
+                    names = ', '.join(p.relative_to(self.repo / 'pkgs').as_posix() for p in pending)
+                    raise CandidateFailure(f'build output contains no checksum for {names}')
+
+                for path, sha in reported.items():
+                    if not install_sha(path, pending.pop(path), sha):
+                        raise CandidateFailure('cannot install the reported checksum')
+
+                    resolved.add(sha)
+
+            for path in originals:
+                self.resolve_remaining_checksums(path, build_packages, resolved)
+        except (OSError, CandidateFailure):
+            for path, data in originals.items():
+                path.write_bytes(data)
+
             raise
 
         self.show_diff()
@@ -847,6 +894,11 @@ def run_updater(env):
                 log(f'skip line family {candidate.line}')
                 continue
 
+            # Released together, moved together: groups.py's.
+            if groups.owned(candidate.packages):
+                log(f'skip group {candidate.line}')
+                continue
+
             try:
                 if updater.process(candidate):
                     updated += 1
@@ -867,8 +919,16 @@ def run_lines(env):
         lines.Lines(updater, lines.Net(env), log, CandidateFailure).run()
 
 
+def run_groups(env):
+    require_run_env(env)
+
+    with tempfile.TemporaryDirectory(prefix='updater.', dir=os.getcwd()) as work:
+        updater = pinned_updater(Path(work).resolve() / 'ix', env)
+        groups.Groups(updater, lines.Net(env), log, CandidateFailure).run()
+
+
 def usage():
-    print('usage: updater run | updater lines', file=sys.stderr)
+    print('usage: updater run | updater lines | updater groups', file=sys.stderr)
     raise SystemExit(2)
 
 
@@ -884,6 +944,10 @@ def main():
 
     if command == 'lines' and len(sys.argv) == 2:
         run_lines(os.environ.copy())
+        return
+
+    if command == 'groups' and len(sys.argv) == 2:
+        run_groups(os.environ.copy())
         return
 
     usage()

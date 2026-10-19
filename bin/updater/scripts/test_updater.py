@@ -22,7 +22,7 @@ class FakeBuilder:
         self.results = list(results)
         self.calls = []
 
-    def build(self, packages):
+    def build(self, packages, keep_going=False):
         self.calls.append(list(packages))
         return self.results.pop(0)
 
@@ -206,9 +206,10 @@ class UpdaterTests(unittest.TestCase):
         )
 
     def test_skips_are_package_prefixes(self):
-        self.assertTrue(updater.skipped('lib/qt/6/base'))
+        self.assertTrue(updater.skipped('lib/mesa/iris'))
         self.assertTrue(updater.skipped('bld/python'))
-        self.assertTrue(updater.skipped('lib/vulkan/headers'))
+        self.assertTrue(updater.skipped('lib/spirv/headers/next'))
+        self.assertFalse(updater.skipped('lib/spirv/headers'))
         self.assertFalse(updater.skipped('lib/qt/keychain'))
         self.assertFalse(updater.skipped('lib/tree/sitter/plugins/python'))
         self.assertFalse(updater.skipped('bin/llama/cpp/vulkan'))
