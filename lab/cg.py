@@ -644,7 +644,7 @@ class S3Cell:
 # none. A new consumer of s3 gets its bucket here first. pg holds personal
 # artifacts that must stay inside our networks (the arc client ix fetches
 # through s3.lab.mesh); nothing mirrors it.
-S3_BUCKETS = ('cas', 'cix', 'etcd', 'geesefs', 'gorn', 'logovo', 'loki', 'mirror', 'molot', 'ogorod', 'pg', 'repology', 'samogon', 'view')
+S3_BUCKETS = ('cas', 'cix', 'etcd', 'geesefs', 'gorn', 'iso', 'logovo', 'loki', 'mirror', 'molot', 'ogorod', 'pg', 'repology', 'samogon', 'view', 'vm')
 
 
 class S3Service:
