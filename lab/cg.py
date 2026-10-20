@@ -737,16 +737,17 @@ DEV_VM_ISO = 'fedora/44-1.7'
 DEV_VM_APPEND = 'root=live:CDLABEL=Fedora-WS-Live-44 rd.live.image'
 
 # Started by the cmdline in every boot: the root is new each time. The
-# mesh binary comes from the host through fw_cfg, its config as a credential.
-DEV_VM_MESH_UNIT = '''[Unit]
+# mesh binary is a read-only disk (fw_cfg reads a byte per VM exit: 15 MB
+# took longer than a start may), its config a credential.
+DEV_VM_MESH_UNIT = r'''[Unit]
 Description=lab mesh
 Wants=network-online.target
-After=network-online.target
+Requires=dev-disk-by\x2did-virtio\x2dlabmesh.device
+After=network-online.target dev-disk-by\x2did-virtio\x2dlabmesh.device
 
 [Service]
 ImportCredential=mesh.json
-ExecStartPre=/usr/sbin/modprobe qemu_fw_cfg
-ExecStartPre=/bin/sh -c 'cat /sys/firmware/qemu_fw_cfg/by_name/opt/lab/mesh/raw > /run/lab-mesh && chmod 755 /run/lab-mesh'
+ExecStartPre=/bin/sh -c 'cat /dev/disk/by-id/virtio-labmesh > /run/lab-mesh && chmod 755 /run/lab-mesh'
 ExecStart=/run/lab-mesh run -c ${CREDENTIALS_DIRECTORY}/mesh.json
 Restart=always
 RestartSec=5
@@ -844,6 +845,13 @@ class DevVm:
         for key in ('linux', 'initrd', 'live.iso'):
             self.fetch(key)
 
+        # The binary padded to whole sectors; zeros after an ELF are ignored.
+        with open(os.path.realpath('/ix/realm/system/bin/mesh'), 'rb') as f:
+            data = f.read()
+
+        with open('mesh.img', 'wb') as f:
+            f.write(data + b'\0' * (-len(data) % 4096))
+
         mesh = json.dumps(GuestMesh(self.vm, self.mesh_hosts, '127.0.0.1:8058', []).config())
         append = ' '.join([
             DEV_VM_APPEND,
@@ -879,7 +887,8 @@ class DevVm:
             '-netdev', 'user,id=net0',
             '-device', 'virtio-net-pci,netdev=net0,romfile=',
             '-device', 'virtio-rng-pci',
-            '-fw_cfg', 'name=opt/lab/mesh,file=' + os.path.realpath('/ix/realm/system/bin/mesh'),
+            '-drive', 'if=none,id=mesh,format=raw,readonly=on,file=mesh.img',
+            '-device', 'virtio-blk-pci,drive=mesh,serial=labmesh',
             *self.credential(mesh_cred, 'mesh.json', mesh),
             *self.credential(unit_cred, 'systemd.extra-unit.lab-mesh.service', DEV_VM_MESH_UNIT),
             '-run-with', 'user=dev_vm',
