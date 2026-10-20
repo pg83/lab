@@ -10,6 +10,7 @@ import time
 import json
 import types
 import shutil
+import signal
 import pickle
 import base64
 import random
@@ -283,7 +284,7 @@ class Mesh:
 
         return {
             'index': self.peers[self.host]['index'],
-            'registry_version': 3,
+            'registry_version': 4,
             'key': get_key(f'/mesh/{self.host}.key').decode().strip(),
             'endpoint': [{'proto': 'udp', 'addr': '::', 'port': 8057}],
             'subnet': '192.168.100.0/24',
@@ -727,6 +728,157 @@ class S3Service:
                 args += ['-metrics', f'127.0.0.1:{self.metrics}']
 
             exec_into(*args, PATH='/bin')
+
+
+# The dev machines: one per host, a Fedora live system booted straight
+# from its ISO, kept in the iso bucket, the root an overlay in RAM, /home
+# a disk in the vm bucket. dev<N> runs on lab<N>.
+DEV_VM_ISO = 'fedora/44-1.7'
+DEV_VM_APPEND = 'root=live:CDLABEL=Fedora-WS-Live-44 rd.live.image'
+
+# Started by the cmdline in every boot: the root is new each time. The
+# mesh binary comes from the host through fw_cfg, its config as a credential.
+DEV_VM_MESH_UNIT = '''[Unit]
+Description=lab mesh
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+ImportCredential=mesh.json
+ExecStartPre=/usr/sbin/modprobe qemu_fw_cfg
+ExecStartPre=/bin/sh -c 'cat /sys/firmware/qemu_fw_cfg/by_name/opt/lab/mesh/raw > /run/lab-mesh && chmod 755 /run/lab-mesh'
+ExecStart=/run/lab-mesh run -c ${CREDENTIALS_DIRECTORY}/mesh.json
+Restart=always
+RestartSec=5
+'''
+
+
+class DevDisk:
+    # /home of the dev machine: a block device over the vm bucket. Writes
+    # live in memory and are committed every 10 s; a crash of the host
+    # loses those seconds, never the filesystem.
+    def __init__(self, disk, endpoint, metrics):
+        self.disk = disk
+        self.endpoint = endpoint
+        self.metrics = metrics
+
+    def name(self):
+        return 'dev_disk'
+
+    def prom_port(self):
+        return self.metrics
+
+    def pkgs(self):
+        yield {'pkg': 'bin/s3/store'}
+
+    def run(self):
+        exec_into('s3', 'nbd', '-debug', '-endpoint', self.endpoint, '-bucket', 'vm', '-disk', self.disk,
+                  '-size', '4T', '-socket', os.path.join(os.getcwd(), 'nbd.sock'),
+                  '-metrics', f'127.0.0.1:{self.metrics}', PATH='/bin')
+
+
+class GuestMesh(Mesh):
+    # The mesh node inside a dev machine: no listeners, it dials the labs.
+    def config(self):
+        c = super().config()
+        c['endpoint'] = []
+        c['sshd'] = True
+
+        for k in ('dns', 'dns_records'):
+            c.pop(k, None)
+
+        return c
+
+
+class DevVm:
+    # qemu with KVM and user-mode networking: the host gets neither a tap
+    # nor a route. The console and QMP are unix sockets here; mesh inside
+    # the guest is the way in.
+    def __init__(self, vm, mesh_hosts, s3_front, cpus, memory):
+        self.vm = vm
+        self.mesh_hosts = mesh_hosts
+        self.s3_front = s3_front
+        self.cpus = cpus
+        self.memory = memory
+
+    def name(self):
+        return 'dev_vm'
+
+    def users(self):
+        # users[0]=root: /dev/kvm; qemu drops to dev_vm once it is open.
+        return ['root', 'dev_vm']
+
+    def pkgs(self):
+        yield {'pkg': 'bin/qemu/11/1'}
+        yield {'pkg': 'aux/seabios'}
+        yield {'pkg': 'bin/mesh'}
+
+    def fetch(self, key):
+        # Into the service directory, in RAM: a live system reads its image
+        # all over the place, and over s3 every miss is a read from a disk.
+        # Kept across restarts while its size matches.
+        with ur.urlopen(f'http://{self.s3_front}/iso/{DEV_VM_ISO}/{key}') as r:
+            if os.path.exists(key) and os.path.getsize(key) == int(r.headers['Content-Length']):
+                return
+
+            with open(key + '.tmp', 'wb') as f:
+                shutil.copyfileobj(r, f, 1 << 20)
+
+        os.rename(key + '.tmp', key)
+
+    def credential(self, path, name, data):
+        with open(path, 'w') as f:
+            f.write(f'io.systemd.credential.binary:{name}=' + base64.b64encode(data.encode()).decode())
+
+        return ['-smbios', f'type=11,path={path}']
+
+    def run(self):
+        if not os.path.exists('/dev/kvm'):
+            # Under TCG the guest does not get past its generators: wait
+            # for a host booted with KVM, the restart after it starts us.
+            print('no /dev/kvm, the dev machine waits for a reboot', flush=True)
+            signal.pause()
+
+        for key in ('linux', 'initrd', 'live.iso'):
+            self.fetch(key)
+
+        mesh = json.dumps(GuestMesh(self.vm, self.mesh_hosts, '127.0.0.1:8058', []).config())
+        append = ' '.join([
+            DEV_VM_APPEND,
+            'console=ttyS0',
+            'systemd.unit=multi-user.target',
+            'enforcing=0',
+            'systemd.mount-extra=LABEL=home:/home:nilfs2:discard,nofail',
+            'systemd.wants=lab-mesh.service',
+        ])
+
+        exec_into(
+            'qemu-system-x86_64',
+            '-name', self.vm,
+            '-machine', 'q35',
+            '-accel', 'kvm',
+            '-cpu', 'max',
+            '-smp', str(self.cpus),
+            '-m', f'{self.memory}G',
+            '-nodefaults', '-no-user-config', '-nographic',
+            '-serial', 'unix:console.sock,server=on,wait=off',
+            '-qmp', 'unix:qmp.sock,server=on,wait=off',
+            '-L', '/ix/realm/system/share/qemu',
+            '-kernel', 'linux', '-initrd', 'initrd', '-append', append,
+            '-drive', 'if=none,id=iso,media=cdrom,readonly=on,file=live.iso',
+            '-device', 'ide-cd,drive=iso,bus=ide.0',
+            '-drive', f'if=none,id=home,format=raw,discard=unmap,file.driver=nbd,'
+                      f'file.server.type=unix,file.server.path=/var/run/dev_disk/nbd.sock,file.export={self.vm}',
+            '-device', 'virtio-blk-pci,drive=home,serial=home',
+            '-netdev', 'user,id=net0',
+            '-device', 'virtio-net-pci,netdev=net0,romfile=',
+            '-device', 'virtio-rng-pci',
+            '-fw_cfg', 'name=opt/lab/mesh,file=' + os.path.realpath('/ix/realm/system/bin/mesh'),
+            *self.credential('mesh.cred', 'mesh.json', mesh),
+            *self.credential('unit.cred', 'systemd.extra-unit.lab-mesh.service', DEV_VM_MESH_UNIT),
+            '-run-with', 'user=dev_vm',
+            PATH='/bin',
+        )
 
 
 class S3Manager:
@@ -2756,6 +2908,15 @@ class ClusterMap:
                 }],
             }
 
+        # The dev machines, keyed like the labs: /mesh/dev<N>.key, pub in /mesh/registry.
+        for n in (1, 2, 3):
+            mesh_hosts[f'dev{n}'] = {
+                'name': f'dev{n}',
+                'index': 31 + n,
+                'intip': f'192.168.100.{31 + n}',
+                'endpoint': [],
+            }
+
         for index, line in enumerate(MESH_HOSTS, 64):
             host, pub = line.split(' ', 1)
             mesh_hosts[host] = {
@@ -3186,6 +3347,18 @@ class ClusterMap:
                 'serv': S3Manager(p['s3_manager'], f"127.0.0.1:{p['s3_front']}"),
             }
 
+            dev = 'dev' + hn[-1]
+
+            yield {
+                'host': hn,
+                'serv': DevDisk(dev, f"http://127.0.0.1:{p['s3_front']}", p['dev_disk_metrics']),
+            }
+
+            yield {
+                'host': hn,
+                'serv': DevVm(dev, mesh_hosts, f"127.0.0.1:{p['s3_front']}", 32, 64),
+            }
+
             yield {
                 'host': hn,
                 'serv': MolotCache(f"0.0.0.0:{p['molot_cache']}", f"http://127.0.0.1:{p['s3_front']}", 'molot'),
@@ -3587,6 +3760,7 @@ def do(code):
         's3_cell_2_metrics': 8098,
         's3_front_metrics': 8099,
         's3_repair_metrics': 8100,
+        'dev_disk_metrics': 8101,
         'lab_proxy': 443,
         'lab_proxy_http': 80,
     }
@@ -3626,6 +3800,8 @@ def do(code):
         's3_repair': 2022,
         's3_web': 2023,
         's3_manager': 2024,
+        'dev_vm': 2028,
+        'dev_disk': 2029,
         'samogon_bot': 2004,
         'job_scheduler': 2005,
         'secrets_v2': 1028,
