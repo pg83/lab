@@ -881,7 +881,9 @@ class DevVm:
             '-kernel', 'linux', '-initrd', 'initrd', '-append', append,
             '-drive', 'if=none,id=iso,media=cdrom,readonly=on,file=live.iso',
             '-device', 'ide-cd,drive=iso,bus=ide.0',
-            '-drive', f'if=none,id=home,format=raw,discard=unmap,file.driver=nbd,'
+            # s3_nbd restarts with every release of s3, committing what it
+            # holds on the way out: the guest's requests wait for it.
+            '-drive', f'if=none,id=home,format=raw,discard=unmap,file.driver=nbd,file.reconnect-delay=300,'
                       f'file.server.type=unix,file.server.path=/var/run/s3_nbd/nbd.sock,file.export={self.vm}',
             '-device', 'virtio-blk-pci,drive=home,serial=home',
             '-netdev', 'user,id=net0',
