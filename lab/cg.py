@@ -753,7 +753,7 @@ RestartSec=5
 '''
 
 
-class DevDisk:
+class S3Nbd:
     # /home of the dev machine: a block device over the vm bucket. Writes
     # live in memory and are committed every 10 s; a crash of the host
     # loses those seconds, never the filesystem.
@@ -763,7 +763,7 @@ class DevDisk:
         self.metrics = metrics
 
     def name(self):
-        return 'dev_disk'
+        return 's3_nbd'
 
     def prom_port(self):
         return self.metrics
@@ -811,6 +811,7 @@ class DevVm:
     def pkgs(self):
         yield {'pkg': 'bin/qemu/11/1'}
         yield {'pkg': 'aux/seabios'}
+        yield {'pkg': 'aux/qemu/roms'}
         yield {'pkg': 'bin/mesh'}
 
     def fetch(self, key):
@@ -827,6 +828,7 @@ class DevVm:
         os.rename(key + '.tmp', key)
 
     def credential(self, path, name, data):
+        # path is a memfd: the mesh key never touches a disk.
         with open(path, 'w') as f:
             f.write(f'io.systemd.credential.binary:{name}=' + base64.b64encode(data.encode()).decode())
 
@@ -852,6 +854,10 @@ class DevVm:
             'systemd.wants=lab-mesh.service',
         ])
 
+        with memfd('mesh.cred') as mesh_cred, memfd('unit.cred') as unit_cred:
+            self.exec_qemu(append, mesh, mesh_cred, unit_cred)
+
+    def exec_qemu(self, append, mesh, mesh_cred, unit_cred):
         exec_into(
             'qemu-system-x86_64',
             '-name', self.vm,
@@ -868,14 +874,14 @@ class DevVm:
             '-drive', 'if=none,id=iso,media=cdrom,readonly=on,file=live.iso',
             '-device', 'ide-cd,drive=iso,bus=ide.0',
             '-drive', f'if=none,id=home,format=raw,discard=unmap,file.driver=nbd,'
-                      f'file.server.type=unix,file.server.path=/var/run/dev_disk/nbd.sock,file.export={self.vm}',
+                      f'file.server.type=unix,file.server.path=/var/run/s3_nbd/nbd.sock,file.export={self.vm}',
             '-device', 'virtio-blk-pci,drive=home,serial=home',
             '-netdev', 'user,id=net0',
             '-device', 'virtio-net-pci,netdev=net0,romfile=',
             '-device', 'virtio-rng-pci',
             '-fw_cfg', 'name=opt/lab/mesh,file=' + os.path.realpath('/ix/realm/system/bin/mesh'),
-            *self.credential('mesh.cred', 'mesh.json', mesh),
-            *self.credential('unit.cred', 'systemd.extra-unit.lab-mesh.service', DEV_VM_MESH_UNIT),
+            *self.credential(mesh_cred, 'mesh.json', mesh),
+            *self.credential(unit_cred, 'systemd.extra-unit.lab-mesh.service', DEV_VM_MESH_UNIT),
             '-run-with', 'user=dev_vm',
             PATH='/bin',
         )
@@ -3351,7 +3357,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': DevDisk(dev, f"http://127.0.0.1:{p['s3_front']}", p['dev_disk_metrics']),
+                'serv': S3Nbd(dev, f"http://127.0.0.1:{p['s3_front']}", p['s3_nbd_metrics']),
             }
 
             yield {
@@ -3760,7 +3766,7 @@ def do(code):
         's3_cell_2_metrics': 8098,
         's3_front_metrics': 8099,
         's3_repair_metrics': 8100,
-        'dev_disk_metrics': 8101,
+        's3_nbd_metrics': 8101,
         'lab_proxy': 443,
         'lab_proxy_http': 80,
     }
@@ -3801,7 +3807,7 @@ def do(code):
         's3_web': 2023,
         's3_manager': 2024,
         'dev_vm': 2028,
-        'dev_disk': 2029,
+        's3_nbd': 2029,
         'samogon_bot': 2004,
         'job_scheduler': 2005,
         'secrets_v2': 1028,
