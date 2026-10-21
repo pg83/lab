@@ -756,8 +756,9 @@ RestartSec=5
 
 class S3Nbd:
     # /home of the dev machine: a block device over the vm bucket. Writes
-    # live in memory and are committed every 10 s; a crash of the host
-    # loses those seconds, never the filesystem.
+    # live in memory and are committed every 10 s; a restart loses those
+    # seconds. The socket gets a new name every start: a qemu of the old
+    # process cannot reconnect to a disk older than what its guest holds.
     def __init__(self, disk, endpoint, metrics):
         self.disk = disk
         self.endpoint = endpoint
@@ -773,8 +774,12 @@ class S3Nbd:
         yield {'pkg': 'bin/s3/store'}
 
     def run(self):
+        for name in os.listdir('.'):
+            if name.endswith('.sock'):
+                os.unlink(name)
+
         exec_into('s3', 'nbd', '-debug', '-endpoint', self.endpoint, '-bucket', 'vm', '-disk', self.disk,
-                  '-size', '4T', '-socket', os.path.join(os.getcwd(), 'nbd.sock'),
+                  '-size', '4T', '-socket', os.path.join(os.getcwd(), f'nbd-{os.urandom(8).hex()}.sock'),
                   '-metrics', f'127.0.0.1:{self.metrics}', PATH='/bin')
 
 
@@ -828,6 +833,14 @@ class DevVm:
 
         os.rename(key + '.tmp', key)
 
+    def nbd_socket(self):
+        names = [n for n in os.listdir('/var/run/s3_nbd') if n.endswith('.sock')]
+
+        if len(names) != 1:
+            raise RuntimeError(f's3_nbd sockets: {names}')
+
+        return '/var/run/s3_nbd/' + names[0]
+
     def credential(self, path, name, data):
         # path is a memfd: the mesh key never touches a disk.
         with open(path, 'w') as f:
@@ -858,7 +871,10 @@ class DevVm:
             'console=ttyS0',
             'systemd.unit=multi-user.target',
             'enforcing=0',
-            'systemd.mount-extra=LABEL=home:/home:nilfs2:discard,nofail',
+            # The disk going away (s3_nbd restarted) is a panic, and the
+            # panic a fresh boot from what was committed.
+            'systemd.mount-extra=LABEL=home:/home:nilfs2:discard,errors=panic,nofail',
+            'panic=1',
             'systemd.wants=lab-mesh.service',
         ])
 
@@ -874,17 +890,15 @@ class DevVm:
             '-cpu', 'max',
             '-smp', str(self.cpus),
             '-m', f'{self.memory}G',
-            '-nodefaults', '-no-user-config', '-nographic',
+            '-nodefaults', '-no-user-config', '-nographic', '-no-reboot',
             '-serial', 'unix:console.sock,server=on,wait=off',
             '-qmp', 'unix:qmp.sock,server=on,wait=off',
             '-L', '/ix/realm/system/share/qemu',
             '-kernel', 'linux', '-initrd', 'initrd', '-append', append,
             '-drive', 'if=none,id=iso,media=cdrom,readonly=on,file=live.iso',
             '-device', 'ide-cd,drive=iso,bus=ide.0',
-            # s3_nbd restarts with every release of s3, committing what it
-            # holds on the way out: the guest's requests wait for it.
-            '-drive', f'if=none,id=home,format=raw,discard=unmap,file.driver=nbd,file.reconnect-delay=300,'
-                      f'file.server.type=unix,file.server.path=/var/run/s3_nbd/nbd.sock,file.export={self.vm}',
+            '-drive', f'if=none,id=home,format=raw,discard=unmap,file.driver=nbd,'
+                      f'file.server.type=unix,file.server.path={self.nbd_socket()},file.export={self.vm}',
             '-device', 'virtio-blk-pci,drive=home,serial=home',
             '-netdev', 'user,id=net0',
             '-device', 'virtio-net-pci,netdev=net0,romfile=',
