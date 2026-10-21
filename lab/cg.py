@@ -30,7 +30,7 @@ DISABLE_ALL = [
 
 DISABLE = {
     'lab1': DISABLE_ALL,
-    'lab2': DISABLE_ALL + ['etcd_2'],  # Move this member from Azerty to the reserved ADATA partition.
+    'lab2': DISABLE_ALL,
     'lab3': DISABLE_ALL,
 }
 
