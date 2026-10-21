@@ -5,7 +5,7 @@ https://github.com/pg83/wirez/archive/refs/tags/9.tar.gz
 {% endblock %}
 
 {% block go_sha %}
-ea7263771f613463b57666a89dda600fe5ac0eb3ed043c514a142fa30e4087b6
+3430df569270901031c9af0fcbc58a5f9835205219505cf1c31f26fdabb6bb40
 {% endblock %}
 
 {% block patch %}
