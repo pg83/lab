@@ -192,6 +192,9 @@ class Collector:
         self.listen = listen
         self.jobs = []
 
+    def name(self):
+        return 'collector'
+
     def prom_jobs(self):
         yield {
             'job_name': self.name(),
@@ -2603,8 +2606,25 @@ class Promtail:
             'pkg': 'bin/promtail',
         }
 
-    def prom_port(self):
-        return self.port
+    def prom_jobs(self):
+        yield {
+            'job_name': self.name(),
+            'static_configs': [{'targets': [f'localhost:{self.port}']}],
+            # Client metrics use host for the Loki URL. Preserve it separately:
+            # external_labels only fills missing labels, so otherwise all three
+            # hosts export the same localhost:8032 counter into the federator.
+            'metric_relabel_configs': [
+                {
+                    'source_labels': ['host'],
+                    'regex': '(.+)',
+                    'target_label': 'loki_host',
+                },
+                {
+                    'target_label': 'host',
+                    'replacement': self.me,
+                },
+            ],
+        }
 
     def config(self):
         scrape_configs = []
@@ -3910,12 +3930,16 @@ def do(code):
         hndl_by_host.append((host, hndl))
 
     # Populate Grafana's shared services list.
-    cluster_services.extend(sorted({h.name() for _, h in hndl_by_host}))
+    cluster_services.extend(sorted({
+        h.name() for host, h in hndl_by_host
+        if h.enabled() and h.name() not in DISABLE.get(host, [])
+    }))
 
     # Second pass: routing/registration needs by_addr fully populated.
     for host, hndl in hndl_by_host:
-        for job in hndl.prom_jobs():
-            by_addr[f'{host}:collector'].srv.jobs.append(job)
+        if hndl.enabled() and hndl.name() not in DISABLE.get(host, []):
+            for job in hndl.prom_jobs():
+                by_addr[f'{host}:collector'].srv.jobs.append(job)
 
         promtail_key = f'{host}:promtail'
 

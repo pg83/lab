@@ -20,6 +20,11 @@ https://github.com/grafana/grafana/archive/refs/tags/v{{self.version().strip()}}
 bin/go/lang/26
 {% endblock %}
 
+{% block go_build_flags %}
+{{super()}}
+-ldflags '-X main.version={{self.version().strip()}} -X main.buildBranch=v{{self.version().strip()}}'
+{% endblock %}
+
 {% block go_args %}
 {{super()}}
 refine_tools={{'bld/git' | b64e}}

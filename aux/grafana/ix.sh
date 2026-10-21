@@ -4,6 +4,8 @@
 mkdir -p ${out}/share/grafana-provisioning/datasources
 mkdir -p ${out}/share/grafana-provisioning/dashboards
 mkdir -p ${out}/share/grafana-provisioning/dashboards-json
+mkdir -p ${out}/share/grafana-provisioning/alerting
+mkdir -p ${out}/share/grafana-provisioning/plugins
 
 cat << EOF > ${out}/share/grafana-provisioning/datasources/datasources.yaml
 apiVersion: 1
@@ -41,10 +43,6 @@ EOF
 
 base64 -d << EOF > ${out}/share/grafana-provisioning/dashboards-json/cluster.json
 {% include 'cluster.json/base64' %}
-EOF
-
-base64 -d << EOF > ${out}/share/grafana-provisioning/dashboards-json/minio.json
-{% include 'minio.json/base64' %}
 EOF
 
 base64 -d << EOF > ${out}/share/grafana-provisioning/dashboards-json/loki.json
