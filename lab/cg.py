@@ -2001,6 +2001,8 @@ class Grafana:
             f'logs = {s}/logs\n'
             f'plugins = {s}/plugins\n'
             'provisioning = /ix/realm/system/share/grafana-provisioning\n'
+            '[plugins]\n'
+            'forward_host_env_vars = TMPDIR\n'
             '[analytics]\n'
             'reporting_enabled = false\n'
             'check_for_updates = false\n'
@@ -2018,7 +2020,7 @@ class Grafana:
         # Wipe state every boot; config is fully provisioning-managed.
         s = self.state_dir()
         shutil.rmtree(f'{s}/data', ignore_errors=True)
-        os.makedirs(f'{s}/data', exist_ok=True)
+        os.makedirs(f'{s}/data/tmp', exist_ok=True)
 
         # Resolve a leaf to bypass grafana's plugin-loader symlink-escape check.
         sample = os.path.realpath('/ix/realm/system/share/grafana/conf/sample.ini')
@@ -2032,6 +2034,8 @@ class Grafana:
                 'grafana', 'server', '--config', fn, '--homepath', homepath,
                 # Env var override; ini admin_password didn't stick on fresh DB.
                 GF_SECURITY_ADMIN_PASSWORD=GRAFANA_ADMIN_PASSWORD,
+                # The runner's shared log directory is owned by root.
+                TMPDIR=f'{s}/data/tmp',
             )
 
 

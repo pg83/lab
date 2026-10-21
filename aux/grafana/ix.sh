@@ -7,6 +7,11 @@ mkdir -p ${out}/share/grafana-provisioning/dashboards-json
 mkdir -p ${out}/share/grafana-provisioning/alerting
 mkdir -p ${out}/share/grafana-provisioning/plugins
 
+# Realm assembly keeps files, not empty directories.
+for section in alerting plugins; do
+    echo 'apiVersion: 1' > ${out}/share/grafana-provisioning/${section}/empty.yaml
+done
+
 cat << EOF > ${out}/share/grafana-provisioning/datasources/datasources.yaml
 apiVersion: 1
 datasources:
