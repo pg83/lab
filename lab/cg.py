@@ -28,12 +28,10 @@ DISABLE_ALL = [
     'co2_mon',  # USB HID device absent; crash-loops with "hid_open: error"
 ]
 
-# MinIO is retired: everything reads and writes our s3 now, and lab2's
-# MinIO disks become s3 cell disks. It cannot come back.
 DISABLE = {
-    'lab1': DISABLE_ALL + ['minio', 'minio_console'],
-    'lab2': DISABLE_ALL + ['minio', 'minio_console'],
-    'lab3': DISABLE_ALL + ['minio', 'minio_console'],
+    'lab1': DISABLE_ALL,
+    'lab2': DISABLE_ALL,
+    'lab3': DISABLE_ALL,
 }
 
 # Allow-list for SamogonBot. Empty → crash-loop (no world-writable bot).
@@ -951,155 +949,6 @@ class S3Manager:
             BUCKET_LOOKUP='Path',
             PUBLIC_URL='https://s3.lab.mesh/{bucket}/{key}',
         )
-
-
-MINIO_SCRIPT = '''
-set -xue
-
-# SMR drives (lab2) sit behind bcache: an SSD partition per drive, writeback,
-# so fsync-heavy small writes never wait for the platter. The xfs label lives
-# on /dev/bcacheN, which exists only once both halves of a pair are
-# registered. There is no udev here, so register everything by hand; devices
-# without a bcache superblock fail with EINVAL and are skipped. Registration
-# is asynchronous, hence the mount retries below.
-for d in /dev/sd? /dev/sd?[0-9]; do
-    echo $d > /sys/fs/bcache/register 2>/dev/null || true
-done
-
-for b in /sys/block/bcache*/bcache; do
-    [ -e $b ] || continue
-    echo writeback > $b/cache_mode
-    echo 0 > $b/sequential_cutoff
-    # keep dirty data on the SSD and trickle it back: a full-speed writeback
-    # queues dozens of writes on the shingled drive, and bcache forwards
-    # every fsync flush behind that queue, which once took over 30 s and
-    # made minio mark the drive faulty
-    echo 10 > $b/writeback_percent
-    # with no volatile cache on the backing drive the block layer drops
-    # those flushes altogether; the drive's own media cache is persistent
-    for f in /sys/block/$(cat $b/backing_dev_name)/device/scsi_disk/*/cache_type; do
-        [ -e $f ] && echo "write through" > $f
-    done
-done
-
-# never send IO past the cache to the SMR drive because the SSD looked slow
-for c in /sys/fs/bcache/*/congested_read_threshold_us /sys/fs/bcache/*/congested_write_threshold_us; do
-    [ -e $c ] && echo 0 > $c
-done
-
-for n in 1 2 3; do
-    mkdir -p /var/mnt/minio/$n
-
-    # the type comes from the device: xfs everywhere, nilfs2 on lab2's third drive
-    for i in $(seq 30); do
-        mount LABEL=MINIO_$n /var/mnt/minio/$n && break
-        sleep 1
-    done
-
-    # never let minio run on the root disk because a label did not show up
-    grep -q " /var/mnt/minio/$n " /proc/mounts
-
-    mkdir -p /var/mnt/minio/$n/data
-    # a freshly made filesystem is root-owned; minio runs as its own user
-    chown minio:minio /var/mnt/minio/$n/data
-done
-
-# 9 drives x parallel gorn uploads exhaust the inherited 4096 hard limit.
-ulimit -n 65536
-
-exec su-exec minio minio server --address {ipv4}:{port} {cmap}
-'''
-
-
-class MinIO:
-    def __init__(self, ipv4, port, cmap):
-        self.v = MINIO_SCRIPT
-        self.ipv4 = ipv4
-        self.port = port
-        self.cmap = cmap
-        self.script = MINIO_SCRIPT
-
-    @property
-    def addr(self):
-        return f'{self.ipv4}:{self.port}'
-
-    def name(self):
-        return 'minio'
-
-    def users(self):
-        return ['root', 'minio']
-
-    def pkgs(self):
-        yield {
-            'pkg': 'bin/minio/daemon',
-        }
-
-        yield {
-            'pkg': 'bin/su/exec',
-        }
-
-    def run(self):
-        s = self.script
-
-        s = s.replace('{port}', str(self.port))
-        s = s.replace('{cmap}', self.cmap)
-        s = s.replace('{ipv4}', self.ipv4)
-
-        with memfd('script') as ss:
-            with open(ss, 'w') as f:
-                f.write(s)
-
-            args = [
-                '/bin/unshare', '-m',
-                '/bin/sh', ss
-            ]
-
-            kwargs = {
-                'MINIO_ROOT_USER': get_key('/s3/user').decode().strip(),
-                'MINIO_ROOT_PASSWORD': get_key('/s3/password').decode().strip(),
-                'MINIO_BROWSER': 'off',
-                'MINIO_PROMETHEUS_AUTH_TYPE': 'public',
-                # a replaced drive is rebuilt by GOMAXPROCS/4 workers by
-                # default; the rebuild is bound by xl.meta reads from the
-                # other drives, so give it more in flight.
-                '_MINIO_HEAL_WORKERS': '32',
-            }
-
-            exec_into(*args, **kwargs)
-
-    def prom_jobs(self):
-        yield {
-            'job_name': self.name(),
-            'metrics_path': '/minio/v2/metrics/cluster',
-            'static_configs': [{'targets': [self.addr]}],
-        }
-
-
-class MinioConsole:
-    def __init__(self, host, port, server):
-        self.host = host
-        self.port = port
-        self.server = server
-
-    def pkgs(self):
-        yield {
-            'pkg': 'bin/minio/console',
-        }
-
-    def proxies(self):
-        yield {'name': 'minio', 'port': self.port}
-
-    def run(self):
-        args = [
-            'minio-console',
-            'server',
-            '--host',
-            self.host,
-            '--port',
-            self.port,
-        ]
-
-        exec_into(*args, CONSOLE_MINIO_SERVER=self.server)
 
 
 DB_PREPARE = '''
@@ -3056,27 +2905,6 @@ class ClusterMap:
                 ),
             }
 
-        for hn in ['lab1', 'lab2', 'lab3']:
-            h = self.conf['by_host'][hn]
-            mesh = h['mesh']
-            mio_cmap = 'http://lab{1...3}.gofra:' + str(p['minio']) + '/var/mnt/minio/{1...3}/data'
-
-            minio = MinIO(h['gofra']['ip'], p['minio'], mio_cmap)
-
-            yield {
-                'host': hn,
-                'serv': minio,
-            }
-
-            mc_host = '127.0.0.1'
-            mc_port = p['minio_web']
-            mc_serv = 'http://' + minio.addr
-
-            yield {
-                'host': hn,
-                'serv': MinioConsole(mc_host, mc_port, mc_serv),
-            }
-
         for h in self.conf['hosts']:
             hn = h['hostname']
 
@@ -3772,8 +3600,6 @@ def do(code):
         'node_exporter': 8007,
         'collector': 8008,
         'ssh_3': 8011,
-        'minio': 8012,
-        'minio_web': 8013,
         'socks_proxy': 8015,
         'ssh_cz_tunnel': 8017,
         'ssh_jopa_tunnel': 8018,
@@ -3831,8 +3657,6 @@ def do(code):
         'i_perf': 1011,
         'i_perf_3': 1029,
         'mirror': 1016,
-        'minio': 1017,
-        'minio_console': 1018,
         'pf': 1019,
         'event_http': 1020,
         'event_dispatch': 1022,
