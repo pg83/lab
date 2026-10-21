@@ -799,7 +799,7 @@ class GuestMesh(Mesh):
 class DevVm:
     # qemu with KVM and user-mode networking: the host gets neither a tap
     # nor a route. The console and QMP are unix sockets here; mesh inside
-    # the guest is the way in.
+    # the guest is the way in, socks the way out.
     def __init__(self, vm, mesh_hosts, s3_front, cpus, memory):
         self.vm = vm
         self.mesh_hosts = mesh_hosts
@@ -819,6 +819,7 @@ class DevVm:
         yield {'pkg': 'aux/seabios'}
         yield {'pkg': 'aux/qemu/roms'}
         yield {'pkg': 'bin/mesh'}
+        yield {'pkg': 'bin/wirez'}
 
     def fetch(self, key):
         # Into the service directory, in RAM: a live system reads its image
@@ -841,12 +842,15 @@ class DevVm:
 
         return '/var/run/s3_nbd/' + names[0]
 
-    def credential(self, path, name, data):
-        # path is a memfd: the mesh key never touches a disk.
-        with open(path, 'w') as f:
-            f.write(f'io.systemd.credential.binary:{name}=' + base64.b64encode(data.encode()).decode())
+    def credential(self, slot, name, data):
+        # A memfd, so the mesh key never touches a disk, at a high descriptor:
+        # wirez gives the command 3..6 of its own.
+        fd = os.memfd_create(name, 0)
+        os.write(fd, f'io.systemd.credential.binary:{name}={base64.b64encode(data.encode()).decode()}'.encode())
+        os.dup2(fd, slot)
+        os.close(fd)
 
-        return ['-smbios', f'type=11,path={path}']
+        return ['-smbios', f'type=11,path=/proc/self/fd/{slot}']
 
     def run(self):
         if not os.path.exists('/dev/kvm'):
@@ -878,11 +882,11 @@ class DevVm:
             'systemd.wants=lab-mesh.service',
         ])
 
-        with memfd('mesh.cred') as mesh_cred, memfd('unit.cred') as unit_cred:
-            self.exec_qemu(append, mesh, mesh_cred, unit_cred)
-
-    def exec_qemu(self, append, mesh, mesh_cred, unit_cred):
+        # Under wirez: whatever the guest dials outside goes through the socks
+        # balancer, the labs' underlay and gofra direct (mesh), and the host's
+        # loopback is not the guest's 10.0.2.2 any more.
         exec_into(
+            'wirez', '-q', '-D', '127.0.0.1', '-F', '127.0.0.1:8015', '-B', '10.0.0.0/24', '-B', '192.168.103.0/24', '--',
             'qemu-system-x86_64',
             '-name', self.vm,
             '-machine', 'q35',
@@ -905,10 +909,11 @@ class DevVm:
             '-device', 'virtio-rng-pci',
             '-drive', 'if=none,id=mesh,format=raw,readonly=on,file=mesh.img',
             '-device', 'virtio-blk-pci,drive=mesh,serial=labmesh',
-            *self.credential(mesh_cred, 'mesh.json', mesh),
-            *self.credential(unit_cred, 'systemd.extra-unit.lab-mesh.service', DEV_VM_MESH_UNIT),
+            *self.credential(100, 'mesh.json', mesh),
+            *self.credential(101, 'systemd.extra-unit.lab-mesh.service', DEV_VM_MESH_UNIT),
             '-run-with', 'user=dev_vm',
             PATH='/bin',
+            TMPDIR=os.getcwd(),
         )
 
 
