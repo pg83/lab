@@ -36,6 +36,9 @@ jobs:
       - name: Artifact server
         run: python3 -m unittest tst.test_artifacts
 
+      - name: Monitoring
+        run: python3 -m unittest tst.test_monitoring tst.test_smart
+
       - name: Package unit tests
         run: |
           python3 -m unittest discover -s bin/job/scheduler/scripts -p 'test_*.py'

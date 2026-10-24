@@ -1,0 +1,697 @@
+{
+  "uid": "smart",
+  "title": "Диски — SMART",
+  "tags": [
+    "smart",
+    "disks",
+    "hardware"
+  ],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "graphTooltip": 1,
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "timezone": "",
+  "refresh": "1m",
+  "annotations": {
+    "list": []
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "host",
+        "label": "Узел",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prom"
+        },
+        "query": "label_values(smart_device_info, host)",
+        "definition": "label_values(smart_device_info, host)",
+        "refresh": 1,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      },
+      {
+        "name": "serial",
+        "label": "Серийный номер",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prom"
+        },
+        "query": "label_values(smart_device_info{host=~\"$host\"}, serial)",
+        "definition": "label_values(smart_device_info{host=~\"$host\"}, serial)",
+        "refresh": 1,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      }
+    ]
+  },
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "type": "text",
+      "title": "Как читать SMART",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 3
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "Опрос примерно раз в 17 минут. Сначала проверьте свежесть и успешность опроса. Постоянные ненулевые значения — накопленная история; рост требует внимания. Pending и Offline Uncorrectable могут описывать одни и те же сектора: их нельзя складывать. Графики секторов ниже относятся к HDD; сырые атрибуты SSD показаны отдельно, их смысл зависит от модели. История Prometheus начинается с подключения этого сбора."
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Возраст последнего опроса",
+      "description": "Если возраст больше 40 минут, значения SMART устарели. Отсутствие данных не означает исправность дисков.",
+      "gridPos": {
+        "x": 0,
+        "y": 3,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "targets": [
+        {
+          "expr": "time() - smart_collect_timestamp_seconds{host=~\"$host\"}",
+          "legendFormat": "{{host}}",
+          "refId": "A",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 2400
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Успешность чтения SMART",
+      "description": "1 — получены SMART и серийный номер; 0 — ошибка чтения или SMART недоступен. USB-носитель без SMART также даёт 0.",
+      "gridPos": {
+        "x": 12,
+        "y": 3,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "targets": [
+        {
+          "expr": "smart_device_scrape_success{host=~\"$host\",serial=~\"$serial\"}",
+          "legendFormat": "{{host}} / {{device}} / {{serial}}",
+          "refId": "A",
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Переназначенные сектора HDD",
+      "description": "",
+      "gridPos": {
+        "x": 0,
+        "y": 10,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "targets": [
+        {
+          "expr": "smart_ata_attribute_raw_value{host=~\"$host\",serial=~\"$serial\",disk_type=\"hdd\",attribute_id=\"5\"}",
+          "legendFormat": "{{host}} / {{device}} / {{serial}}",
+          "refId": "A",
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Переназначенные сектора HDD — рост от минимума за 24 ч",
+      "description": "Текущее значение минус минимум в доступной части последних 24 часов. Это не число уникальных новых дефектов: pending может уменьшаться. Полная история слева показывает и рост, и снижение. При первом опросе результат 0; это ещё не сутки наблюдений.",
+      "gridPos": {
+        "x": 12,
+        "y": 10,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "targets": [
+        {
+          "expr": "smart_ata_attribute_raw_value{host=~\"$host\",serial=~\"$serial\",disk_type=\"hdd\",attribute_id=\"5\"} - min_over_time(smart_ata_attribute_raw_value{host=~\"$host\",serial=~\"$serial\",disk_type=\"hdd\",attribute_id=\"5\"}[24h])",
+          "legendFormat": "{{host}} / {{device}} / {{serial}}",
+          "refId": "A",
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Pending-сектора HDD",
+      "description": "",
+      "gridPos": {
+        "x": 0,
+        "y": 17,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "targets": [
+        {
+          "expr": "smart_ata_attribute_raw_value{host=~\"$host\",serial=~\"$serial\",disk_type=\"hdd\",attribute_id=\"197\"}",
+          "legendFormat": "{{host}} / {{device}} / {{serial}}",
+          "refId": "A",
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Pending-сектора HDD — рост от минимума за 24 ч",
+      "description": "Текущее значение минус минимум в доступной части последних 24 часов. Это не число уникальных новых дефектов: pending может уменьшаться. Полная история слева показывает и рост, и снижение. При первом опросе результат 0; это ещё не сутки наблюдений.",
+      "gridPos": {
+        "x": 12,
+        "y": 17,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "targets": [
+        {
+          "expr": "smart_ata_attribute_raw_value{host=~\"$host\",serial=~\"$serial\",disk_type=\"hdd\",attribute_id=\"197\"} - min_over_time(smart_ata_attribute_raw_value{host=~\"$host\",serial=~\"$serial\",disk_type=\"hdd\",attribute_id=\"197\"}[24h])",
+          "legendFormat": "{{host}} / {{device}} / {{serial}}",
+          "refId": "A",
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Offline Uncorrectable HDD",
+      "description": "",
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "targets": [
+        {
+          "expr": "smart_ata_attribute_raw_value{host=~\"$host\",serial=~\"$serial\",disk_type=\"hdd\",attribute_id=\"198\"}",
+          "legendFormat": "{{host}} / {{device}} / {{serial}}",
+          "refId": "A",
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Offline Uncorrectable HDD — рост от минимума за 24 ч",
+      "description": "Текущее значение минус минимум в доступной части последних 24 часов. Это не число уникальных новых дефектов: pending может уменьшаться. Полная история слева показывает и рост, и снижение. При первом опросе результат 0; это ещё не сутки наблюдений.",
+      "gridPos": {
+        "x": 12,
+        "y": 24,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "targets": [
+        {
+          "expr": "smart_ata_attribute_raw_value{host=~\"$host\",serial=~\"$serial\",disk_type=\"hdd\",attribute_id=\"198\"} - min_over_time(smart_ata_attribute_raw_value{host=~\"$host\",serial=~\"$serial\",disk_type=\"hdd\",attribute_id=\"198\"}[24h])",
+          "legendFormat": "{{host}} / {{device}} / {{serial}}",
+          "refId": "A",
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Температура дисков",
+      "description": "",
+      "gridPos": {
+        "x": 0,
+        "y": 31,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "targets": [
+        {
+          "expr": "smart_device_temperature_celsius{host=~\"$host\",serial=~\"$serial\"}",
+          "legendFormat": "{{host}} / {{device}} / {{serial}}",
+          "refId": "A",
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "decimals": 0
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Общая оценка SMART",
+      "description": "1 — PASSED, 0 — FAILED. PASSED не отменяет pending и переназначенные сектора. Отсутствующие показания не заменяются нулём.",
+      "gridPos": {
+        "x": 12,
+        "y": 31,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "targets": [
+        {
+          "expr": "smart_device_health_passed{host=~\"$host\",serial=~\"$serial\"}",
+          "legendFormat": "{{host}} / {{device}} / {{serial}}",
+          "refId": "A",
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Ошибки SATA CRC",
+      "description": "Сырой атрибут 199. Рост может указывать на проблемы соединения; смысл зависит от модели.",
+      "gridPos": {
+        "x": 0,
+        "y": 38,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "targets": [
+        {
+          "expr": "smart_ata_attribute_raw_value{host=~\"$host\",serial=~\"$serial\",attribute_id=\"199\"}",
+          "legendFormat": "{{host}} / {{device}} / {{serial}}",
+          "refId": "A",
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "SSD — сырые атрибуты 5, 197, 198",
+      "description": "Не интерпретировать автоматически как число дефектных секторов: у SSD значения зависят от модели.",
+      "gridPos": {
+        "x": 12,
+        "y": 38,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "targets": [
+        {
+          "expr": "smart_ata_attribute_raw_value{host=~\"$host\",serial=~\"$serial\",disk_type=\"ssd\",attribute_id=~\"5|197|198\"}",
+          "legendFormat": "{{host}} / {{device}} / {{serial}} / {{attribute_id}} {{attribute_name}}",
+          "refId": "A",
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 14,
+      "type": "table",
+      "title": "Диски и серийные номера",
+      "description": "",
+      "gridPos": {
+        "x": 0,
+        "y": 45,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "targets": [
+        {
+          "expr": "smart_device_info{host=~\"$host\",serial=~\"$serial\"}",
+          "legendFormat": "{{host}} / {{device}} / {{serial}}",
+          "refId": "A",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "options": {
+        "showHeader": true
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value": true,
+              "__name__": true,
+              "instance": true,
+              "job": true
+            },
+            "indexByName": {
+              "host": 0,
+              "device": 1,
+              "serial": 2,
+              "model": 3,
+              "disk_type": 4
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Ошибки чтения файла метрик",
+      "description": "0 — node_exporter прочитал файл; 1 — ошибка формата или доступа.",
+      "gridPos": {
+        "x": 12,
+        "y": 45,
+        "w": 12,
+        "h": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "targets": [
+        {
+          "expr": "node_textfile_scrape_error{host=~\"$host\"}",
+          "legendFormat": "{{host}}",
+          "refId": "A",
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    }
+  ]
+}

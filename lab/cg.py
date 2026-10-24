@@ -171,7 +171,10 @@ class NodeExporter:
     def run(self):
         # Kernel 7.2 changed /proc/fs/xfs/stat and the xfs collector fails
         # every scrape; there are no xfs mounts left on the hosts anyway.
-        exec_into('node_exporter', f'--web.listen-address=127.0.0.1:{self.port}', '--no-collector.xfs')
+        textfiles = '/var/run/node_exporter/textfile'
+        os.makedirs(textfiles, exist_ok=True)
+        exec_into('node_exporter', f'--web.listen-address=127.0.0.1:{self.port}',
+                  '--no-collector.xfs', f'--collector.textfile.directory={textfiles}')
 
 
 def make_dirs(path, owner=None):

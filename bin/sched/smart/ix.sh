@@ -3,6 +3,6 @@
 {% block run_deps %}
 bin/sched(delay={{delay}})
 bin/sched/smart/scripts(delay={{delay}})
-bin/add/prefix
+bin/python
 bin/smart/mon/tools
 {% endblock %}
