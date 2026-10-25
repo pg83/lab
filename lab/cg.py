@@ -904,10 +904,12 @@ TimeoutStartSec=30min
         ])
 
         # Under wirez: whatever the guest dials outside goes through the jopa
-        # tunnel, the labs' underlay and gofra direct (mesh), and the host's
-        # loopback is not the guest's 10.0.2.2 any more.
+        # tunnel, the labs' underlay and gofra direct (mesh). The mirror's
+        # guest-visible address maps to this lab's loopback through wirez.
         exec_into(
-            'wirez', '-q', '-D', '127.0.0.1', '-F', '127.0.0.1:8018', '-B', '10.0.0.0/24', '-B', '192.168.103.0/24', '--',
+            'wirez', '-q', '-D', '127.0.0.1', '-F', '127.0.0.1:8018',
+            '-B', '10.0.0.0/24', '-B', '192.168.103.0/24',
+            '-L', '10.1.1.2:8102:127.0.0.1:8102/tcp', '--',
             'qemu-system-x86_64',
             '-name', self.vm,
             '-machine', 'q35',
@@ -1612,6 +1614,10 @@ class FedoraMirror:
                 # Publish the snapshot before the mutable discovery document.
                 self.put(f'{repo}/{arch}/snapshots/{sha}/metalink.xml', io.BytesIO(data), 'application/xml')
                 self.put(key, io.BytesIO(data), 'application/xml')
+        # Librepo expects unprefixed Metalink elements and the mm prefix for
+        # MirrorManager extensions, rather than ElementTree's ns0/ns1 names.
+        ET.register_namespace('', self.ns['m'])
+        ET.register_namespace('mm', 'http://fedorahosted.org/mirrormanager')
         root, file, sha, _ = self.metalink_info(data)
         resources = file.find('m:resources', self.ns)
         resources.clear()
@@ -3547,7 +3553,7 @@ class ClusterMap:
 
             yield {
                 'host': hn,
-                'serv': FedoraMirror(p['fedora_mirror'], f"http://{h['ip']}:{p['fedora_mirror']}",
+                'serv': FedoraMirror(p['fedora_mirror'], f"http://10.1.1.2:{p['fedora_mirror']}",
                                      f"http://127.0.0.1:{p['s3_front']}", f"127.0.0.1:{p['socks_proxy']}"),
             }
 

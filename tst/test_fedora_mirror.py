@@ -131,6 +131,9 @@ class MirrorTests(unittest.TestCase):
     def discover(self):
         status, _, body = self.request('/metalink?repo=fedora-44&arch=x86_64&countme=1')
         self.assertEqual(status, 200)
+        # Librepo's Metalink parser does not recognize ns0:file/ns0:url.
+        self.assertIn(b'<file name="repomd.xml">', body)
+        self.assertNotIn(b'ns0:', body)
         root = ET.fromstring(body)
         urls = [e.text for e in root.findall('.//m:url', self.app.ns)]
         self.assertEqual(urls, [self.app.public_url + self.path('repodata/repomd.xml')])
