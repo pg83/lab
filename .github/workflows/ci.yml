@@ -36,6 +36,9 @@ jobs:
       - name: Artifact server
         run: python3 -m unittest tst.test_artifacts
 
+      - name: Fedora mirror
+        run: python3 -m unittest tst.test_fedora_mirror
+
       - name: Monitoring
         run: python3 -m unittest tst.test_monitoring tst.test_smart
 

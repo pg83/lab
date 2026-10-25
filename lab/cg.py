@@ -649,7 +649,7 @@ class S3Cell:
 # none. A new consumer of s3 gets its bucket here first. pg holds personal
 # artifacts that must stay inside our networks (the arc client ix fetches
 # through s3.lab.mesh); nothing mirrors it.
-S3_BUCKETS = ('cas', 'cix', 'etcd', 'geesefs', 'gorn', 'iso', 'logovo', 'loki', 'mirror', 'molot', 'ogorod', 'pg', 'repology', 'samogon', 'view', 'vm')
+S3_BUCKETS = ('cas', 'cix', 'etcd', 'fedora', 'geesefs', 'gorn', 'iso', 'logovo', 'loki', 'mirror', 'molot', 'ogorod', 'pg', 'repology', 'samogon', 'view', 'vm')
 
 
 class S3Service:
@@ -1497,6 +1497,283 @@ class Artifacts:
             PATH='/bin', HOME=os.getcwd(), TMPDIR=os.getcwd(),
             MC_HOST_view=f'{scheme}://{key}:{secret}@{host}',
         )
+
+
+class FedoraMirror:
+    # Each host is independent. S3 holds complete files; concurrent misses
+    # may download and PUT the same file twice. Only metalink.xml expires.
+    # Snapshot URLs pin repomd.xml while RPMs and hashed repodata are shared.
+    ns = {'m': 'http://www.metalinker.org/'}
+    metadata_ttl = 600
+
+    def __init__(self, port, public_url, s3_endpoint, socks):
+        self.port = port
+        self.public_url = public_url.rstrip('/')
+        self.s3_endpoint = s3_endpoint.rstrip('/') + '/fedora'
+        self.socks = socks
+
+    def pkgs(self):
+        yield {'pkg': 'bin/curl'}
+
+    def prom_port(self):
+        return self.port
+
+    def s3(self, key, method='GET', data=None, headers=None):
+        from urllib.parse import quote
+        req = ur.Request(self.s3_endpoint + '/' + quote(key, safe='/'),
+                         data=data, headers=headers or {}, method=method)
+        try:
+            return ur.build_opener(ur.ProxyHandler({})).open(req, timeout=120)
+        except ue.HTTPError as e:
+            if e.code == 404 and method in ('GET', 'HEAD'):
+                e.close()
+                return None
+            raise
+
+    def put(self, key, file, content_type='application/octet-stream'):
+        file.seek(0, os.SEEK_END)
+        size = file.tell()
+        file.seek(0)
+        with self.s3(key, 'PUT', file, {'Content-Length': str(size), 'Content-Type': content_type}):
+            pass
+
+    def download(self, urls, file, checksum=None, validate=None):
+        # Try random mirrors directly first, then the shared SOCKS balancer.
+        # Explicit proxy options also override any inherited proxy settings.
+        urls = random.sample(list(dict.fromkeys(urls)), min(3, len(set(urls))))
+        for route in ('direct', 'proxy'):
+            for url in urls:
+                file.seek(0)
+                file.truncate()
+                proxy = ['--proxy', '', '--noproxy', '*'] if route == 'direct' else [
+                    '--proxy', 'socks5h://' + self.socks, '--noproxy', '']
+                cmd = ['curl', '--disable', '--fail', '--silent', '--show-error', '--location',
+                       '--proto', '=https', '--proto-redir', '=https',
+                       '--connect-timeout', '5', '--max-time', '120',
+                       '--speed-time', '15', '--speed-limit', '1024', *proxy, url]
+                try:
+                    res = subprocess.run(cmd, stdout=file, stderr=subprocess.PIPE, timeout=125)
+                except subprocess.TimeoutExpired:
+                    res = subprocess.CompletedProcess(cmd, 28, stderr=b'download timeout')
+                good = res.returncode == 0
+                if good and checksum:
+                    file.seek(0)
+                    good = hashlib.file_digest(file, checksum[0]).hexdigest() == checksum[1]
+                if good and validate:
+                    file.seek(0)
+                    try:
+                        validate(file.read())
+                    except (ValueError, SyntaxError):
+                        good = False
+                self.counts[f'downloads_{route}_total'] += 1
+                if good:
+                    print(f'fetch {route} {url} bytes={file.seek(0, os.SEEK_END)}', flush=True)
+                    file.seek(0)
+                    return
+                self.counts['download_failures_total'] += 1
+                print(f'fetch failed {route} {url}: {res.stderr.decode(errors="replace").strip() or "checksum mismatch"}', flush=True)
+        raise OSError('all mirrors failed, directly and through SOCKS')
+
+    def metalink_info(self, data):
+        import xml.etree.ElementTree as ET
+        from urllib.parse import urlsplit
+        root = ET.fromstring(data)
+        file = root.find('.//m:file[@name="repomd.xml"]', self.ns)
+        if file is None:
+            raise ValueError('metalink has no repomd.xml')
+        sha = file.findtext('m:verification/m:hash[@type="sha256"]', namespaces=self.ns)
+        urls = [u.text for u in file.findall('m:resources/m:url', self.ns)
+                if u.text and urlsplit(u.text).scheme == 'https'
+                and urlsplit(u.text).path.endswith('/repodata/repomd.xml')]
+        if not sha or not re.fullmatch('[0-9a-f]{64}', sha) or not urls:
+            raise ValueError('metalink has no SHA256 or HTTPS mirrors')
+        return root, file, sha, urls
+
+    def metalink(self, repo, arch):
+        import tempfile
+        import xml.etree.ElementTree as ET
+        from email.utils import parsedate_to_datetime
+        from urllib.parse import urlencode
+        key = f'{repo}/{arch}/metalink.xml'
+        data = None
+        cached = self.s3(key)
+        if cached is not None:
+            with cached:
+                age = time.time() - parsedate_to_datetime(cached.headers['Last-Modified']).timestamp()
+                if age < self.metadata_ttl:
+                    data = cached.read()
+        if data is None:
+            url = 'https://mirrors.fedoraproject.org/metalink?' + urlencode({
+                'repo': repo, 'arch': arch, 'protocol': 'https'})
+            with tempfile.TemporaryFile() as tmp:
+                self.download([url], tmp, validate=self.metalink_info)
+                data = tmp.read()
+                _, _, sha, _ = self.metalink_info(data)
+                # Publish the snapshot before the mutable discovery document.
+                self.put(f'{repo}/{arch}/snapshots/{sha}/metalink.xml', io.BytesIO(data), 'application/xml')
+                self.put(key, io.BytesIO(data), 'application/xml')
+        root, file, sha, _ = self.metalink_info(data)
+        resources = file.find('m:resources', self.ns)
+        resources.clear()
+        ET.SubElement(resources, '{' + self.ns['m'] + '}url',
+                      {'type': 'http', 'protocol': 'http', 'preference': '100'}).text = (
+            f'{self.public_url}/{repo}/{arch}/{sha}/repodata/repomd.xml')
+        # Alternate repomd versions must not send clients to external mirrors.
+        for child in list(file):
+            if child.tag.endswith('}alternates'):
+                file.remove(child)
+        return ET.tostring(root, encoding='utf-8', xml_declaration=True)
+
+    def file_key(self, repo, arch, sha, path):
+        if path == 'repodata/repomd.xml':
+            return f'{repo}/{arch}/snapshots/{sha}/repomd.xml'
+        return f'{repo}/{arch}/files/{path}'
+
+    def fill(self, repo, arch, sha, path):
+        import tempfile
+        import xml.etree.ElementTree as ET
+        from urllib.parse import quote
+        snapshot = self.s3(f'{repo}/{arch}/snapshots/{sha}/metalink.xml')
+        if snapshot is None:
+            raise FileNotFoundError('unknown repository snapshot')
+        with snapshot:
+            _, _, expected, urls = self.metalink_info(snapshot.read())
+        if expected != sha:
+            raise ValueError('snapshot checksum mismatch')
+        checksum = None
+        if path == 'repodata/repomd.xml':
+            checksum = ('sha256', sha)
+        elif path.startswith('repodata/'):
+            repomd_key = self.file_key(repo, arch, sha, 'repodata/repomd.xml')
+            repomd = self.s3(repomd_key)
+            if repomd is None:
+                self.fill(repo, arch, sha, 'repodata/repomd.xml')
+                repomd = self.s3(repomd_key)
+            with repomd:
+                root = ET.fromstring(repomd.read())
+            ns = {'r': 'http://linux.duke.edu/metadata/repo'}
+            for entry in root.findall('r:data', ns):
+                location = entry.find('r:location', ns)
+                if location is not None and location.get('href') == path:
+                    check = entry.find('r:checksum', ns)
+                    checksum = (check.get('type'), check.text)
+                    break
+            if checksum is None:
+                raise FileNotFoundError('file is not in this repomd.xml')
+        # DNF checks RPM checksums and Fedora signatures itself. Metadata is
+        # checked here too, anchored in Fedora's HTTPS metalink.
+        urls = [url.removesuffix('repodata/repomd.xml') + quote(path, safe='/') for url in urls]
+        with tempfile.TemporaryFile() as tmp:
+            self.download(urls, tmp, checksum)
+            self.put(self.file_key(repo, arch, sha, path), tmp)
+        self.counts['cache_fills_total'] += 1
+
+    def server(self, bind='0.0.0.0'):
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+        from urllib.parse import parse_qs, unquote, urlsplit
+        self.counts = collections.Counter()
+        app = self
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_HEAD(self):
+                self.respond(True)
+
+            def do_GET(self):
+                self.respond(False)
+
+            def end_headers(self):
+                self.started = True
+                super().end_headers()
+
+            def respond(self, head):
+                self.started = False
+                try:
+                    self.serve(head)
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
+                except Exception as e:
+                    app.counts['errors_total'] += 1
+                    self.log_error('%s', e)
+                    if isinstance(e, ue.HTTPError):
+                        e.close()
+                    if self.started:
+                        self.close_connection = True
+                    else:
+                        code = 404 if isinstance(e, FileNotFoundError) else 503
+                        if isinstance(e, ue.HTTPError) and e.code == 416:
+                            code = 416
+                        self.send_error(code)
+
+            def bytes(self, data, content_type, head):
+                self.send_response(200)
+                self.send_header('Content-Type', content_type)
+                self.send_header('Content-Length', str(len(data)))
+                self.end_headers()
+                if not head:
+                    self.wfile.write(data)
+
+            def serve(self, head):
+                url = urlsplit(self.path)
+                if url.path == '/healthz':
+                    return self.bytes(b'ok\n', 'text/plain', head)
+                if url.path == '/metrics':
+                    names = ('cache_hits_total', 'cache_misses_total', 'cache_fills_total',
+                             'downloads_direct_total', 'downloads_proxy_total',
+                             'download_failures_total', 'errors_total')
+                    data = ''.join(f'fedora_mirror_{k} {app.counts[k]}\n' for k in names).encode()
+                    return self.bytes(data, 'text/plain; version=0.0.4', head)
+                if url.path == '/metalink':
+                    query = parse_qs(url.query)
+                    repo = query.get('repo', [''])[0]
+                    arch = query.get('arch', [''])[0]
+                else:
+                    parts = unquote(url.path).lstrip('/').split('/', 3)
+                    if len(parts) != 4:
+                        raise FileNotFoundError('expected repo/arch/snapshot/path')
+                    repo, arch, sha, path = parts
+                    if (not re.fullmatch('[0-9a-f]{64}', sha)
+                            or not path.startswith(('Packages/', 'repodata/'))
+                            or any(p in ('', '.', '..') for p in path.split('/'))
+                            or '\\' in path or any(ord(c) < 32 for c in path)):
+                        raise FileNotFoundError('invalid repository path')
+                if (not re.fullmatch(r'(fedora|updates)-[a-zA-Z0-9_.-]+', repo)
+                        or not re.fullmatch(r'[a-zA-Z0-9_]+', arch)):
+                    raise FileNotFoundError('invalid repository or architecture')
+                if url.path == '/metalink':
+                    return self.bytes(app.metalink(repo, arch), 'application/metalink+xml', head)
+                key = app.file_key(repo, arch, sha, path)
+                # The S3 frontend supports single byte ranges. A multi-range
+                # request gets the full representation, as permitted by HTTP.
+                headers = {}
+                if 'Range' in self.headers and ',' not in self.headers['Range'] and 'If-Range' not in self.headers:
+                    headers['Range'] = self.headers['Range']
+                cached = app.s3(key, 'HEAD' if head else 'GET', headers=headers)
+                hit = cached is not None
+                if not hit:
+                    app.counts['cache_misses_total'] += 1
+                    app.fill(repo, arch, sha, path)
+                    cached = app.s3(key, 'HEAD' if head else 'GET', headers=headers)
+                else:
+                    app.counts['cache_hits_total'] += 1
+                with cached:
+                    if self.headers.get('If-None-Match') == cached.headers.get('ETag'):
+                        self.send_response(304)
+                        self.send_header('ETag', cached.headers['ETag'])
+                        return self.end_headers()
+                    self.send_response(cached.status)
+                    for name in ('Content-Type', 'Content-Length', 'Content-Range', 'ETag', 'Last-Modified', 'Accept-Ranges'):
+                        if name in cached.headers:
+                            self.send_header(name, cached.headers[name])
+                    self.send_header('X-Cache', 'HIT' if hit else 'MISS')
+                    self.end_headers()
+                    if not head:
+                        shutil.copyfileobj(cached, self.wfile, 1 << 20)
+
+        return ThreadingHTTPServer((bind, self.port), Handler)
+
+    def run(self):
+        with self.server() as server:
+            server.serve_forever()
 
 
 class RepologyBadge:
@@ -3270,6 +3547,12 @@ class ClusterMap:
 
             yield {
                 'host': hn,
+                'serv': FedoraMirror(p['fedora_mirror'], f"http://{h['ip']}:{p['fedora_mirror']}",
+                                     f"http://127.0.0.1:{p['s3_front']}", f"127.0.0.1:{p['socks_proxy']}"),
+            }
+
+            yield {
+                'host': hn,
                 'serv': MolotCache(f"0.0.0.0:{p['molot_cache']}", f"http://127.0.0.1:{p['s3_front']}", 'molot'),
             }
 
@@ -3668,6 +3951,7 @@ def do(code):
         's3_front_metrics': 8099,
         's3_repair_metrics': 8100,
         's3_nbd_metrics': 8101,
+        'fedora_mirror': 8102,
         'lab_proxy': 443,
         'lab_proxy_http': 80,
     }
@@ -3707,6 +3991,7 @@ def do(code):
         's3_manager': 2024,
         'dev_vm': 2028,
         's3_nbd': 2029,
+        'fedora_mirror': 2030,
         'samogon_bot': 2004,
         'job_scheduler': 2005,
         'secrets_v2': 1028,
