@@ -804,6 +804,22 @@ class DevVm:
     # qemu with KVM and user-mode networking: the host gets neither a tap
     # nor a route. The console and QMP are unix sockets here; mesh inside
     # the guest is the way in, socks the way out.
+    install_unit = '''[Unit]
+Description=Dev VM host setup
+Requires=home.mount
+Wants=network-online.target
+After=home.mount network-online.target
+ConditionPathIsMountPoint=/home
+ConditionFileIsExecutable=/home/install.sh
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home
+ExecStart=/home/install.sh
+RemainAfterExit=yes
+TimeoutStartSec=30min
+'''
+
     def __init__(self, vm, mesh_hosts, s3_front, cpus, memory):
         self.vm = vm
         self.mesh_hosts = mesh_hosts
@@ -884,6 +900,7 @@ class DevVm:
             'systemd.mount-extra=LABEL=home:/home:nilfs2:discard,errors=panic,nofail',
             'panic=1',
             'systemd.wants=lab-mesh.service',
+            'systemd.wants=lab-install.service',
         ])
 
         # Under wirez: whatever the guest dials outside goes through the socks
@@ -915,6 +932,7 @@ class DevVm:
             '-device', 'virtio-blk-pci,drive=mesh,serial=labmesh',
             *self.credential(100, 'mesh.json', mesh),
             *self.credential(101, 'systemd.extra-unit.lab-mesh.service', DEV_VM_MESH_UNIT),
+            *self.credential(102, 'systemd.extra-unit.lab-install.service', self.install_unit),
             '-run-with', 'user=dev_vm',
             PATH='/bin',
             TMPDIR=os.getcwd(),
