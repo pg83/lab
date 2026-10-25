@@ -903,11 +903,11 @@ TimeoutStartSec=30min
             'systemd.wants=lab-install.service',
         ])
 
-        # Under wirez: whatever the guest dials outside goes through the socks
-        # balancer, the labs' underlay and gofra direct (mesh), and the host's
+        # Under wirez: whatever the guest dials outside goes through the jopa
+        # tunnel, the labs' underlay and gofra direct (mesh), and the host's
         # loopback is not the guest's 10.0.2.2 any more.
         exec_into(
-            'wirez', '-q', '-D', '127.0.0.1', '-F', '127.0.0.1:8015', '-B', '10.0.0.0/24', '-B', '192.168.103.0/24', '--',
+            'wirez', '-q', '-D', '127.0.0.1', '-F', '127.0.0.1:8018', '-B', '10.0.0.0/24', '-B', '192.168.103.0/24', '--',
             'qemu-system-x86_64',
             '-name', self.vm,
             '-machine', 'q35',
