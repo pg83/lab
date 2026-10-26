@@ -63,7 +63,8 @@ CODEX_AUTH_ENVELOPE_VERSION = 1
 CODEX_AUTH_ENVELOPE_ALGORITHM = 'aes-256-cbc+hmac-sha256'
 CODEX_AUTH_HKDF_INFO = b'ix-updater-fixer/codex-auth/v1'
 CODEX_AUTH_AES = '-aes-256-cbc'
-GIT_MIRROR_RETRY_DELAY_S = 15
+GIT_PUSH_ATTEMPTS = 10
+GIT_PUSH_RETRY_DELAY_S = 15
 
 ANSI_RE = re.compile(rb'\x1b\[[0-9;?]*[ -/]*[@-~]')
 DIRECT_FAIL_MARKER = b'node failed: '
@@ -761,20 +762,32 @@ def publish_fix(repo, revision, branch, env):
         return False
 
     token = load_repo_token(env)
+    push_url = env.get('IX_FIXER_GIT_PUSH_URL', IX_GIT_PUSH_URL)
 
-    for attempt in range(2):
-        subprocess.run(
-            ('git', 'fetch', 'origin', branch),
+    for attempt in range(1, GIT_PUSH_ATTEMPTS + 1):
+        # Publication must use the destination's current head: the local
+        # Ogorod mirror can still lag after a rejected push.
+        fetched = subprocess.run(
+            ('git', 'fetch', push_url, branch),
             cwd=repo,
             env=git_read_env(env),
-            check=True,
+            check=False,
         )
+
+        if fetched.returncode != 0:
+            log(f'git fetch failed; attempt {attempt}/{GIT_PUSH_ATTEMPTS}')
+
+            if attempt < GIT_PUSH_ATTEMPTS:
+                time.sleep(GIT_PUSH_RETRY_DELAY_S)
+
+            continue
+
         remote_head = git_output(repo, 'rev-parse', 'FETCH_HEAD')
         parent = git_output(repo, 'rev-parse', 'HEAD^')
 
         if remote_head != parent:
             log(
-                f'origin {branch} moved from {parent[:12]} to '
+                f'publication {branch} moved from {parent[:12]} to '
                 f'{remote_head[:12]}; rebase Codex fix'
             )
             subprocess.run(
@@ -800,15 +813,15 @@ def publish_fix(repo, revision, branch, env):
             log(f'published Codex commit {head[:12]} to {branch}')
             return True
 
-        log(f'git push raced with another publisher; retry {attempt + 1}/2')
+        log(f'git push failed; attempt {attempt}/{GIT_PUSH_ATTEMPTS}')
 
-        if attempt == 0:
+        if attempt < GIT_PUSH_ATTEMPTS:
             remove_repository_metadata_from_commit(repo)
-            # origin is the eventually consistent Ogorod mirror.  Let its
-            # 10-second cycle observe the commit which won the push race.
-            time.sleep(GIT_MIRROR_RETRY_DELAY_S)
+            time.sleep(GIT_PUSH_RETRY_DELAY_S)
 
-    raise InfrastructureFailure('git push failed after rebase retries')
+    raise InfrastructureFailure(
+        f'publication failed after {GIT_PUSH_ATTEMPTS} attempts'
+    )
 
 
 def run_fixer(env):

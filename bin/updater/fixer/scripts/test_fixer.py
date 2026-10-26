@@ -391,7 +391,9 @@ class FixerTests(unittest.TestCase):
         calls = run.call_args_list
         push = next(call for call in calls if 'push' in call.args[0])
         fetch = next(call for call in calls if call.args[0][:2] == ('git', 'fetch'))
-        self.assertEqual(fetch.args[0], ('git', 'fetch', 'origin', 'main'))
+        self.assertEqual(
+            fetch.args[0], ('git', 'fetch', fixer.IX_GIT_PUSH_URL, 'main'),
+        )
         self.assertIn('origin', push.args[0])
         self.assertIn('amended123:refs/heads/main', push.args[0])
         self.assertNotIn('--force', push.args[0])
@@ -461,7 +463,7 @@ class FixerTests(unittest.TestCase):
         commands = [call.args[0] for call in run.call_args_list]
         self.assertEqual(sum('push' in command for command in commands), 2)
         self.assertIn(('git', 'rebase', 'FETCH_HEAD'), commands)
-        sleep.assert_called_once_with(fixer.GIT_MIRROR_RETRY_DELAY_S)
+        sleep.assert_called_once_with(fixer.GIT_PUSH_RETRY_DELAY_S)
 
     def test_amend_repository_metadata_rebuilds_generated_files(self):
         with tempfile.TemporaryDirectory() as td, \
@@ -483,6 +485,99 @@ class FixerTests(unittest.TestCase):
                 ('git', 'commit', '--amend', '--no-edit'),
             ],
         )
+
+    def test_publish_ignores_stale_mirror_and_survives_two_push_races(self):
+        real_run = subprocess.run
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            seed, _ = self.init_git_repo(td)
+            real_run(('git', 'branch', '-M', 'main'), cwd=seed, check=True)
+            base = self.commit_file(seed, 'metadata', 'original\n', 'initial metadata')
+            remote, mirror, writer, repo = (root / name for name in (
+                'remote.git', 'mirror.git', 'writer', 'repair',
+            ))
+            real_run(('git', 'clone', '-q', '--bare', str(seed), str(remote)), check=True)
+            real_run(('git', 'clone', '-q', '--bare', str(remote), str(mirror)), check=True)
+            real_run(('git', 'clone', '-q', str(remote), str(writer)), check=True)
+            real_run(('git', 'config', 'user.name', 'writer'), cwd=writer, check=True)
+            real_run(('git', 'config', 'user.email', 'writer@example.invalid'), cwd=writer, check=True)
+            env = {
+                **os.environ,
+                **self.run_env(),
+                'IX_FIXER_GIT_READ_URL': str(mirror),
+                'IX_FIXER_GIT_PUSH_URL': str(remote),
+            }
+            fixer.clone_ix(repo, env)
+            self.commit_file(
+                repo, 'repair.patch',
+                '--- a/source\n+++ b/source\n@@ -1,2 +1,3 @@\n context\n \n+fixed\n',
+                'fix package',
+            )
+
+            def advance_remote(number):
+                self.commit_file(writer, f'upstream-{number}', f'{number}\n', f'update {number}')
+                real_run(('git', 'push', '-q', 'origin', 'main'), cwd=writer, check=True)
+
+            # The read mirror stays at base for the entire publication.
+            advance_remote(0)
+            pushes = 0
+
+            def run(command, **kwargs):
+                nonlocal pushes
+
+                if 'push' in command and kwargs.get('cwd') == repo:
+                    pushes += 1
+
+                    if pushes <= 2:
+                        advance_remote(pushes)
+
+                return real_run(command, **kwargs)
+
+            def regenerate(repo, env):
+                (repo / 'metadata').write_text(fixer.git_output(repo, 'ls-files') + '\n')
+
+            with mock.patch.object(fixer, 'REGENERATED_PATHS', ('metadata',)), \
+                 mock.patch.object(fixer, 'regenerate_repository_metadata', side_effect=regenerate), \
+                 mock.patch.object(fixer, 'load_repo_token', return_value='repo-token'), \
+                 mock.patch.object(fixer.time, 'sleep') as sleep, \
+                 mock.patch.object(fixer.subprocess, 'run', side_effect=run):
+                self.assertTrue(fixer.publish_fix(repo, base, 'main', env))
+
+            self.assertEqual(pushes, 3)
+            self.assertEqual(sleep.call_count, 2)
+            self.assertEqual(fixer.git_output(mirror, 'rev-parse', 'main'), base)
+            self.assertEqual(
+                fixer.git_output(remote, 'rev-parse', 'main^'),
+                fixer.git_output(writer, 'rev-parse', 'HEAD'),
+            )
+            self.assertIn('upstream-2', fixer.git_output(remote, 'show', 'main:metadata'))
+            self.assertIn('context', fixer.git_output(remote, 'show', 'main:repair.patch'))
+
+    def test_publication_attempts_are_bounded_on_fetch_or_push_failure(self):
+        for failing_command in ('fetch', 'push'):
+            with self.subTest(failing_command=failing_command), \
+                 tempfile.TemporaryDirectory() as td, \
+                 mock.patch.object(fixer, 'GIT_PUSH_ATTEMPTS', 3), \
+                 mock.patch.object(fixer, 'validate_agent_commit', return_value='fix'), \
+                 mock.patch.object(fixer, 'load_repo_token', return_value='repo-token'), \
+                 mock.patch.object(fixer, 'git_output', return_value='base'), \
+                 mock.patch.object(fixer, 'amend_repository_metadata', return_value='fix'), \
+                 mock.patch.object(fixer, 'remove_repository_metadata_from_commit') as remove, \
+                 mock.patch.object(fixer.time, 'sleep') as sleep, \
+                 mock.patch.object(
+                     fixer.subprocess, 'run',
+                     side_effect=lambda command, **kwargs: mock.Mock(
+                         returncode=1 if failing_command in command else 0,
+                     ),
+                 ) as run:
+                with self.assertRaisesRegex(fixer.InfrastructureFailure, 'after 3 attempts'):
+                    fixer.publish_fix(Path(td), 'base', 'main', self.run_env())
+
+                commands = [call.args[0] for call in run.call_args_list]
+                self.assertEqual(sum(failing_command in c for c in commands), 3)
+                self.assertEqual(sleep.call_count, 2)
+                self.assertEqual(remove.call_count, 2 if failing_command == 'push' else 0)
 
     def test_validate_accepts_one_clean_agent_commit(self):
         with tempfile.TemporaryDirectory() as td:
