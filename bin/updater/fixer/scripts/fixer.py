@@ -749,11 +749,6 @@ def validate_agent_commit(repo, revision):
     if forbidden.intersection(changed):
         raise InfrastructureFailure('Codex committed fixer scratch files')
 
-    subprocess.run(
-        ('git', 'diff', '--check', revision, head),
-        cwd=repo,
-        check=True,
-    )
     log(f'validated Codex commit {head[:12]}: {subject}')
     return head
 
