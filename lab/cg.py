@@ -820,16 +820,16 @@ RemainAfterExit=yes
 TimeoutStartSec=30min
 '''
     # The kernel selects colder file pages. EAGAIN means the requested
-    # amount could not be reclaimed; the next attempt still waits 5 s.
+    # amount could not be reclaimed; the next attempt still waits 1 s.
     reclaim_script = '''import errno
 import time
 
-print("Requesting 64 MiB of file-cache reclaim every 5 seconds", flush=True)
+print("Requesting 16 MiB of file-cache reclaim every 1 second", flush=True)
 while True:
-    time.sleep(5)
+    time.sleep(1)
     try:
         with open('/sys/fs/cgroup/memory.reclaim', 'w') as reclaim:
-            reclaim.write('64M swappiness=0\\n')
+            reclaim.write('16M swappiness=0\\n')
     except OSError as error:
         if error.errno != errno.EAGAIN:
             raise
