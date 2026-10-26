@@ -819,6 +819,33 @@ ExecStart=/home/install.sh
 RemainAfterExit=yes
 TimeoutStartSec=30min
 '''
+    # The kernel selects colder file pages. EAGAIN means the requested
+    # amount could not be reclaimed; the next attempt still waits 5 s.
+    reclaim_script = '''import errno
+import time
+
+print("Requesting 64 MiB of file-cache reclaim every 5 seconds", flush=True)
+while True:
+    time.sleep(5)
+    try:
+        with open('/sys/fs/cgroup/memory.reclaim', 'w') as reclaim:
+            reclaim.write('64M swappiness=0\\n')
+    except OSError as error:
+        if error.errno != errno.EAGAIN:
+            raise
+'''
+    reclaim_unit = '''[Unit]
+Description=Gradual dev VM file-cache reclaim
+After=lab-install.service
+
+[Service]
+ImportCredential=lab-reclaim.py
+ExecStart=/usr/bin/python3 ${CREDENTIALS_DIRECTORY}/lab-reclaim.py
+Nice=19
+IOSchedulingClass=idle
+Restart=on-failure
+RestartSec=30
+'''
 
     def __init__(self, vm, mesh_hosts, s3_front, cpus, memory):
         self.vm = vm
@@ -901,6 +928,7 @@ TimeoutStartSec=30min
             'panic=1',
             'systemd.wants=lab-mesh.service',
             'systemd.wants=lab-install.service',
+            'systemd.wants=lab-reclaim.service',
         ])
 
         # Under wirez: whatever the guest dials outside goes through the jopa
@@ -930,11 +958,15 @@ TimeoutStartSec=30min
             '-netdev', 'user,id=net0',
             '-device', 'virtio-net-pci,netdev=net0,romfile=',
             '-device', 'virtio-rng-pci',
+            # Return guest-free pages to the lab without shrinking guest RAM.
+            '-device', 'virtio-balloon-pci,id=balloon0,free-page-reporting=on',
             '-drive', 'if=none,id=mesh,format=raw,readonly=on,file=mesh.img',
             '-device', 'virtio-blk-pci,drive=mesh,serial=labmesh',
             *self.credential(100, 'mesh.json', mesh),
             *self.credential(101, 'systemd.extra-unit.lab-mesh.service', DEV_VM_MESH_UNIT),
             *self.credential(102, 'systemd.extra-unit.lab-install.service', self.install_unit),
+            *self.credential(103, 'systemd.extra-unit.lab-reclaim.service', self.reclaim_unit),
+            *self.credential(104, 'lab-reclaim.py', self.reclaim_script),
             '-run-with', 'user=dev_vm',
             PATH='/bin',
             TMPDIR=os.getcwd(),
