@@ -109,7 +109,7 @@ def iter_tout():
     tout = 60
 
     while True:
-        yield tout * (0.5 + random.random())
+        yield 1.5 * tout * (0.5 + random.random())
         tout = min(tout * 1.5, 10000)
 
 
