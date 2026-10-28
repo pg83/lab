@@ -33,6 +33,7 @@ def main():
             '--guid', f'ghcr_push_{sha}',
             '--env', f'GORN_API={os.environ["GORN_API"]}',
             '--env', f'S3_ENDPOINT={os.environ["S3_ENDPOINT"]}',
+            '--env', f'MC_HOST_minio={os.environ["MC_HOST_minio_cas"]}',
             '--env', f'AWS_ACCESS_KEY_ID={os.environ["AWS_ACCESS_KEY_ID_CAS"]}',
             '--env', f'AWS_SECRET_ACCESS_KEY={os.environ["AWS_SECRET_ACCESS_KEY_CAS"]}',
             '--env', f'GHCR_TOKEN={os.environ["GHCR_TOKEN"]}',

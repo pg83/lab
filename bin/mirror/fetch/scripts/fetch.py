@@ -15,10 +15,10 @@ Per run:
   2. Sequentially curl each URL, alternating direct and local
      SOCKS5 routes with increasing randomized timeouts, sha256sum it,
      upload to CAS
-     via /bin/cas. Per-URL failures log and move on so a flaky
-     upstream for one URL doesn't poison the rest.
+     via /bin/cas. A missing upstream URL is skipped; failed CAS writes
+     retry the downloaded file instead of losing it.
 
-  3. For each successful URL: emit `kind=new_sha {sha:<content-sha>}`
+  3. Immediately after each successful URL: emit `kind=new_sha {sha:<content-sha>}`
      so hf/ghcr subscribers can incrementally update their remotes.
 
 No persistent state — each event handles its own diff window.
@@ -181,7 +181,13 @@ def fetch_one(url):
     )
     content_sha = res.stdout.split()[0]
 
-    subprocess.run(['cas', data], check=True)
+    while True:
+        try:
+            subprocess.run(['cas', data], check=True)
+            break
+        except subprocess.CalledProcessError:
+            log(f'CAS upload failed for {url}; keeping downloaded file, retry in 30s')
+            time.sleep(30)
     shutil.rmtree(work)
 
     return content_sha
@@ -199,12 +205,15 @@ def emit_new_sha(content_sha):
 
 
 def main():
-    if len(sys.argv) != 2:
-        raise SystemExit('usage: cache_ix_sources <ix-sha>')
-
-    sha = sys.argv[1]
-    urls = added_urls(sha)
-    log(f'diff window {sha}~{DEPTH}..{sha}: {len(urls)} added URLs')
+    if sys.argv[1:] == ['--urls']:
+        urls = list(dict.fromkeys(line.strip() for line in sys.stdin if line.strip()))
+        log(f'replay: {len(urls)} URLs')
+    elif len(sys.argv) == 2:
+        sha = sys.argv[1]
+        urls = added_urls(sha)
+        log(f'diff window {sha}~{DEPTH}..{sha}: {len(urls)} added URLs')
+    else:
+        raise SystemExit('usage: cache_ix_sources <ix-sha> | --urls < urls.txt')
 
     new_content_shas = set()
 
@@ -219,13 +228,11 @@ def main():
             log(f'WARN: fetch failed for {url}: {e}')
             continue
 
-        new_content_shas.add(cs)
+        if cs not in new_content_shas:
+            emit_new_sha(cs)
+            new_content_shas.add(cs)
 
     log(f'fetched this run: {len(new_content_shas)} unique content shas')
-
-    for content_sha in sorted(new_content_shas):
-        emit_new_sha(content_sha)
-
 
 if __name__ == '__main__':
     main()

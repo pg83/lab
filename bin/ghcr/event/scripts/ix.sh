@@ -15,6 +15,7 @@ cat << 'EOF' > ${out}/etc/event/new_sha/ghcr.json
         "PATH=$PATH",
         "GORN_API=$GORN_API",
         "S3_ENDPOINT=$S3_ENDPOINT",
+        "MC_HOST_minio_cas=$MC_HOST_minio_cas",
         "AWS_ACCESS_KEY_ID_CAS=$AWS_ACCESS_KEY_ID_CAS",
         "AWS_SECRET_ACCESS_KEY_CAS=$AWS_SECRET_ACCESS_KEY_CAS",
         "GHCR_TOKEN=$GHCR_TOKEN",

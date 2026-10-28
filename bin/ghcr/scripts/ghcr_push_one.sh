@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-set -xue
+set -eu
 
 sha=$1
 
