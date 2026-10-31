@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -207,8 +208,14 @@ func run() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 	b.ctx = ctx
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	// ML-KEM handshakes time out on the lab's direct path to Kimi.
+	transport.TLSClientConfig = &tls.Config{
+		CurvePreferences: []tls.CurveID{tls.X25519, tls.CurveP256},
+	}
 	b.client = &http.Client{
-		Timeout: requestTimeout,
+		Transport: transport,
+		Timeout:   requestTimeout,
 		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
