@@ -20,6 +20,13 @@ sys.modules[SPEC.name] = fixer
 SPEC.loader.exec_module(fixer)
 
 
+def kimi_auth(access='secret'):
+    return (json.dumps({'kimi-coding': {
+        'type': 'oauth', 'access': access, 'refresh': 'refresh-secret',
+        'expires': 1900000000000,
+    }}) + '\n').encode()
+
+
 class FixerTests(unittest.TestCase):
     def run_env(self):
         env = {
@@ -31,9 +38,9 @@ class FixerTests(unittest.TestCase):
                 'AWS_SECRET_ACCESS_KEY',
                 'ETCD_PERSIST_ENDPOINTS',
                 'GIT_USER',
-                'IX_FIXER_CODEX_GORN_API',
-                'IX_FIXER_CODEX_S3_ENDPOINT',
-                'IX_FIXER_CODEX_MOLOT_RESOLVE',
+                'IX_FIXER_KIMI_GORN_API',
+                'IX_FIXER_KIMI_S3_ENDPOINT',
+                'IX_FIXER_KIMI_MOLOT_RESOLVE',
                 'IX_FIXER_GENERATION',
             )
         }
@@ -99,7 +106,7 @@ class FixerTests(unittest.TestCase):
         env = {
             'AWS_ACCESS_KEY_ID': 'molot-key',
             'AWS_SECRET_ACCESS_KEY': 'molot-secret',
-            'CODEX_AUTH_B64': 'must-not-leak',
+            'KIMI_AUTH_B64': 'must-not-leak',
         }
 
         got = fixer.molot_env(env)
@@ -109,10 +116,10 @@ class FixerTests(unittest.TestCase):
         self.assertEqual(got['AWS_SECRET_ACCESS_KEY'], 'molot-secret')
         self.assertEqual(got['S3_BUCKET'], 'molot')
         self.assertNotIn('MOLOT_CACHE', got)
-        self.assertNotIn('CODEX_AUTH_B64', got)
+        self.assertNotIn('KIMI_AUTH_B64', got)
 
     def test_prompt_asks_for_one_local_commit_without_publication(self):
-        prompt = fixer.codex_prompt(fixer.IX_TARGET, 'node failed: root')
+        prompt = fixer.kimi_prompt(fixer.IX_TARGET, 'node failed: root')
         compact = ' '.join(prompt.split())
         self.assertIn('./ix build set/ci/tier/0 --seed=1', compact)
         self.assertIn('./ix build <package> --seed=1', compact)
@@ -187,50 +194,35 @@ class FixerTests(unittest.TestCase):
         killpg.assert_called_once_with(1234, signal.SIGTERM)
         proc.wait.assert_called_once_with(timeout=fixer.BUILD_STOP_TIMEOUT_S)
 
-    def test_codex_runs_noninteractively_without_external_profile(self):
-        cmd = fixer.codex_command(Path('/work/ix'), 'repair it')
-        self.assertEqual(cmd[:4], ('timeout', '7200', 'codex', 'exec'))
-        self.assertIn('--model', cmd)
-        self.assertEqual(cmd[cmd.index('--model') + 1], 'gpt-5.6-sol')
-        self.assertIn('--config', cmd)
-        self.assertEqual(
-            cmd[cmd.index('--config') + 1],
-            'model_reasoning_effort="xhigh"',
-        )
-        self.assertNotIn('-p', cmd)
-        self.assertIn('--dangerously-bypass-approvals-and-sandbox', cmd)
-        self.assertIn('--ephemeral', cmd)
-        self.assertIn('-C', cmd)
-        self.assertEqual(cmd[-1], 'repair it')
+    def test_kimi_runs_noninteractively_without_external_profile(self):
+        cmd = fixer.kimi_command(Path('/work/ix'), Path('/work/auth.json'))
+        self.assertEqual(cmd, (
+            'timeout', '7200', 'batcher', '-auth', '/work/auth.json',
+            '-model', 'k3.1-pro', '-effort', 'max', '-C', '/work/ix',
+        ))
+        self.assertNotIn('wirez', cmd)
 
-    def test_codex_auth_is_materialized_privately(self):
-        auth = b'{"tokens":{"access_token":"secret"}}\n'
+    def test_kimi_auth_is_materialized_privately(self):
+        auth = kimi_auth()
 
         with tempfile.TemporaryDirectory() as td:
-            home = fixer.materialize_codex_home(
+            home = fixer.materialize_kimi_home(
                 Path(td),
                 auth,
             )
             auth_path = home / 'auth.json'
             config_path = home / 'config.toml'
             self.assertEqual(auth_path.read_bytes(), auth)
-            self.assertEqual(
-                config_path.read_text(),
-                'allow_login_shell = false\n'
-                '\n'
-                '[shell_environment_policy]\n'
-                'inherit = "all"\n',
-            )
+            self.assertFalse(config_path.exists())
             self.assertEqual(home.stat().st_mode & 0o777, 0o700)
             self.assertEqual(auth_path.stat().st_mode & 0o777, 0o600)
-            self.assertEqual(config_path.stat().st_mode & 0o777, 0o600)
 
-    def test_codex_auth_etcd_envelope_is_authenticated(self):
-        auth = b'{"tokens":{"access_token":"secret"}}\n'
+    def test_kimi_auth_etcd_envelope_is_authenticated(self):
+        auth = kimi_auth()
         key = bytes(range(32))
         seed_hash = '1' * 64
-        encrypted = fixer.encrypt_codex_auth(auth, key, seed_hash)
-        decrypted, got_seed_hash = fixer.decrypt_codex_auth(encrypted, key)
+        encrypted = fixer.encrypt_kimi_auth(auth, key, seed_hash)
+        decrypted, got_seed_hash = fixer.decrypt_kimi_auth(encrypted, key)
         self.assertEqual(decrypted, auth)
         self.assertEqual(got_seed_hash, seed_hash)
 
@@ -243,52 +235,72 @@ class FixerTests(unittest.TestCase):
             fixer.InfrastructureFailure,
             'authentication failed',
         ):
-            fixer.decrypt_codex_auth(json.dumps(envelope).encode(), key)
+            fixer.decrypt_kimi_auth(json.dumps(envelope).encode(), key)
 
-    def test_codex_auth_key_rotation_uses_bootstrap(self):
-        auth = b'{"tokens":{"access_token":"old"}}\n'
-        encrypted = fixer.encrypt_codex_auth(auth, bytes(range(32)), '1' * 64)
+    def test_kimi_auth_key_rotation_uses_bootstrap(self):
+        auth = kimi_auth('old')
+        encrypted = fixer.encrypt_kimi_auth(auth, bytes(range(32)), '1' * 64)
         self.assertEqual(
-            fixer.decrypt_codex_auth(encrypted, bytes(range(1, 33))),
+            fixer.decrypt_kimi_auth(encrypted, bytes(range(1, 33))),
             (None, None),
         )
 
-    def test_codex_auth_bootstrap_rotation_replaces_runtime(self):
-        old_auth = b'{"tokens":{"access_token":"old"}}\n'
-        new_auth = b'{"tokens":{"access_token":"new"}}\n'
+    def test_kimi_auth_loads_rotated_runtime_from_etcd(self):
+        new_auth = kimi_auth('new')
         key = bytes(range(32))
-        encrypted = fixer.encrypt_codex_auth(
-            old_auth,
+        encrypted = fixer.encrypt_kimi_auth(
+            new_auth,
             key,
-            fixer.hashlib.sha256(old_auth).hexdigest(),
+            '1' * 64,
         )
 
-        with mock.patch.object(fixer, 'load_codex_wrapping_key', return_value=key), \
-             mock.patch.object(fixer, 'load_codex_bootstrap', return_value=new_auth), \
-             mock.patch.object(fixer, 'read_codex_auth_etcd', return_value=encrypted):
-            got, got_key, seed_hash = fixer.load_codex_auth(self.run_env())
+        with mock.patch.object(fixer, 'load_kimi_wrapping_key', return_value=key), \
+             mock.patch.object(fixer, 'read_kimi_auth_etcd', return_value=encrypted):
+            got, got_key, seed_hash = fixer.load_kimi_auth(self.run_env())
 
         self.assertEqual(got, new_auth)
         self.assertEqual(got_key, key)
-        self.assertEqual(seed_hash, fixer.hashlib.sha256(new_auth).hexdigest())
+        self.assertEqual(seed_hash, '1' * 64)
 
-    def test_codex_auth_uses_persistent_etcd(self):
+    def test_kimi_auth_missing_or_wrong_provider_fails(self):
+        with mock.patch.object(fixer, 'load_kimi_wrapping_key', return_value=bytes(range(32))), \
+             mock.patch.object(fixer, 'read_kimi_auth_etcd', return_value=b''):
+            with self.assertRaisesRegex(fixer.InfrastructureFailure, 'not provisioned'):
+                fixer.load_kimi_auth(self.run_env())
+
+        with self.assertRaisesRegex(fixer.InfrastructureFailure, 'kimi-coding OAuth'):
+            fixer.validate_kimi_auth(b'{"tokens":{"access_token":"secret"}}')
+
+        mixed = json.loads(kimi_auth())
+        mixed['openai-codex'] = {'access': 'unrelated'}
+
+        with self.assertRaisesRegex(fixer.InfrastructureFailure, 'other providers'):
+            fixer.validate_kimi_auth(json.dumps(mixed).encode())
+
+    def test_kimi_auth_uses_persistent_etcd(self):
         env = self.run_env()
         env['ETCDCTL_ENDPOINTS'] = 'tmpfs:2379'
         env['ETCD_PERSIST_ENDPOINTS'] = 'persist:2379'
         result = mock.Mock(returncode=0, stdout=b'', stderr=b'')
 
         with mock.patch.object(fixer.subprocess, 'run', return_value=result) as run:
-            self.assertEqual(fixer.read_codex_auth_etcd(env), b'')
+            self.assertEqual(fixer.read_kimi_auth_etcd(env), b'')
 
         self.assertEqual(
             run.call_args.kwargs['env']['ETCDCTL_ENDPOINTS'],
             'persist:2379',
         )
 
-    def test_refreshed_auth_is_saved_even_when_codex_fails(self):
-        auth = b'{"tokens":{"access_token":"secret"}}\n'
+    def test_refreshed_auth_is_saved_even_when_kimi_fails(self):
+        auth = kimi_auth()
+        refreshed = kimi_auth('rotated')
         key = bytes(range(32))
+
+        def fail_after_rotation(cmd, **kwargs):
+            self.assertIn(b'Repair the failed IX package build.', kwargs['input'])
+            self.assertNotIn('wirez', cmd)
+            Path(cmd[cmd.index('-auth') + 1]).write_bytes(refreshed)
+            raise subprocess.CalledProcessError(1, 'batcher')
 
         with tempfile.TemporaryDirectory() as td:
             repo = Path(td) / 'ix'
@@ -302,30 +314,30 @@ class FixerTests(unittest.TestCase):
                 return_value='abc123\n',
             ), mock.patch.object(
                 fixer,
-                'load_codex_auth',
+                'load_kimi_auth',
                 return_value=(auth, key, '1' * 64),
             ), mock.patch.object(
                 fixer.subprocess,
                 'run',
-                side_effect=fixer.subprocess.CalledProcessError(1, 'codex'),
-            ), mock.patch.object(fixer, 'save_codex_auth') as save:
+                side_effect=fail_after_rotation,
+            ), mock.patch.object(fixer, 'save_kimi_auth') as save:
                 with self.assertRaises(fixer.subprocess.CalledProcessError):
-                    fixer.run_codex(repo, build_log, self.run_env())
+                    fixer.run_kimi(repo, build_log, self.run_env())
 
             save.assert_called_once()
-            self.assertEqual(save.call_args.args[0], auth)
+            self.assertEqual(save.call_args.args[0], refreshed)
 
-    def test_codex_agent_uses_cluster_endpoints_inside_wirez(self):
+    def test_kimi_agent_keeps_cluster_build_endpoints(self):
         env = self.run_env()
         env['GORN_API'] = 'http://127.0.0.1:8025'
         env['S3_ENDPOINT'] = 'http://127.0.0.1:8012'
-        env['IX_FIXER_CODEX_GORN_API'] = 'http://192.168.100.16:8027'
-        env['IX_FIXER_CODEX_S3_ENDPOINT'] = 'http://192.168.103.16:8012'
-        env['IX_FIXER_CODEX_MOLOT_RESOLVE'] = 'http://192.168.103.16:8064'
+        env['IX_FIXER_KIMI_GORN_API'] = 'http://192.168.100.16:8027'
+        env['IX_FIXER_KIMI_S3_ENDPOINT'] = 'http://192.168.103.16:8012'
+        env['IX_FIXER_KIMI_MOLOT_RESOLVE'] = 'http://192.168.103.16:8064'
         env['MOLOT_STORE_ENDPOINT'] = 'http://127.0.0.1:8064'
 
         with tempfile.TemporaryDirectory() as td:
-            got = fixer.codex_agent_env(env, Path(td) / 'codex-home')
+            got = fixer.kimi_agent_env(env, Path(td) / 'kimi-home')
 
         self.assertEqual(got['GORN_API'], 'http://192.168.100.16:8027')
         self.assertEqual(got['S3_ENDPOINT'], 'http://192.168.103.16:8012')
@@ -338,7 +350,7 @@ class FixerTests(unittest.TestCase):
         self.assertNotIn('GIT_PASS', got)
         self.assertNotIn('GIT_ASKPASS', got)
         self.assertEqual(got['GIT_TERMINAL_PROMPT'], '0')
-        self.assertNotIn('CODEX_AUTH_B64', got)
+        self.assertNotIn('KIMI_AUTH_B64', got)
 
     def test_clone_does_not_receive_repository_credentials(self):
         env = self.run_env()
@@ -636,10 +648,10 @@ class FixerTests(unittest.TestCase):
             ):
                 fixer.validate_agent_commit(repo, base)
 
-    def test_required_environment_does_not_require_codex_package_variable(self):
+    def test_required_environment_does_not_require_kimi_package_variable(self):
         env = self.run_env()
         fixer.require_env(env)
-        self.assertNotIn('CODEX_HOME', env)
+        self.assertNotIn('KIMI_HOME', env)
 
     def test_obsolete_generation_exits_before_work(self):
         env = self.run_env()
@@ -660,10 +672,10 @@ class FixerTests(unittest.TestCase):
 
         with mock.patch.object(fixer, 'clone_ix', side_effect=clone), \
              mock.patch.object(fixer, 'run_build', side_effect=build), \
-             mock.patch.object(fixer, 'run_codex') as codex:
+             mock.patch.object(fixer, 'run_kimi') as kimi:
             fixer.run_fixer(self.run_env())
 
-        codex.assert_not_called()
+        kimi.assert_not_called()
 
     def test_target_failure_starts_one_agent(self):
         def clone(repo, env):
@@ -677,11 +689,11 @@ class FixerTests(unittest.TestCase):
 
         with mock.patch.object(fixer, 'clone_ix', side_effect=clone), \
              mock.patch.object(fixer, 'run_build', side_effect=build), \
-             mock.patch.object(fixer, 'run_codex', return_value='abc123') as codex, \
+             mock.patch.object(fixer, 'run_kimi', return_value='abc123') as kimi, \
              mock.patch.object(fixer, 'publish_fix') as publish:
             fixer.run_fixer(self.run_env())
 
-        codex.assert_called_once()
+        kimi.assert_called_once()
         publish.assert_called_once()
 
 

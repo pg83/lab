@@ -13,7 +13,7 @@ cat << 'EOF' > ${out}/etc/cron/300-updater-fixer.json
 {
     "cmd": [
         "etcd_lock", "/lock/updater/fixer/schedule", "--",
-        "dedup", "/updater/fixer/v5", "--",
+        "dedup", "/updater/fixer/v6", "--",
         "gorn", "ignite",
         "--root", "updater_fixer",
         "--env", "GORN_API=$GORN_API",
@@ -23,10 +23,10 @@ cat << 'EOF' > ${out}/etc/cron/300-updater-fixer.json
         "--env", "ETCDCTL_ENDPOINTS=$ETCDCTL_ENDPOINTS",
         "--env", "ETCD_PERSIST_ENDPOINTS=$ETCD_PERSIST_ENDPOINTS",
         "--env", "GIT_USER=pg83",
-        "--env", "IX_FIXER_CODEX_GORN_API=$CODEX_GORN_API",
-        "--env", "IX_FIXER_CODEX_S3_ENDPOINT=$CODEX_S3_ENDPOINT",
-        "--env", "IX_FIXER_CODEX_MOLOT_RESOLVE=$CODEX_MOLOT_RESOLVE",
-        "--env", "IX_FIXER_GENERATION=7",
+        "--env", "IX_FIXER_KIMI_GORN_API=$KIMI_GORN_API",
+        "--env", "IX_FIXER_KIMI_S3_ENDPOINT=$KIMI_S3_ENDPOINT",
+        "--env", "IX_FIXER_KIMI_MOLOT_RESOLVE=$KIMI_MOLOT_RESOLVE",
+        "--env", "IX_FIXER_GENERATION=8",
         "--env", "MOLOT_QUIET=1",
         "--",
         "/bin/env", "PATH=/bin",

@@ -11,17 +11,17 @@ holds /lock/updater/fixer/work around the complete process.  The worker:
      without a keep-going flag, and stops its process group at the first
      direct ``node failed:`` marker;
   3. exits when the build is green;
-  4. on a real target failure, invokes one non-interactive Codex agent and
+  4. on a real target failure, invokes one batcher/Kimi agent and
      gives it the checkout plus the complete log.
 
 Infrastructure failures do not spend an agent run.  The next cron cycle will
-retry them.  The lab's bin/codex/wrap package forces Codex and every command it
-spawns through Wirez.  Authentication is loaded just in time from the
-host-only secret service and materialized as CODEX_HOME/auth.json only inside
-this worker's temporary directory.  Codex may rotate its refresh token, so the
+retry them. Batcher runs directly and receives the task on stdin. Authentication
+is loaded from encrypted persistent etcd using the host-only wrapping key and
+materialized as auth.json inside this worker's private temporary directory.
+Batcher may rotate its refresh token, so the
 updated file is always written back before the temporary directory disappears.
 Repository credentials are not present while the agent runs: the supervisor
-fetches /github/token only after Codex exits, validates the agent's local
+fetches /github/token only after Kimi exits, validates the agent's local
 commit, rebases it onto a concurrently advanced main when necessary,
 regenerates repository metadata, and publishes it atomically.
 """
@@ -51,18 +51,18 @@ REGENERATED_PATHS = (
     'pkgs/die/scripts/dump.json',
     'pkgs/die/scripts/urls.txt',
 )
-FIXER_GENERATION = '7'
-CODEX_MODEL = 'gpt-5.6-sol'
-CODEX_REASONING_EFFORT = 'xhigh'
+FIXER_GENERATION = '8'
+KIMI_MODEL = 'k3.1-pro'
+KIMI_REASONING_EFFORT = 'max'
 GIT_TOKEN_URL = 'http://127.0.0.1:8022/github/token'
-CODEX_AUTH_URL = 'http://127.0.0.1:8022/codex/auth'
-CODEX_AUTH_KEY_URL = 'http://127.0.0.1:8022/codex/auth/key'
-CODEX_AUTH_MAX_BYTES = 1024 * 1024
-CODEX_AUTH_ETCD_KEY = '/updater/fixer/codex-auth'
-CODEX_AUTH_ENVELOPE_VERSION = 1
-CODEX_AUTH_ENVELOPE_ALGORITHM = 'aes-256-cbc+hmac-sha256'
-CODEX_AUTH_HKDF_INFO = b'ix-updater-fixer/codex-auth/v1'
-CODEX_AUTH_AES = '-aes-256-cbc'
+# Reuse the deployed wrapping key with a separate Kimi HKDF domain and etcd key.
+KIMI_AUTH_KEY_URL = 'http://127.0.0.1:8022/codex/auth/key'
+KIMI_AUTH_MAX_BYTES = 1024 * 1024
+KIMI_AUTH_ETCD_KEY = '/updater/fixer/kimi-auth'
+KIMI_AUTH_ENVELOPE_VERSION = 1
+KIMI_AUTH_ENVELOPE_ALGORITHM = 'aes-256-cbc+hmac-sha256'
+KIMI_AUTH_HKDF_INFO = b'ix-updater-fixer/kimi-auth/v1'
+KIMI_AUTH_AES = '-aes-256-cbc'
 GIT_PUSH_ATTEMPTS = 10
 GIT_PUSH_RETRY_DELAY_S = 15
 
@@ -79,7 +79,7 @@ TARGET_FAIL_MARKERS = (
 
 
 class InfrastructureFailure(Exception):
-    """The build did not reach a package failure; retry without Codex."""
+    """The build did not reach a package failure; retry without Kimi."""
 
 
 def log(*args):
@@ -94,9 +94,9 @@ def require_env(env):
         'AWS_SECRET_ACCESS_KEY',
         'ETCD_PERSIST_ENDPOINTS',
         'GIT_USER',
-        'IX_FIXER_CODEX_GORN_API',
-        'IX_FIXER_CODEX_S3_ENDPOINT',
-        'IX_FIXER_CODEX_MOLOT_RESOLVE',
+        'IX_FIXER_KIMI_GORN_API',
+        'IX_FIXER_KIMI_S3_ENDPOINT',
+        'IX_FIXER_KIMI_MOLOT_RESOLVE',
         'IX_FIXER_GENERATION',
     )
     missing = [name for name in required if not env.get(name)]
@@ -124,14 +124,11 @@ def clone_ix(dst, env):
         cwd=dst,
         check=True,
     )
-    # GitHub attributes commits by author email; this is the noreply address
-    # of the official chatgpt-codex-connector[bot] account, so fixer commits
-    # show up as Codex itself.
-    subprocess.run(('git', 'config', 'user.name', 'Codex'), cwd=dst, check=True)
+    subprocess.run(('git', 'config', 'user.name', 'IX Fixer'), cwd=dst, check=True)
     subprocess.run(
         (
             'git', 'config', 'user.email',
-            '199175422+chatgpt-codex-connector[bot]@users.noreply.github.com',
+            'ix-fixer@localhost',
         ),
         cwd=dst,
         check=True,
@@ -190,7 +187,7 @@ def load_repo_token(env):
     return token
 
 
-def fetch_secret(url, description, limit=CODEX_AUTH_MAX_BYTES):
+def fetch_secret(url, description, limit=KIMI_AUTH_MAX_BYTES):
     log(f'load {description} from {url}')
 
     try:
@@ -208,43 +205,53 @@ def fetch_secret(url, description, limit=CODEX_AUTH_MAX_BYTES):
     return value
 
 
-def validate_codex_auth(auth):
-    if len(auth) > CODEX_AUTH_MAX_BYTES:
-        raise InfrastructureFailure('CODEX auth is too large')
+def validate_kimi_auth(auth):
+    if len(auth) > KIMI_AUTH_MAX_BYTES:
+        raise InfrastructureFailure('KIMI auth is too large')
 
     try:
         parsed = json.loads(auth)
     except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-        raise InfrastructureFailure('invalid CODEX auth') from exc
+        raise InfrastructureFailure('invalid KIMI auth') from exc
 
     if not isinstance(parsed, dict):
-        raise InfrastructureFailure('CODEX auth is not a JSON object')
+        raise InfrastructureFailure('KIMI auth is not a JSON object')
+
+    credential = parsed.get('kimi-coding')
+
+    if not isinstance(credential, dict) or credential.get('type') != 'oauth':
+        raise InfrastructureFailure('KIMI auth must contain kimi-coding OAuth credentials')
+
+    for name in ('access', 'refresh'):
+        if not isinstance(credential.get(name), str) or not credential[name]:
+            raise InfrastructureFailure(f'KIMI auth is missing {name}')
+
+    if not isinstance(credential.get('expires'), (int, float)):
+        raise InfrastructureFailure('KIMI auth is missing token expiry')
+
+    if set(parsed) != {'kimi-coding'}:
+        raise InfrastructureFailure('KIMI auth must not contain other providers')
 
     return auth
 
 
-def load_codex_wrapping_key(env):
-    url = env.get('IX_FIXER_CODEX_AUTH_KEY_URL', CODEX_AUTH_KEY_URL)
-    raw = fetch_secret(url, 'CODEX auth wrapping key', limit=256).strip()
+def load_kimi_wrapping_key(env):
+    url = env.get('IX_FIXER_KIMI_AUTH_KEY_URL', KIMI_AUTH_KEY_URL)
+    raw = fetch_secret(url, 'KIMI auth wrapping key', limit=256).strip()
 
     try:
         key = bytes.fromhex(raw.decode())
     except (UnicodeDecodeError, ValueError) as exc:
         raise InfrastructureFailure(
-            'CODEX auth wrapping key must be 64 hexadecimal characters'
+            'KIMI auth wrapping key must be 64 hexadecimal characters'
         ) from exc
 
     if len(key) != 32:
         raise InfrastructureFailure(
-            'CODEX auth wrapping key must be 64 hexadecimal characters'
+            'KIMI auth wrapping key must be 64 hexadecimal characters'
         )
 
     return key
-
-
-def load_codex_bootstrap(env):
-    url = env.get('IX_FIXER_CODEX_AUTH_URL', CODEX_AUTH_URL)
-    return validate_codex_auth(fetch_secret(url, 'CODEX auth'))
 
 
 def hkdf_sha256(secret, salt, info, length):
@@ -266,19 +273,19 @@ def hkdf_sha256(secret, salt, info, length):
     return out[:length]
 
 
-def codex_auth_keys(wrapping_key, salt):
+def kimi_auth_keys(wrapping_key, salt):
     material = hkdf_sha256(
         wrapping_key,
         salt,
-        CODEX_AUTH_HKDF_INFO,
+        KIMI_AUTH_HKDF_INFO,
         64,
     )
     return material[:32], material[32:]
 
 
-def codex_auth_mac_input(seed_hash, salt, iv, ciphertext):
+def kimi_auth_mac_input(seed_hash, salt, iv, ciphertext):
     return (
-        b'ix-updater-fixer-codex-auth-v1\0'
+        b'ix-updater-fixer-kimi-auth-v1\0'
         + seed_hash.encode()
         + salt
         + iv
@@ -286,14 +293,14 @@ def codex_auth_mac_input(seed_hash, salt, iv, ciphertext):
     )
 
 
-def encrypt_codex_auth(auth, wrapping_key, seed_hash):
-    validate_codex_auth(auth)
+def encrypt_kimi_auth(auth, wrapping_key, seed_hash):
+    validate_kimi_auth(auth)
     salt = os.urandom(32)
     iv = os.urandom(16)
-    encryption_key, mac_key = codex_auth_keys(wrapping_key, salt)
+    encryption_key, mac_key = kimi_auth_keys(wrapping_key, salt)
     ciphertext = subprocess.check_output(
         (
-            'openssl', 'enc', CODEX_AUTH_AES,
+            'openssl', 'enc', KIMI_AUTH_AES,
             '-K', encryption_key.hex(),
             '-iv', iv.hex(),
         ),
@@ -301,30 +308,30 @@ def encrypt_codex_auth(auth, wrapping_key, seed_hash):
     )
     tag = hmac.new(
         mac_key,
-        codex_auth_mac_input(seed_hash, salt, iv, ciphertext),
+        kimi_auth_mac_input(seed_hash, salt, iv, ciphertext),
         hashlib.sha256,
     ).digest()
     envelope = {
-        'alg': CODEX_AUTH_ENVELOPE_ALGORITHM,
+        'alg': KIMI_AUTH_ENVELOPE_ALGORITHM,
         'ct': base64.b64encode(ciphertext).decode(),
         'iv': base64.b64encode(iv).decode(),
         'key': hashlib.sha256(wrapping_key).hexdigest(),
         'salt': base64.b64encode(salt).decode(),
         'seed': seed_hash,
         'tag': base64.b64encode(tag).decode(),
-        'v': CODEX_AUTH_ENVELOPE_VERSION,
+        'v': KIMI_AUTH_ENVELOPE_VERSION,
     }
     return (json.dumps(envelope, separators=(',', ':'), sort_keys=True) + '\n').encode()
 
 
-def decrypt_codex_auth(raw, wrapping_key):
+def decrypt_kimi_auth(raw, wrapping_key):
     try:
         envelope = json.loads(raw)
 
-        if envelope['v'] != CODEX_AUTH_ENVELOPE_VERSION:
+        if envelope['v'] != KIMI_AUTH_ENVELOPE_VERSION:
             raise ValueError('unsupported version')
 
-        if envelope['alg'] != CODEX_AUTH_ENVELOPE_ALGORITHM:
+        if envelope['alg'] != KIMI_AUTH_ENVELOPE_ALGORITHM:
             raise ValueError('unsupported algorithm')
 
         seed_hash = envelope['seed']
@@ -340,25 +347,25 @@ def decrypt_codex_auth(raw, wrapping_key):
         ciphertext = base64.b64decode(envelope['ct'], validate=True)
         tag = base64.b64decode(envelope['tag'], validate=True)
     except (KeyError, TypeError, binascii.Error, json.JSONDecodeError, ValueError) as exc:
-        raise InfrastructureFailure('invalid encrypted CODEX auth in etcd') from exc
+        raise InfrastructureFailure('invalid encrypted KIMI auth in etcd') from exc
 
     if len(salt) != 32 or len(iv) != 16 or len(tag) != hashlib.sha256().digest_size:
-        raise InfrastructureFailure('invalid encrypted CODEX auth sizes in etcd')
+        raise InfrastructureFailure('invalid encrypted KIMI auth sizes in etcd')
 
-    encryption_key, mac_key = codex_auth_keys(wrapping_key, salt)
+    encryption_key, mac_key = kimi_auth_keys(wrapping_key, salt)
     expected = hmac.new(
         mac_key,
-        codex_auth_mac_input(seed_hash, salt, iv, ciphertext),
+        kimi_auth_mac_input(seed_hash, salt, iv, ciphertext),
         hashlib.sha256,
     ).digest()
 
     if not hmac.compare_digest(tag, expected):
-        raise InfrastructureFailure('encrypted CODEX auth authentication failed')
+        raise InfrastructureFailure('encrypted KIMI auth authentication failed')
 
     try:
         auth = subprocess.check_output(
             (
-                'openssl', 'enc', CODEX_AUTH_AES,
+                'openssl', 'enc', KIMI_AUTH_AES,
                 '-K', encryption_key.hex(),
                 '-iv', iv.hex(),
                 '-d',
@@ -367,16 +374,16 @@ def decrypt_codex_auth(raw, wrapping_key):
             stderr=subprocess.PIPE,
         )
     except subprocess.CalledProcessError as exc:
-        raise InfrastructureFailure('cannot decrypt CODEX auth from etcd') from exc
+        raise InfrastructureFailure('cannot decrypt KIMI auth from etcd') from exc
 
-    return validate_codex_auth(auth), seed_hash
+    return validate_kimi_auth(auth), seed_hash
 
 
-def read_codex_auth_etcd(env):
+def read_kimi_auth_etcd(env):
     etcd_env = dict(env)
     etcd_env['ETCDCTL_ENDPOINTS'] = env['ETCD_PERSIST_ENDPOINTS']
     result = subprocess.run(
-        ('etcdctl', 'get', '--print-value-only', CODEX_AUTH_ETCD_KEY),
+        ('etcdctl', 'get', '--print-value-only', KIMI_AUTH_ETCD_KEY),
         env=etcd_env,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -385,41 +392,33 @@ def read_codex_auth_etcd(env):
 
     if result.returncode != 0:
         sys.stderr.buffer.write(result.stderr)
-        raise InfrastructureFailure('cannot load encrypted CODEX auth from etcd')
+        raise InfrastructureFailure('cannot load encrypted KIMI auth from etcd')
 
     return result.stdout
 
 
-def load_codex_auth(env):
-    wrapping_key = load_codex_wrapping_key(env)
-    bootstrap = load_codex_bootstrap(env)
-    seed_hash = hashlib.sha256(bootstrap).hexdigest()
-    encrypted = read_codex_auth_etcd(env)
+def load_kimi_auth(env):
+    wrapping_key = load_kimi_wrapping_key(env)
+    encrypted = read_kimi_auth_etcd(env)
 
     if not encrypted:
-        log('no runtime CODEX auth in etcd; use encrypted-store bootstrap')
-        return bootstrap, wrapping_key, seed_hash
+        raise InfrastructureFailure('KIMI auth is not provisioned in persistent etcd')
 
-    auth, saved_seed_hash = decrypt_codex_auth(encrypted, wrapping_key)
+    auth, seed_hash = decrypt_kimi_auth(encrypted, wrapping_key)
 
     if auth is None:
-        log('CODEX wrapping key changed; use encrypted-store bootstrap')
-        return bootstrap, wrapping_key, seed_hash
-
-    if saved_seed_hash != seed_hash:
-        log('CODEX auth bootstrap changed; replace stale runtime state')
-        return bootstrap, wrapping_key, seed_hash
+        raise InfrastructureFailure('KIMI wrapping key changed; re-provision auth in etcd')
 
     return auth, wrapping_key, seed_hash
 
 
-def save_codex_auth(auth, wrapping_key, seed_hash, env):
-    encrypted = encrypt_codex_auth(auth, wrapping_key, seed_hash)
-    log(f'save refreshed CODEX auth to etcd {CODEX_AUTH_ETCD_KEY}')
+def save_kimi_auth(auth, wrapping_key, seed_hash, env):
+    encrypted = encrypt_kimi_auth(auth, wrapping_key, seed_hash)
+    log(f'save refreshed KIMI auth to etcd {KIMI_AUTH_ETCD_KEY}')
     etcd_env = dict(env)
     etcd_env['ETCDCTL_ENDPOINTS'] = env['ETCD_PERSIST_ENDPOINTS']
     result = subprocess.run(
-        ('etcdctl', 'put', CODEX_AUTH_ETCD_KEY),
+        ('etcdctl', 'put', KIMI_AUTH_ETCD_KEY),
         env=etcd_env,
         input=encrypted,
         stdout=subprocess.PIPE,
@@ -429,58 +428,43 @@ def save_codex_auth(auth, wrapping_key, seed_hash, env):
 
     if result.returncode != 0:
         sys.stderr.buffer.write(result.stderr)
-        raise InfrastructureFailure('cannot save encrypted CODEX auth to etcd')
+        raise InfrastructureFailure('cannot save encrypted KIMI auth to etcd')
 
 
 def molot_env(base_env):
     env = dict(base_env)
-    # Codex auth never crosses the task environment; it is loaded from the
-    # host-only secret service just in time.
-    env.pop('CODEX_AUTH_B64', None)  # Do not leak payloads from obsolete tasks.
+    # OAuth tokens never cross the task environment.
+    env.pop('CODEX_AUTH_B64', None)
+    env.pop('KIMI_AUTH_B64', None)  # Do not leak payloads from obsolete tasks.
     env['IX_EXEC_KIND'] = 'molot'
     env['S3_BUCKET'] = 'molot'
     return env
 
 
-def materialize_codex_home(work, auth):
-    auth = validate_codex_auth(auth)
-    home = work / 'codex-home'
+def materialize_kimi_home(work, auth):
+    auth = validate_kimi_auth(auth)
+    home = work / 'kimi-home'
     home.mkdir(mode=0o700)
     auth_path = home / 'auth.json'
     auth_path.write_bytes(auth)
     auth_path.chmod(0o600)
 
-    # A login shell sources /etc/profile and overwrites the supervisor's
-    # IX_EXEC_KIND=molot with IX_EXEC_KIND=system.  Keep agent commands in a
-    # regular shell and let them inherit the supervisor's curated environment,
-    # including Molot's endpoints.  Repository credentials and the auth
-    # payload have already been removed.
-    config_path = home / 'config.toml'
-    config_path.write_text(
-        'allow_login_shell = false\n'
-        '\n'
-        '[shell_environment_policy]\n'
-        'inherit = "all"\n'
-    )
-    config_path.chmod(0o600)
     return home
 
 
-def codex_agent_env(base_env, codex_home):
+def kimi_agent_env(base_env, kimi_home):
     env = molot_env(base_env)
     # The supervisor needs persistent etcd for auth state.  The repair agent
     # only needs Molot/Gorn and must not receive the durable etcd endpoint.
     env.pop('ETCD_PERSIST_ENDPOINTS', None)
-    # The agent runs in Wirez's network namespace.  Host-loopback endpoints
-    # are unreachable there, so use the cluster-facing 192.* listeners which
-    # the codex wrapper explicitly bypasses around SOCKS.
-    env['GORN_API'] = base_env['IX_FIXER_CODEX_GORN_API']
-    env['S3_ENDPOINT'] = base_env['IX_FIXER_CODEX_S3_ENDPOINT']
+    # Keep the cluster endpoints used by distributed builds.
+    env['GORN_API'] = base_env['IX_FIXER_KIMI_GORN_API']
+    env['S3_ENDPOINT'] = base_env['IX_FIXER_KIMI_S3_ENDPOINT']
     # The client resolves against the store's gofra listener. The workers
     # keep MOLOT_STORE_ENDPOINT, their own loopback, which the client
     # forwards into every task: it must not be overridden here.
-    env['MOLOT_RESOLVE'] = base_env['IX_FIXER_CODEX_MOLOT_RESOLVE']
-    env['CODEX_HOME'] = str(codex_home)
+    env['MOLOT_RESOLVE'] = base_env['IX_FIXER_KIMI_MOLOT_RESOLVE']
+    env['HOME'] = str(kimi_home)
     return git_read_env(env)
 
 
@@ -583,8 +567,32 @@ def run_build(repo, env):
     return returncode, build_log
 
 
-def codex_prompt(target, summary):
+def path_tools(env, cwd):
+    names = set()
+
+    for directory in os.get_exec_path(env):
+        path = Path(directory or '.')
+
+        if not path.is_absolute():
+            path = cwd / path
+
+        try:
+            with os.scandir(path) as entries:
+                for entry in entries:
+                    if entry.is_file() and os.access(entry.path, os.X_OK):
+                        names.add(entry.name)
+        except OSError:
+            continue
+
+    return ' '.join(sorted(names))
+
+
+def kimi_prompt(target, summary, *, env=None, cwd=None):
+    tools = path_tools(env, Path(cwd) if cwd is not None else Path.cwd())
     return f"""Repair the failed IX package build.
+
+Environment: IX, with static linking by default. Standard shell utilities are
+BusyBox applets, with BusyBox options. Available commands in PATH: {tools}
 
 Reproduce it with:
 
@@ -614,38 +622,37 @@ clean.
 """
 
 
-def codex_command(repo, prompt):
+def kimi_command(repo, auth_path):
     return (
-        'timeout', '7200', 'codex', 'exec',
-        '--model', CODEX_MODEL,
-        '--config', f'model_reasoning_effort="{CODEX_REASONING_EFFORT}"',
-        '--dangerously-bypass-approvals-and-sandbox',
-        '--ephemeral',
-        '--color', 'never',
+        'timeout', '7200', 'batcher',
+        '-auth', str(auth_path),
+        '-model', KIMI_MODEL,
+        '-effort', KIMI_REASONING_EFFORT,
         '-C', str(repo),
-        prompt,
     )
 
 
-def run_codex(repo, build_log, env):
+def run_kimi(repo, build_log, env):
     target = IX_TARGET
     revision = subprocess.check_output(
         ('git', 'rev-parse', 'HEAD'), cwd=repo, text=True,
     ).strip()
-    prompt = codex_prompt(target, failure_summary(build_log))
-    auth, wrapping_key, seed_hash = load_codex_auth(env)
-    codex_home = materialize_codex_home(repo.parent, auth)
-    agent_env = codex_agent_env(env, codex_home)
-    cmd = codex_command(repo, prompt)
-    log(f'run codex target={target}')
+    auth, wrapping_key, seed_hash = load_kimi_auth(env)
+    kimi_home = materialize_kimi_home(repo.parent, auth)
+    agent_env = kimi_agent_env(env, kimi_home)
+    prompt = kimi_prompt(
+        target, failure_summary(build_log), env=agent_env, cwd=repo,
+    )
+    cmd = kimi_command(repo, kimi_home / 'auth.json')
+    log(f'run batcher model={KIMI_MODEL} target={target}')
 
     try:
-        subprocess.run(cmd, cwd=repo, env=agent_env, check=True)
+        subprocess.run(cmd, cwd=repo, env=agent_env, input=prompt.encode(), check=True)
     finally:
-        # Persist rotations even on a non-zero Codex exit or timeout.  Losing
+        # Persist rotations even on a non-zero Kimi exit or timeout.  Losing
         # an updated auth.json here would leave the saved refresh token stale.
-        save_codex_auth(
-            (codex_home / 'auth.json').read_bytes(),
+        save_kimi_auth(
+            (kimi_home / 'auth.json').read_bytes(),
             wrapping_key,
             seed_hash,
             env,
@@ -715,28 +722,28 @@ def validate_agent_commit(repo, revision):
     if head == revision:
         if status:
             raise InfrastructureFailure(
-                'Codex left uncommitted repository changes; refusing to publish'
+                'Kimi left uncommitted repository changes; refusing to publish'
             )
 
-        log('Codex left no repository change; nothing to publish')
+        log('Kimi left no repository change; nothing to publish')
         return None
 
     if status:
         raise InfrastructureFailure(
-            'Codex committed with a dirty working tree; refusing to publish'
+            'Kimi committed with a dirty working tree; refusing to publish'
         )
 
     commit_line = git_output(repo, 'rev-list', '--parents', '-n', '1', head).split()
 
     if len(commit_line) != 2 or commit_line[1] != revision:
         raise InfrastructureFailure(
-            'Codex did not leave exactly one commit on the original HEAD'
+            'Kimi did not leave exactly one commit on the original HEAD'
         )
 
     subject = git_output(repo, 'log', '-1', '--format=%s', head)
 
     if not subject or len(subject) > 120:
-        raise InfrastructureFailure('Codex left an invalid commit subject')
+        raise InfrastructureFailure('Kimi left an invalid commit subject')
 
     changed = git_output(
         repo,
@@ -745,12 +752,12 @@ def validate_agent_commit(repo, revision):
     forbidden = {'.fixer-build.log'}
 
     if not changed:
-        raise InfrastructureFailure('Codex left an empty repair commit')
+        raise InfrastructureFailure('Kimi left an empty repair commit')
 
     if forbidden.intersection(changed):
-        raise InfrastructureFailure('Codex committed fixer scratch files')
+        raise InfrastructureFailure('Kimi committed fixer scratch files')
 
-    log(f'validated Codex commit {head[:12]}: {subject}')
+    log(f'validated Kimi commit {head[:12]}: {subject}')
     return head
 
 
@@ -788,7 +795,7 @@ def publish_fix(repo, revision, branch, env):
         if remote_head != parent:
             log(
                 f'publication {branch} moved from {parent[:12]} to '
-                f'{remote_head[:12]}; rebase Codex fix'
+                f'{remote_head[:12]}; rebase Kimi fix'
             )
             subprocess.run(
                 ('git', 'rebase', 'FETCH_HEAD'),
@@ -810,7 +817,7 @@ def publish_fix(repo, revision, branch, env):
         )
 
         if pushed.returncode == 0:
-            log(f'published Codex commit {head[:12]} to {branch}')
+            log(f'published Kimi commit {head[:12]} to {branch}')
             return True
 
         log(f'git push failed; attempt {attempt}/{GIT_PUSH_ATTEMPTS}')
@@ -843,8 +850,8 @@ def run_fixer(env):
                 f'ix build exited {returncode} without a target-failure marker'
             )
 
-        log(f'IX CI target failed (exit {returncode}); starting one Codex repair')
-        revision = run_codex(repo, build_log, env)
+        log(f'IX CI target failed (exit {returncode}); starting one Kimi repair')
+        revision = run_kimi(repo, build_log, env)
         publish_fix(repo, revision, branch, env)
 
 

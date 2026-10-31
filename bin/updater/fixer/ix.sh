@@ -9,7 +9,7 @@ bin/git/unwrap
 bin/git/passenv
 bin/minio/patched/client
 bin/ix/timeout
-bin/codex/wrap
+bin/batcher
 bin/openssl
 bin/etcd/ctl
 bin/ix/tools/regen

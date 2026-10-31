@@ -2480,7 +2480,7 @@ class SamogonBot:
 class JobScheduler:
     # Cluster cron; singleton via etcd_lock /lock/job/scheduler.
     def __init__(self, gorn_api, s3_endpoint, etcd_endpoints, etcd_persist_endpoints,
-                 codex_gorn_api, codex_s3_endpoint, codex_molot_resolve, logovo_s3_endpoint, socks5):
+                 kimi_gorn_api, kimi_s3_endpoint, kimi_molot_resolve, logovo_s3_endpoint, socks5):
         self.gorn_api = gorn_api
         self.s3_endpoint = s3_endpoint
         # Egress for jobs that fetch from the internet (repology).
@@ -2491,9 +2491,9 @@ class JobScheduler:
         # etcd_endpoints: tmpfs etcd_3; etcd_persist_endpoints: cold-safe.
         self.etcd_endpoints = list(etcd_endpoints)
         self.etcd_persist_endpoints = list(etcd_persist_endpoints)
-        self.codex_gorn_api = codex_gorn_api
-        self.codex_s3_endpoint = codex_s3_endpoint
-        self.codex_molot_resolve = codex_molot_resolve
+        self.kimi_gorn_api = kimi_gorn_api
+        self.kimi_s3_endpoint = kimi_s3_endpoint
+        self.kimi_molot_resolve = kimi_molot_resolve
 
     def name(self):
         return 'job_scheduler'
@@ -2536,10 +2536,10 @@ class JobScheduler:
             'HF_TOKEN': get_key('/hf/token').decode().strip(),
             'GHCR_TOKEN': get_key('/ghcr/token').decode().strip(),
             'GITHUB_TOKEN': get_key('/github/token').decode().strip(),
-            # Wirez gives 192.* a direct route; loopback is a different netns.
-            'CODEX_GORN_API': self.codex_gorn_api,
-            'CODEX_S3_ENDPOINT': self.codex_s3_endpoint,
-            'CODEX_MOLOT_RESOLVE': self.codex_molot_resolve,
+            # Cluster endpoints passed to the fixer's build tools.
+            'KIMI_GORN_API': self.kimi_gorn_api,
+            'KIMI_S3_ENDPOINT': self.kimi_s3_endpoint,
+            'KIMI_MOLOT_RESOLVE': self.kimi_molot_resolve,
             'LOGOVO_S3_ENDPOINT': self.logovo_s3_endpoint,
             'SOCKS5_PROXY': self.socks5,
         }
@@ -3355,9 +3355,9 @@ class ClusterMap:
                     s3_endpoint=f"http://127.0.0.1:{p['s3_front']}",
                     etcd_endpoints=[f"127.0.0.1:{p['etcd_3_client']}"],
                     etcd_persist_endpoints=[f"127.0.0.1:{p['etcd_1_client']}"],
-                    codex_gorn_api=f"http://{h['gofra']['ip']}:{p['gorn_ctl_mesh']}",
-                    codex_s3_endpoint=f"http://{h['gofra']['ip']}:{p['s3_front']}",
-                    codex_molot_resolve=f"http://{h['gofra']['ip']}:{p['molot_store']}",
+                    kimi_gorn_api=f"http://{h['gofra']['ip']}:{p['gorn_ctl_mesh']}",
+                    kimi_s3_endpoint=f"http://{h['gofra']['ip']}:{p['s3_front']}",
+                    kimi_molot_resolve=f"http://{h['gofra']['ip']}:{p['molot_store']}",
                     logovo_s3_endpoint=f"http://127.0.0.1:{p['s3_front']}",
                     socks5=f"127.0.0.1:{p['socks_proxy']}",
                 ),
