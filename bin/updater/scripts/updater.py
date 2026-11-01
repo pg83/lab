@@ -47,6 +47,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(os.path.realpath(__file__)).parent.parent / 'share' / 'updater'))
 
 import groups
+import gnu_patches
 import libversion
 import lines
 
@@ -221,7 +222,9 @@ def newest_versions(records, old):
             rec.get('version')
             for rec in records
             if rec.get('status') == status and rec.get('version')
-            and libversion.version_compare(rec['version'], old) > 0
+            and libversion.version_compare(
+                rec['version'], old, libversion.P_IS_PATCH, libversion.P_IS_PATCH,
+            ) > 0
             and (prerelease(old) or not prerelease(rec['version']))
         }
 
@@ -342,7 +345,7 @@ def prepare_recipe(path, old, new, probe_sha, go=GO_LATEST):
     context = recipe_context(path, data)
     old_line = f'\n{old}\n'
 
-    if 'noauto' in context or old_line not in data:
+    if 'noauto' in context or gnu_patches.MARKER in context or old_line not in data:
         return False
 
     updated = data.replace(recipe_sha(data), probe_sha).replace(old_line, f'\n{new}\n')
@@ -384,7 +387,8 @@ def rewrite_version(data, old, new, probe_sha, literal):
 
 def recipe_accepts_update(path, old):
     data = path.read_text()
-    return 'noauto' not in recipe_context(path, data) and f'\n{old}\n' in data
+    context = recipe_context(path, data)
+    return 'noauto' not in context and gnu_patches.MARKER not in context and f'\n{old}\n' in data
 
 
 def install_sha(path, probe_sha, sha):
@@ -604,6 +608,17 @@ class PackageUpdater:
         probe_sha = secrets.token_hex(32)
 
         try:
+            if gnu_patches.MARKER in original.decode():
+                series = gnu_patches.owner(packages)
+
+                if series is None or series.holder != holder:
+                    raise CandidateFailure(f'unknown GNU patch recipe: {holder}')
+
+                path.write_text(gnu_patches.rewrite(original.decode(), series, new, lines.Net(self.env)))
+                self.render(build_packages)
+                self.show_diff()
+                return
+
             path.write_text(rewrite_version(path.read_text(), old, new, probe_sha, literal))
             self.show_diff()
             sha = extract_reported_sha(self.builder.build(build_packages).output, probe_sha)
@@ -612,9 +627,9 @@ class PackageUpdater:
                 raise CandidateFailure('cannot install the reported checksum')
 
             self.resolve_remaining_checksums(path, build_packages, {sha})
-        except (OSError, CandidateFailure):
+        except (OSError, ValueError, CandidateFailure) as exc:
             path.write_bytes(original)
-            raise
+            raise CandidateFailure(f'cannot update {holder}: {exc}') from exc
 
         self.show_diff()
 
@@ -711,9 +726,51 @@ class PackageUpdater:
             log(f'checksum {stale[0]} -> {sha}')
             resolved.add(sha)
 
+    def process_gnu_patches(self, candidate, series):
+        path = self.repo / 'pkgs' / series.holder
+
+        try:
+            original = path.read_text()
+
+            if gnu_patches.MARKER not in original or 'noauto' in original:
+                log(f'GNU patch recipe not enabled: {series.package}')
+                return False
+
+            old = gnu_patches.content(original, 'version')
+            new = gnu_patches.canonical(candidate.new)
+
+            # Repology may still describe an earlier source snapshot.
+            if gnu_patches.key(new) <= gnu_patches.key(old):
+                log(f'GNU patches already current: {series.package} {old}')
+                return False
+
+            if series.name == 'bash' and gnu_patches.key(new)[0] != int(series.package.rsplit('/', 1)[1]):
+                raise CandidateFailure('Bash release belongs to a different major line')
+
+            build_packages = list(packages_to_build(self.repo, candidate.packages))
+            preflight = self.builder.build(build_packages)
+
+            if preflight.returncode != 0:
+                raise CandidateFailure(f'current package does not build (exit {preflight.returncode})')
+
+            # These are raw files, not vendored .pzd archives. Download all
+            # missing patches and hash their exact bytes before editing.
+            updated = gnu_patches.rewrite(original, series, new, lines.Net(self.env))
+            path.write_text(updated)
+            self.render(build_packages)
+        except (OSError, ValueError) as exc:
+            raise CandidateFailure(f'cannot update GNU patches: {exc}') from exc
+
+        self.show_diff()
+        self.commit_and_push(Candidate(old, new, candidate.packages))
+        return True
+
     def process(self, candidate):
         if not candidate.packages:
             raise CandidateFailure('Repology record contains no stalix source packages')
+
+        if series := gnu_patches.owner(candidate.packages):
+            return self.process_gnu_patches(candidate, series)
 
         try:
             files = self.dependency_files(candidate.packages)
@@ -890,7 +947,7 @@ def run_updater(env):
 
             # Lines are lines.py's: repology sees one version of a family
             # and would move a line directory across its prefix.
-            if lines.owned(candidate.packages):
+            if lines.owned(candidate.packages) and not gnu_patches.owner(candidate.packages):
                 log(f'skip line family {candidate.line}')
                 continue
 

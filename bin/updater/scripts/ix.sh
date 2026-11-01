@@ -19,5 +19,9 @@ base64 -d << EOF > ${out}/share/updater/groups.py
 {% include 'groups.py/base64' %}
 EOF
 
+base64 -d << EOF > ${out}/share/updater/gnu_patches.py
+{% include 'gnu_patches.py/base64' %}
+EOF
+
 chmod +x ${out}/bin/updater
 {% endblock %}

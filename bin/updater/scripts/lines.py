@@ -20,6 +20,8 @@ import subprocess
 import time
 from dataclasses import dataclass
 
+import gnu_patches
+
 
 # The line directory first: the version holder of a line is the first of
 # these that names a version.
@@ -80,7 +82,7 @@ class Net:
         self.pause = pause
         self.sleep = sleep
 
-    def run(self, cmd):
+    def run(self, cmd, *, binary=False):
         for attempt in range(self.attempts):
             if attempt:
                 self.sleep(self.pause)
@@ -92,7 +94,7 @@ class Net:
                 continue
 
             if res.returncode == 0:
-                return res.stdout.decode(errors='replace')
+                return res.stdout if binary else res.stdout.decode(errors='replace')
 
             tail = res.stderr.decode(errors='replace').strip().splitlines()[-1:]
             why = f'exit {res.returncode}: {" ".join(tail)}'
@@ -109,13 +111,13 @@ class Net:
 
         return [l.split('refs/tags/', 1)[1] for l in out.splitlines() if 'refs/tags/' in l]
 
-    def get(self, url):
+    def get(self, url, *, binary=False):
         cmd = ['curl', '-sSfL', '-m', '300']
 
         if self.proxy:
             cmd += ['--socks5-hostname', self.proxy]
 
-        return self.run(cmd + [url])
+        return self.run(cmd + [url], binary=binary)
 
 
 @dataclass(frozen=True)
@@ -359,9 +361,12 @@ def owned(packages, families=FAMILIES):
 
 
 def newest(versions, key, family, above):
-    pool = [v for v in versions if family.key_of(v) == key and numeric(v) > numeric(above)]
+    # The Bash release listing names base archives, while a recipe may
+    # already include patches (5.3p20 must never be reset to bare 5.3).
+    rank = gnu_patches.key if family.name == 'bash' else numeric
+    pool = [v for v in versions if family.key_of(v) == key and rank(v) > rank(above)]
 
-    return max(pool, key=numeric) if pool else None
+    return max(pool, key=rank) if pool else None
 
 
 def retarget_paths(text, family, old, new):
