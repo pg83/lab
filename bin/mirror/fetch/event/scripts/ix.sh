@@ -17,6 +17,7 @@ cat << 'EOF' > ${out}/etc/event/git/cache_ix.json
         "S3_ENDPOINT=$S3_ENDPOINT",
         "MC_HOST_minio_cas=$MC_HOST_minio_cas",
         "EVENT_HTTP_PORT=$EVENT_HTTP_PORT",
+        "ETCD_PERSIST_ENDPOINTS=$ETCD_PERSIST_ENDPOINTS",
         "cache_ix_event"
     ]
 }

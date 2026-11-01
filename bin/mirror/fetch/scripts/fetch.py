@@ -6,22 +6,22 @@ time of the event.
 
 Per run:
 
-  1. Bare-clone (--filter=blob:none) the local mirror_ix.git;
-     `git diff <sha>~DEPTH..<sha> -- pkgs/die/scripts/urls.txt`
-     yields the added URL lines (the '+' rows). DEPTH=3 keeps
-     a 2-event buffer for missed/failed prior events; CAS-dedup
-     absorbs whatever is re-fetched.
+  1. Acquire the shared etcd lock, read the last processed commit
+     from persistent etcd, and bare-clone the local mirror_ix.git.
+     Diff urls.txt against that commit, regardless of merge topology.
 
   2. Sequentially curl each URL, alternating direct and local
      SOCKS5 routes with increasing randomized timeouts, sha256sum it,
      upload to CAS
-     via /bin/cas. A missing upstream URL is skipped; failed CAS writes
+     via /bin/cas. Failed downloads leave the cursor unchanged; CAS writes
      retry the downloaded file instead of losing it.
 
   3. Immediately after each successful URL: emit `kind=new_sha {sha:<content-sha>}`
      so hf/ghcr subscribers can incrementally update their remotes.
 
-No persistent state — each event handles its own diff window.
+  4. Advance the cursor only after all downloads and events succeed.
+     An older event never moves the cursor backwards. --urls is an
+     independent manual replay and does not touch the cursor.
 """
 
 import hashlib
@@ -29,6 +29,7 @@ import ipaddress
 import json
 import os
 import random
+import re
 import shutil
 import subprocess
 import sys
@@ -38,8 +39,8 @@ import urllib.parse
 
 URLS_PATH = 'pkgs/die/scripts/urls.txt'
 MIRROR_GIT = 'http://127.0.0.1:8035/mirror_ix.git'
-DEPTH = 3
-EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
+CURSOR_KEY = '/mirror/ix/last_processed_commit'
+LOCK_NAME = '/lock/mirror/ix/work'
 
 
 random.seed(int(time.time() * 1000000000000))
@@ -49,7 +50,50 @@ def log(*args):
     print('+', *args, file=sys.stderr, flush=True)
 
 
-def added_urls(sha):
+def commit_sha(value):
+    if not re.fullmatch('[0-9a-f]{40}', value):
+        raise ValueError(f'invalid ix commit: {value!r}')
+    return value
+
+
+def persist_env():
+    endpoints = os.environ['ETCD_PERSIST_ENDPOINTS'].strip()
+    if not endpoints:
+        raise ValueError('ETCD_PERSIST_ENDPOINTS is empty')
+    return dict(os.environ, ETCDCTL_ENDPOINTS=endpoints)
+
+
+def read_cursor():
+    value = subprocess.check_output(
+        ['etcdctl', 'get', '--print-value-only', CURSOR_KEY],
+        env=persist_env(), text=True,
+    ).strip()
+    if not value:
+        raise RuntimeError(f'{CURSOR_KEY} is missing; seed it with the last successful commit')
+    return commit_sha(value)
+
+
+def save_cursor(base, sha):
+    # Fence the write with both the cursor and our unique lease-backed lock key.
+    # A worker whose lease expired must not overwrite a newer worker's cursor.
+    lock_key = os.environ['ETCD_LOCK_KEY']
+    if not lock_key.startswith(LOCK_NAME + '/'):
+        raise RuntimeError('mirror lock is not held')
+    txn = (
+        f'value({json.dumps(CURSOR_KEY)}) = {json.dumps(base)}\n'
+        f'version({json.dumps(lock_key)}) > "0"\n\n'
+        f'put {CURSOR_KEY} {sha}\n\n\n'
+    )
+    result = subprocess.check_output(
+        ['etcdctl', '--write-out=json', 'txn'],
+        input=txn, env=persist_env(), text=True,
+    )
+    if not json.loads(result).get('succeeded'):
+        raise RuntimeError('cursor changed or mirror lock expired; cursor was not updated')
+    log(f'cursor: {base} -> {sha}')
+
+
+def clone_repo(sha):
     log(f'cloning {MIRROR_GIT} (--filter=blob:none) for diff at {sha}')
 
     subprocess.run(
@@ -57,20 +101,15 @@ def added_urls(sha):
         check=True,
     )
 
-    res = subprocess.run(
-        ['git', '-C', 'ix.git', 'rev-parse', f'{sha}~{DEPTH}'],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        check=False,
-    )
 
-    if res.returncode == 0:
-        base = res.stdout.strip()
-    else:
-        log(f'history shorter than {DEPTH}, falling back to empty tree')
-        base = EMPTY_TREE
+def is_ancestor(base, sha):
+    result = subprocess.run(['git', '-C', 'ix.git', 'merge-base', '--is-ancestor', base, sha])
+    if result.returncode not in (0, 1):
+        result.check_returncode()
+    return result.returncode == 0
 
+
+def added_urls(base, sha):
     diff = subprocess.check_output(
         ['git', '-C', 'ix.git', 'diff', '--unified=0', base, sha, '--', URLS_PATH],
     ).decode()
@@ -84,7 +123,7 @@ def added_urls(sha):
             if u:
                 out.append(u)
 
-    return out
+    return list(dict.fromkeys(out))
 
 
 # Hosts only our own networks resolve. Everything this worker fetches lands
@@ -204,17 +243,7 @@ def emit_new_sha(content_sha):
     )
 
 
-def main():
-    if sys.argv[1:] == ['--urls']:
-        urls = list(dict.fromkeys(line.strip() for line in sys.stdin if line.strip()))
-        log(f'replay: {len(urls)} URLs')
-    elif len(sys.argv) == 2:
-        sha = sys.argv[1]
-        urls = added_urls(sha)
-        log(f'diff window {sha}~{DEPTH}..{sha}: {len(urls)} added URLs')
-    else:
-        raise SystemExit('usage: cache_ix_sources <ix-sha> | --urls < urls.txt')
-
+def fetch_urls(urls, *, replay=False):
     new_content_shas = set()
 
     for url in urls:
@@ -226,7 +255,9 @@ def main():
             cs = fetch_one(url)
         except subprocess.CalledProcessError as e:
             log(f'WARN: fetch failed for {url}: {e}')
-            continue
+            if replay:
+                continue
+            raise
 
         if cs not in new_content_shas:
             emit_new_sha(cs)
@@ -234,5 +265,48 @@ def main():
 
     log(f'fetched this run: {len(new_content_shas)} unique content shas')
 
+
+def process_commit(sha):
+    base = read_cursor()
+    if base == sha:
+        log(f'already processed {sha}')
+        return
+    clone_repo(sha)
+    if is_ancestor(sha, base):
+        log(f'skip old event {sha}; cursor is {base}')
+        return
+    if not is_ancestor(base, sha):
+        raise RuntimeError(f'ix history diverged: cursor {base}, event {sha}')
+    urls = added_urls(base, sha)
+    log(f'diff {base}..{sha}: {len(urls)} added URLs')
+    fetch_urls(urls)
+    save_cursor(base, sha)
+
+
+def main():
+    args = sys.argv[1:]
+    if args == ['--urls']:
+        urls = list(dict.fromkeys(line.strip() for line in sys.stdin if line.strip()))
+        log(f'replay: {len(urls)} URLs')
+        fetch_urls(urls, replay=True)
+    elif len(args) == 2 and args[0] == '--locked':
+        process_commit(commit_sha(args[1]))
+    elif len(args) == 1:
+        sha = commit_sha(args[0])
+        os.execvpe('etcd_lock', [
+            'etcd_lock', LOCK_NAME, '--',
+            sys.executable, os.path.abspath(__file__), '--locked', sha,
+        ], persist_env())
+    else:
+        raise SystemExit('usage: cache_ix_sources <ix-sha> | --urls < urls.txt')
+
+
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception:
+        # Gorn retries exit 1; avoid a tight retry loop on an unavailable source.
+        import traceback
+        traceback.print_exc()
+        time.sleep(30)
+        sys.exit(1)

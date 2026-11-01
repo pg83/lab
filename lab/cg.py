@@ -2607,6 +2607,7 @@ class EventRunner:
             'TMPDIR': os.getcwd(),
             'EVENT_HTTP_PORT': str(self.port),
             'ETCDCTL_ENDPOINTS': ','.join(self.etcd_endpoints),
+            'ETCD_PERSIST_ENDPOINTS': ','.join(self.etcd_endpoints),
             'ETCD_TMPFS_ENDPOINTS': ','.join(self.etcd_tmpfs_endpoints),
             'GORN_API': self.gorn_api,
             'S3_ENDPOINT': self.s3_endpoint,
