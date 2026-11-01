@@ -119,9 +119,9 @@ class FixerTests(unittest.TestCase):
         self.assertNotIn('KIMI_AUTH_B64', got)
 
     def test_prompt_asks_for_one_local_commit_without_publication(self):
-        prompt = fixer.kimi_prompt(fixer.IX_TARGET, 'node failed: root')
+        prompt = fixer.kimi_prompt(' '.join(fixer.IX_TARGETS), 'node failed: root')
         compact = ' '.join(prompt.split())
-        self.assertIn('./ix build set/ci/tier/0 --seed=1', compact)
+        self.assertIn('./ix build set/ci/tier/0 set/ci/tier/1 --seed=1', compact)
         self.assertIn('./ix build <package> --seed=1', compact)
         self.assertIn('as often as needed', compact)
         self.assertIn('until that build exits zero', compact)
@@ -138,8 +138,8 @@ class FixerTests(unittest.TestCase):
         self.assertNotIn('IX_EXEC_KIND', prompt)
         self.assertNotIn('build <package> -k', prompt)
 
-    def test_fixer_target_is_fixed_to_tier_zero(self):
-        self.assertEqual(fixer.IX_TARGET, 'set/ci/tier/0')
+    def test_fixer_targets_include_tiers_zero_and_one(self):
+        self.assertEqual(fixer.IX_TARGETS, ('set/ci/tier/0', 'set/ci/tier/1'))
 
         proc = mock.Mock()
         proc.stdout = io.BytesIO(b'green\n')
@@ -155,7 +155,7 @@ class FixerTests(unittest.TestCase):
 
         self.assertEqual(
             popen.call_args.args[0],
-            ('./ix', 'build', 'set/ci/tier/0', '--seed=1'),
+            ('./ix', 'build', 'set/ci/tier/0', 'set/ci/tier/1', '--seed=1'),
         )
 
     def test_build_stops_at_first_direct_failure(self):

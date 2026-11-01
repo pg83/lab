@@ -7,7 +7,7 @@ The cluster scheduler starts this command asynchronously through gorn and
 holds /lock/updater/fixer/work around the complete process.  The worker:
 
   1. clones pg83/ix at main from the local Ogorod mirror;
-  2. runs ``./ix build set/ci/tier/0 --seed=1`` through Molot, deliberately
+  2. runs ``./ix build set/ci/tier/0 set/ci/tier/1 --seed=1`` through Molot, deliberately
      without a keep-going flag, and stops its process group at the first
      direct ``node failed:`` marker;
   3. exits when the build is green;
@@ -46,7 +46,7 @@ from pathlib import Path
 IX_GIT_READ_URL = 'http://127.0.0.1:8035/mirror_ix.git'
 IX_GIT_PUSH_URL = 'https://github.com/pg83/ix.git'
 IX_BRANCH = 'main'
-IX_TARGET = 'set/ci/tier/0'
+IX_TARGETS = ('set/ci/tier/0', 'set/ci/tier/1')
 REGENERATED_PATHS = (
     'pkgs/die/scripts/dump.json',
     'pkgs/die/scripts/urls.txt',
@@ -528,9 +528,8 @@ def stop_build_process_group(proc):
 
 
 def run_build(repo, env):
-    target = IX_TARGET
     build_log = repo / '.fixer-build.log'
-    cmd = ('./ix', 'build', target, '--seed=1')
+    cmd = ('./ix', 'build', *IX_TARGETS, '--seed=1')
     log('run', *cmd, '(molot, no -k)')
 
     proc = subprocess.Popen(
@@ -636,7 +635,7 @@ def kimi_command(repo, auth_path):
 
 
 def run_kimi(repo, build_log, env):
-    target = IX_TARGET
+    target = ' '.join(IX_TARGETS)
     revision = subprocess.check_output(
         ('git', 'rev-parse', 'HEAD'), cwd=repo, text=True,
     ).strip()
