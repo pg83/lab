@@ -165,12 +165,14 @@ class NodeExporter:
             'pkg': 'bin/prometheus/node/exporter',
         }
 
+        yield {'pkg': 'bin/sched/s3/metrics', 'delay': '30'}
+
     def prom_port(self):
         return self.port
 
     def run(self):
         # Kernel 7.2 changed /proc/fs/xfs/stat and the xfs collector fails
-        # every scrape; there are no xfs mounts left on the hosts anyway.
+        # every scrape; S3 filesystems are collected from their mount namespaces.
         textfiles = '/var/run/node_exporter/textfile'
         os.makedirs(textfiles, exist_ok=True)
         exec_into('node_exporter', f'--web.listen-address=127.0.0.1:{self.port}',
