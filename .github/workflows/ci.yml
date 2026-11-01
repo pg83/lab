@@ -49,3 +49,4 @@ jobs:
           python3 -m unittest discover -s bin/repology/scripts -p 'test_*.py'
           python3 -m unittest discover -s bin/updater/scripts -p 'test_*.py'
           python3 -m unittest discover -s bin/updater/fixer/scripts -p 'test_*.py'
+          python3 -m unittest discover -s bin/updater/merger/scripts -p 'test_*.py'

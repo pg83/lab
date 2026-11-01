@@ -11,4 +11,5 @@ bin/git/passenv
 bin/ix/tools/regen
 bin/updater/scripts
 bin/updater/fixer
+bin/updater/merger
 {% endblock %}

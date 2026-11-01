@@ -19,6 +19,7 @@ bin/repology
 bin/repology/cron
 bin/updater/cron
 bin/updater/fixer/cron
+bin/updater/merger/cron
 
 bin/mc/gc/cron(root=/gorn/cli,hours=24)
 bin/mc/gc/cron(root=/gorn/mc_gc,hours=1)
@@ -35,4 +36,5 @@ bin/mc/gc/cron(root=/gorn/ogorod_mirror,hours=1)
 bin/mc/gc/cron(root=/gorn/repology,hours=24)
 bin/mc/gc/cron(root=/gorn/updater,hours=24)
 bin/mc/gc/cron(root=/gorn/updater_fixer,hours=24)
+bin/mc/gc/cron(root=/gorn/updater_merger,hours=168)
 {% endblock %}
