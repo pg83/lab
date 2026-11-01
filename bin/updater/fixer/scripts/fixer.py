@@ -124,11 +124,11 @@ def clone_ix(dst, env):
         cwd=dst,
         check=True,
     )
-    subprocess.run(('git', 'config', 'user.name', 'IX Fixer'), cwd=dst, check=True)
+    subprocess.run(('git', 'config', 'user.name', 'Batcher'), cwd=dst, check=True)
     subprocess.run(
         (
             'git', 'config', 'user.email',
-            'ix-fixer@localhost',
+            '351180121+batcher-bot[bot]@users.noreply.github.com',
         ),
         cwd=dst,
         check=True,
