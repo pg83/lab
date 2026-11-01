@@ -7,7 +7,7 @@ The cluster scheduler starts this command asynchronously through gorn and
 holds /lock/updater/fixer/work around the complete process.  The worker:
 
   1. clones pg83/ix at main from the local Ogorod mirror;
-  2. runs ``./ix build set/ci/tier/0 set/ci/tier/1 --seed=1`` through Molot, deliberately
+  2. runs ``./ix build --seed=1 set/ci/tier/0 set/ci/tier/1`` through Molot, deliberately
      without a keep-going flag, and stops its process group at the first
      direct ``node failed:`` marker;
   3. exits when the build is green;
@@ -529,7 +529,8 @@ def stop_build_process_group(proc):
 
 def run_build(repo, env):
     build_log = repo / '.fixer-build.log'
-    cmd = ('./ix', 'build', *IX_TARGETS, '--seed=1')
+    # Flags before the first package apply to the realm, hence every target.
+    cmd = ('./ix', 'build', '--seed=1', *IX_TARGETS)
     log('run', *cmd, '(molot, no -k)')
 
     proc = subprocess.Popen(
@@ -598,7 +599,7 @@ Molot builds on remote workers, so paths in build logs may not exist locally.
 
 Reproduce it with:
 
-    ./ix build {target} --seed=1
+    ./ix build --seed=1 {target}
 
 The build log is in `.fixer-build.log`.  Initial failure markers are:
 
