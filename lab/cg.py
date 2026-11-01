@@ -658,8 +658,9 @@ class S3Service:
     # front, repair and web share one config: the s3 etcd, the buckets and
     # every cell of the cluster by its gofra name. repair is the exception
     # for its own host: those cells it reaches over loopback and nothing else.
-    def __init__(self, kind, listen, etcd, cell_ports, host, buckets, metrics=None):
+    def __init__(self, kind, listen, etcd, cell_ports, host, buckets, metrics=None, prometheus=None):
         self.kind = kind
+        self.prometheus = prometheus
         # Prometheus on loopback (front and repair); web serves none.
         self.metrics = metrics
         # Addresses to serve on; the front also serves on gofra for the
@@ -715,7 +716,12 @@ class S3Service:
             for i, port in enumerate(self.cell_ports):
                 cells.append({'id': (n - 1) * len(self.cell_ports) + i, 'host': host, 'addr': f'{where}:{port}'})
 
-        return {'etcd': [self.etcd], 'buckets': self.buckets, 'cells': cells}
+        config = {'etcd': [self.etcd], 'buckets': self.buckets, 'cells': cells}
+
+        if self.kind == 'web' and self.prometheus:
+            config['dashboard'] = {'prometheus': self.prometheus, 'etcd_job': 'etcd_2'}
+
+        return config
 
     def run(self):
         with memfd('config.json') as conf:
@@ -3565,7 +3571,8 @@ class ClusterMap:
             ):
                 yield {
                     'host': hn,
-                    'serv': S3Service(kind, listen, s3_etcd, s3_cell_ports, hn, S3_BUCKETS, p.get(f's3_{kind}_metrics')),
+                    'serv': S3Service(kind, listen, s3_etcd, s3_cell_ports, hn, S3_BUCKETS, p.get(f's3_{kind}_metrics'),
+                                      f"http://127.0.0.1:{p['federator']}" if kind == 'web' else None),
                 }
 
             yield {
