@@ -445,6 +445,7 @@ def materialize_kimi_home(work, auth):
     auth = validate_kimi_auth(auth)
     home = work / 'kimi-home'
     home.mkdir(mode=0o700)
+    (home / 'tmp').mkdir(mode=0o700)
     auth_path = home / 'auth.json'
     auth_path.write_bytes(auth)
     auth_path.chmod(0o600)
@@ -465,6 +466,7 @@ def kimi_agent_env(base_env, kimi_home):
     # forwards into every task: it must not be overridden here.
     env['MOLOT_RESOLVE'] = base_env['IX_FIXER_KIMI_MOLOT_RESOLVE']
     env['HOME'] = str(kimi_home)
+    env['TMPDIR'] = str(kimi_home / 'tmp')
     return git_read_env(env)
 
 
@@ -593,6 +595,7 @@ def kimi_prompt(target, summary, *, env=None, cwd=None):
 
 Environment: IX, with static linking by default. Standard shell utilities are
 BusyBox applets, with BusyBox options. Available commands in PATH: {tools}
+Molot builds on remote workers, so paths in build logs may not exist locally.
 
 Reproduce it with:
 

@@ -136,7 +136,6 @@ class FixerTests(unittest.TestCase):
         self.assertNotIn('credentials', prompt)
         self.assertNotIn('Do not fetch', prompt)
         self.assertNotIn('IX_EXEC_KIND', prompt)
-        self.assertNotIn('Molot', prompt)
         self.assertNotIn('build <package> -k', prompt)
 
     def test_fixer_target_is_fixed_to_tier_zero(self):
