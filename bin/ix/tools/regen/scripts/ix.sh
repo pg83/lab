@@ -1,7 +1,10 @@
 {% extends '//die/gen.sh' %}
 
 {% block install %}
-mkdir ${out}/bin
+mkdir -p ${out}/bin ${out}/share/ix/regen
+base64 -d << EOF > ${out}/share/ix/regen/libversion.py
+{% include '//bin/repology/scripts/libversion.py/base64' %}
+EOF
 base64 -d << EOF > ${out}/bin/ix_flt
 {% include 'flt.py/base64' %}
 EOF
