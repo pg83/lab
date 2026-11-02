@@ -23,7 +23,8 @@ batcher exits, including on failure.
 Repository credentials are not present while the agent runs: the supervisor
 fetches /github/token only after Kimi exits, validates the agent's local
 commit, rebases it onto a concurrently advanced main when necessary,
-regenerates repository metadata, and publishes it atomically.
+regenerates repository metadata, forces batcher-bot authorship, and publishes it
+atomically.
 """
 
 import base64
@@ -46,6 +47,8 @@ from pathlib import Path
 IX_GIT_READ_URL = 'http://127.0.0.1:8035/mirror_ix.git'
 IX_GIT_PUSH_URL = 'https://github.com/pg83/ix.git'
 IX_BRANCH = 'main'
+FIXER_AUTHOR_NAME = 'Batcher'
+FIXER_AUTHOR_EMAIL = '351180121+batcher-bot[bot]@users.noreply.github.com'
 IX_TARGETS = ('set/ci/tier/0', 'set/ci/tier/1')
 REGENERATED_PATHS = (
     'pkgs/die/scripts/dump.json',
@@ -124,11 +127,11 @@ def clone_ix(dst, env):
         cwd=dst,
         check=True,
     )
-    subprocess.run(('git', 'config', 'user.name', 'Batcher'), cwd=dst, check=True)
+    subprocess.run(('git', 'config', 'user.name', FIXER_AUTHOR_NAME), cwd=dst, check=True)
     subprocess.run(
         (
             'git', 'config', 'user.email',
-            '351180121+batcher-bot[bot]@users.noreply.github.com',
+            FIXER_AUTHOR_EMAIL,
         ),
         cwd=dst,
         check=True,
@@ -691,8 +694,15 @@ def amend_repository_metadata(repo, env):
         check=True,
     )
     subprocess.run(
-        ('git', 'commit', '--amend', '--no-edit'),
+        ('git', 'commit', '--amend', '--no-edit', '--reset-author'),
         cwd=repo,
+        env={
+            **env,
+            'GIT_AUTHOR_NAME': FIXER_AUTHOR_NAME,
+            'GIT_AUTHOR_EMAIL': FIXER_AUTHOR_EMAIL,
+            'GIT_COMMITTER_NAME': FIXER_AUTHOR_NAME,
+            'GIT_COMMITTER_EMAIL': FIXER_AUTHOR_EMAIL,
+        },
         check=True,
     )
     return git_output(repo, 'rev-parse', 'HEAD')

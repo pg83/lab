@@ -493,7 +493,7 @@ class FixerTests(unittest.TestCase):
             commands,
             [
                 ('git', 'add', '--', *fixer.REGENERATED_PATHS),
-                ('git', 'commit', '--amend', '--no-edit'),
+                ('git', 'commit', '--amend', '--no-edit', '--reset-author'),
             ],
         )
 
