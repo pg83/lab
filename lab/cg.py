@@ -2614,6 +2614,7 @@ class EventRunner:
             'HF_TOKEN': get_key('/hf/token').decode().strip(),
             'GHCR_TOKEN': get_key('/ghcr/token').decode().strip(),
             'QUAY_TOKEN': get_key('/quay/token').decode().strip(),
+            'MODELSCOPE_TOKEN': get_key('/modelscope/token').decode().strip(),
             'ROOT_S3_USER': root_key,
             'ROOT_S3_PASSWORD': root_secret,
             'MC_HOST_minio_root': f'{scheme}://{root_key}:{root_secret}@{host}',

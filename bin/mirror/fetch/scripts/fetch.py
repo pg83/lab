@@ -17,7 +17,7 @@ Per run:
      retry the downloaded file instead of losing it.
 
   3. Immediately after each successful URL: emit `kind=new_sha {sha:<content-sha>}`
-     so hf/ghcr/quay subscribers can incrementally update their remotes.
+     so mirror subscribers can incrementally update their remotes.
 
   4. Advance the cursor only after all downloads and events succeed.
      An older event never moves the cursor backwards. --urls is an
@@ -127,7 +127,7 @@ def added_urls(base, sha):
 
 
 # Hosts only our own networks resolve. Everything this worker fetches lands
-# in the CAS that hf/ghcr/quay push to the public pkgsrc mirrors, so a recipe that
+# in the CAS that subscribers push to the public pkgsrc mirrors, so a recipe that
 # fetches from the lab's private s3 (s3.lab.mesh) must never be mirrored.
 PRIVATE_SUFFIXES = ('.mesh', '.local', '.gofra', '.localdomain')
 

@@ -7,7 +7,7 @@ on stdin. If repo == 'ix', fires `gorn ignite --root mirror_fetch
 -- cache_ix_sources <sha>` (async — gorn returns once the task
 is queued). The worker then fetches urls.txt at <sha> from the
 local mirror, downloads new URLs into CAS, and emits one
-kind=new_sha event per content sha for hf/ghcr/quay subscribers.
+kind=new_sha event per content sha for mirror subscribers.
 """
 
 import json

@@ -11,6 +11,7 @@ bin/dev
 bin/mtr
 bin/ghcr
 bin/quay
+bin/modelscope
 bin/htop
 bin/ncdu
 bin/iotop
