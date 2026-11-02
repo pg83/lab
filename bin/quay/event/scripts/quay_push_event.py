@@ -13,7 +13,7 @@ def main():
 
     print(f'+ quay_push_event: gorn ignite quay_sync sha={sha}', file=sys.stderr, flush=True)
 
-    subprocess.run(
+    result = subprocess.run(
         (
             'gorn', 'ignite',
             '--api', os.environ['GORN_API'],
@@ -26,8 +26,9 @@ def main():
             '/bin/env', 'PATH=/bin',
             'quay_push_one', sha,
         ),
-        check=True,
+        check=False,
     )
+    sys.exit(result.returncode)
 
 
 if __name__ == '__main__':
