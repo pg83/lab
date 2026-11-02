@@ -9,7 +9,7 @@ https://github.com/pg83/s3/archive/39.tar.gz
 {% endblock %}
 
 {% block go_sha %}
-f267943cf9cc53235d03e23ace8fd5fdedbea7fe64ec1f843e93e43b8de41295
+36f1237904e9548584bea9169fb653fca8d5bf8d06e83bc122074d5beac59970
 {% endblock %}
 
 {% block go_bins %}
