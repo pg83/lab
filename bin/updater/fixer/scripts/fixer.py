@@ -18,8 +18,8 @@ Infrastructure failures do not spend an agent run.  The next cron cycle will
 retry them. Batcher runs directly and receives the task on stdin. Authentication
 is loaded from encrypted persistent etcd using the host-only wrapping key and
 materialized as auth.json inside this worker's private temporary directory.
-Batcher may rotate its refresh token, so the
-updated file is always written back before the temporary directory disappears.
+Each token rotation is written back to etcd synchronously: batcher waits for
+the supervisor's acknowledgement before using the updated credentials.
 Repository credentials are not present while the agent runs: the supervisor
 fetches /github/token only after Kimi exits, validates the agent's local
 commit, rebases it onto a concurrently advanced main when necessary,
@@ -35,6 +35,7 @@ import os
 import re
 import signal
 import shutil
+import socket
 import subprocess
 import sys
 import tempfile
@@ -51,7 +52,7 @@ REGENERATED_PATHS = (
     'pkgs/die/scripts/dump.json',
     'pkgs/die/scripts/urls.txt',
 )
-FIXER_GENERATION = '8'
+FIXER_GENERATION = '9'
 KIMI_MODEL = 'k3.1-pro'
 KIMI_REASONING_EFFORT = 'max'
 GIT_TOKEN_URL = 'http://127.0.0.1:8022/github/token'
@@ -635,6 +636,53 @@ def kimi_command(repo, auth_path):
     )
 
 
+def run_kimi_process(cmd, *, cwd, env, input, on_auth_save):
+    supervisor, agent = socket.socketpair()
+
+    with supervisor, agent:
+        cmd = (*cmd, '-auth-save-fd', str(agent.fileno()))
+
+        with subprocess.Popen(
+            cmd, cwd=cwd, env=env, stdin=subprocess.PIPE,
+            pass_fds=(agent.fileno(),), start_new_session=True,
+        ) as proc:
+            agent.close()
+
+            try:
+                proc.stdin.write(input)
+                proc.stdin.close()
+
+                while request := supervisor.recv(1):
+                    if request != b'S':
+                        raise InfrastructureFailure('invalid Kimi auth save request')
+
+                    on_auth_save()
+                    supervisor.sendall(b'K')
+
+                returncode = proc.wait()
+
+                if returncode:
+                    raise subprocess.CalledProcessError(returncode, cmd)
+            except BaseException:
+                if proc.poll() is None:
+                    try:
+                        os.killpg(proc.pid, signal.SIGTERM)
+                    except ProcessLookupError:
+                        pass
+
+                    try:
+                        proc.wait(timeout=10)
+                    except subprocess.TimeoutExpired:
+                        try:
+                            os.killpg(proc.pid, signal.SIGKILL)
+                        except ProcessLookupError:
+                            pass
+
+                        proc.wait()
+
+                raise
+
+
 def run_kimi(repo, build_log, env):
     target = ' '.join(IX_TARGETS)
     revision = subprocess.check_output(
@@ -648,18 +696,24 @@ def run_kimi(repo, build_log, env):
     )
     cmd = kimi_command(repo, kimi_home / 'auth.json')
     log(f'run batcher model={KIMI_MODEL} target={target}')
+    saved_auth = auth
+
+    def persist_auth():
+        nonlocal saved_auth
+        current = (kimi_home / 'auth.json').read_bytes()
+
+        if current != saved_auth:
+            save_kimi_auth(current, wrapping_key, seed_hash, env)
+            saved_auth = current
 
     try:
-        subprocess.run(cmd, cwd=repo, env=agent_env, input=prompt.encode(), check=True)
-    finally:
-        # Persist rotations even on a non-zero Kimi exit or timeout.  Losing
-        # an updated auth.json here would leave the saved refresh token stale.
-        save_kimi_auth(
-            (kimi_home / 'auth.json').read_bytes(),
-            wrapping_key,
-            seed_hash,
-            env,
+        run_kimi_process(
+            cmd, cwd=repo, env=agent_env, input=prompt.encode(),
+            on_auth_save=persist_auth,
         )
+    finally:
+        # Also recover a local write if batcher exits before notifying us.
+        persist_auth()
 
     return revision
 
