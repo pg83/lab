@@ -177,6 +177,7 @@ func run() {
 	flag.DurationVar(&requestTimeout, "request-timeout", 10*time.Minute, "timeout for one model request")
 	flag.Usage = func() {
 		fmt.Fprintln(flag.CommandLine.Output(), "Usage: batcher -auth /path/to/auth.json [-C repo] < task.txt > run.jsonl")
+		fmt.Fprintln(flag.CommandLine.Output(), "bash timeout: default 10s; 0 disables.")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
@@ -681,8 +682,8 @@ var toolDefinitions = []object{
 	defineTool("edit", "Replace a literal substring with another. Specify exactly one of path or glob. count defaults to 1 (first occurrence), -1 replaces all; count applies separately to each file. Globs support ** for directories. No prior read, version check, or uniqueness check is required. Returns actual replacement counts; files without matches are skipped for glob.", object{
 		"path": object{"type": "string"}, "glob": object{"type": "string"}, "old": object{"type": "string", "minLength": 1}, "new": object{"type": "string"}, "count": object{"type": "integer", "default": 1},
 	}, "old", "new"),
-	defineTool("bash", "Execute a bash script synchronously to completion. No login shell, persistent shell, background jobs or stdin. Returns combined stdout/stderr (up to 64 KiB), exit_code and truncation status. timeout is seconds; 0 means no timeout. All processes in the command's process group are stopped when the call ends.", object{
-		"command": object{"type": "string"}, "cwd": object{"type": "string"}, "timeout": object{"type": "integer", "minimum": 0, "default": 0},
+	defineTool("bash", "Execute a bash script synchronously to completion. No login shell, persistent shell, background jobs or stdin. Returns combined stdout/stderr (up to 64 KiB), exit_code and truncation status. timeout: seconds, default 10; 0 disables. All processes in the command's process group are stopped when the call ends.", object{
+		"command": object{"type": "string"}, "cwd": object{"type": "string"}, "timeout": object{"type": "integer", "minimum": 0, "default": 10},
 	}, "command"),
 }
 
@@ -802,6 +803,7 @@ func executeTool(ctx context.Context, name, arguments string) any {
 			Cwd     string `json:"cwd"`
 			Timeout int    `json:"timeout"`
 		}
+		args.Timeout = 10
 		decode(&args, "command")
 		if args.Command == "" || args.Timeout < 0 || args.Timeout > 365*24*3600 {
 			ThrowFmt("nonempty command and timeout between 0 and one year required")

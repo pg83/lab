@@ -595,6 +595,7 @@ def kimi_prompt(target, summary, *, env=None, cwd=None):
 
 Environment: IX, with static linking by default. Standard shell utilities are
 BusyBox applets, with BusyBox options. Available commands in PATH: {tools}
+Use $TMPDIR for temporary files; /tmp is unavailable.
 Molot builds on remote workers, so paths in build logs may not exist locally.
 
 Reproduce it with:
