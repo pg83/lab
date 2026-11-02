@@ -2650,7 +2650,7 @@ class Loki:
     # HA per-host. Ring on tmpfs etcd_3 — ephemeral by nature, members
     # re-register on restart (gossip per grafana/loki#14019).
     def __init__(self, port, s3_endpoint, peers, me, etcd_endpoints, grpc_listen):
-        self.v = 1
+        self.v = 2
         self.port = port
         self.s3_endpoint = s3_endpoint
         self.peers = list(peers)
@@ -2756,6 +2756,7 @@ class Loki:
                 'ingestion_burst_size_mb': 32,
             },
             'ingester': {
+                'chunk_encoding': 'zstd',
                 'wal': {
                     # A planned restart hands its chunks to S3 instead of the WAL.
                     'flush_on_shutdown': True,
