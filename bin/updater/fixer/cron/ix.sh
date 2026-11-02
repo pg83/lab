@@ -26,7 +26,7 @@ cat << 'EOF' > ${out}/etc/cron/300-updater-fixer.json
         "--env", "IX_FIXER_KIMI_GORN_API=$KIMI_GORN_API",
         "--env", "IX_FIXER_KIMI_S3_ENDPOINT=$KIMI_S3_ENDPOINT",
         "--env", "IX_FIXER_KIMI_MOLOT_RESOLVE=$KIMI_MOLOT_RESOLVE",
-        "--env", "IX_FIXER_GENERATION=9",
+        "--env", "IX_FIXER_GENERATION=10",
         "--env", "MOLOT_QUIET=1",
         "--",
         "/bin/env", "PATH=/bin",

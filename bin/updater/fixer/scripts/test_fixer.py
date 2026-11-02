@@ -316,8 +316,8 @@ class FixerTests(unittest.TestCase):
                 'load_kimi_auth',
                 return_value=(auth, key, '1' * 64),
             ), mock.patch.object(
-                fixer,
-                'run_kimi_process',
+                fixer.subprocess,
+                'run',
                 side_effect=fail_after_rotation,
             ), mock.patch.object(fixer, 'save_kimi_auth') as save:
                 with self.assertRaises(fixer.subprocess.CalledProcessError):

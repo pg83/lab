@@ -139,7 +139,6 @@ type batcher struct {
 	client       *http.Client
 	log          *json.Encoder
 	authPath     string
-	authSave     *os.File
 	model        string
 	effort       string
 	window       int
@@ -166,9 +165,7 @@ func run() {
 	var b batcher
 	var cwd string
 	var requestTimeout time.Duration
-	var authSaveFD int
 	flag.StringVar(&b.authPath, "auth", "", "path to Pi-format auth.json (updated after OAuth refresh)")
-	flag.IntVar(&authSaveFD, "auth-save-fd", -1, "supervisor socket: send S after saving auth.json, wait for K before continuing")
 	flag.StringVar(&b.model, "model", "k3.1-pro", "Kimi Code model")
 	flag.StringVar(&b.effort, "effort", "max", "reasoning effort: low, high, max")
 	flag.StringVar(&cwd, "C", "", "working directory for tools")
@@ -185,14 +182,6 @@ func run() {
 	flag.Parse()
 	if b.authPath == "" || flag.NArg() != 0 {
 		ThrowFmt("provide -auth /path/to/auth.json; the task is read from stdin")
-	}
-	if authSaveFD != -1 {
-		if authSaveFD < 3 {
-			ThrowFmt("-auth-save-fd must be an inherited socket descriptor")
-		}
-		syscall.CloseOnExec(authSaveFD)
-		b.authSave = os.NewFile(uintptr(authSaveFD), "auth-save")
-		defer b.authSave.Close()
 	}
 	if b.effort != "low" && b.effort != "high" && b.effort != "max" {
 		ThrowFmt("-effort must be low, high or max")
@@ -282,16 +271,6 @@ func (b *batcher) saveCredential(c credential) {
 	Throw(f.Sync())
 	Throw(f.Close())
 	Throw(os.Rename(f.Name(), b.authPath))
-	if b.authSave != nil {
-		// The supervisor persists the new file outside this task's tmpfs.
-		// Do not use the rotated token until that write is acknowledged.
-		Throw2(b.authSave.Write([]byte{'S'}))
-		var ack [1]byte
-		Throw2(io.ReadFull(b.authSave, ack[:]))
-		if ack[0] != 'K' {
-			ThrowFmt("supervisor did not acknowledge saved auth")
-		}
-	}
 }
 
 func (b *batcher) refresh(force bool) {
