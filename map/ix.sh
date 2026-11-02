@@ -10,6 +10,7 @@ bin/mc
 bin/dev
 bin/mtr
 bin/ghcr
+bin/quay
 bin/htop
 bin/ncdu
 bin/iotop

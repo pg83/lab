@@ -8,4 +8,5 @@ bin/event/scripts
 bin/mirror/fetch/event
 bin/hf/sync/event
 bin/ghcr/event
+bin/quay/event
 {% endblock %}
