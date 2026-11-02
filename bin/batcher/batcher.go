@@ -150,6 +150,7 @@ type batcher struct {
 	credential   credential
 	gitBase      string
 	gitInitial   string
+	outputDir    string
 	history      []json.RawMessage
 	used         int
 }
@@ -163,6 +164,11 @@ func main() {
 
 func run() {
 	var b batcher
+	defer func() {
+		if b.outputDir != "" {
+			_ = os.RemoveAll(b.outputDir)
+		}
+	}()
 	var cwd string
 	var requestTimeout time.Duration
 	flag.StringVar(&b.authPath, "auth", "", "path to Pi-format auth.json (updated after OAuth refresh)")
@@ -494,7 +500,7 @@ func (b *batcher) loop() {
 			Throw(b.ctx.Err())
 			var value any
 			Try(func() {
-				value = executeTool(b.ctx, call.Function.Name, call.Function.Arguments)
+				value = b.executeTool(b.ctx, call.Function.Name, call.Function.Arguments)
 			}).Catch(func(e *Exception) {
 				value = object{"error": e.Error()}
 			})
@@ -682,12 +688,12 @@ var toolDefinitions = []object{
 	defineTool("edit", "Replace a literal substring with another. Specify exactly one of path or glob. count defaults to 1 (first occurrence), -1 replaces all; count applies separately to each file. Globs support ** for directories. No prior read, version check, or uniqueness check is required. Returns actual replacement counts; files without matches are skipped for glob.", object{
 		"path": object{"type": "string"}, "glob": object{"type": "string"}, "old": object{"type": "string", "minLength": 1}, "new": object{"type": "string"}, "count": object{"type": "integer", "default": 1},
 	}, "old", "new"),
-	defineTool("bash", "Execute a bash script synchronously to completion. No login shell, persistent shell, background jobs or stdin. Returns combined stdout/stderr (up to 64 KiB), exit_code and truncation status. timeout: seconds, default 10; 0 disables. All processes in the command's process group are stopped when the call ends.", object{
+	defineTool("bash", "Execute a bash script synchronously to completion. No login shell, persistent shell, background jobs or stdin. Returns combined stdout/stderr, exit_code and truncation status. Above 32 KiB, returns the first and last 16 KiB plus output_file with the full output in $TMPDIR; use read or bash to inspect it during this batch. timeout: seconds, default 10; 0 disables. All processes in the command's process group are stopped when the call ends.", object{
 		"command": object{"type": "string"}, "cwd": object{"type": "string"}, "timeout": object{"type": "integer", "minimum": 0, "default": 10},
 	}, "command"),
 }
 
-func executeTool(ctx context.Context, name, arguments string) any {
+func (b *batcher) executeTool(ctx context.Context, name, arguments string) any {
 	var required map[string]json.RawMessage
 	if err := json.Unmarshal([]byte(arguments), &required); err != nil || required == nil {
 		ThrowFmt("tool arguments must be a JSON object")
@@ -813,7 +819,28 @@ func executeTool(ctx context.Context, name, arguments string) any {
 			ctx, cancel = context.WithTimeout(ctx, time.Duration(args.Timeout)*time.Second)
 			defer cancel()
 		}
-		output, truncated, err := command(ctx, args.Cwd, toolByteLimit, "bash", "-c", args.Command)
+		if b.outputDir == "" {
+			b.outputDir = Throw2(os.MkdirTemp(Throw2(filepath.Abs(os.TempDir())), "batcher-output-*"))
+		}
+		file := Throw2(os.CreateTemp(b.outputDir, "command-*.log"))
+		defer file.Close()
+		err := runCommand(ctx, args.Cwd, file, "bash", "-c", args.Command)
+		size := Throw2(file.Stat()).Size()
+		const partBytes = 16 * 1024
+		data := make([]byte, min(size, 2*partBytes))
+		Throw2(file.ReadAt(data, 0))
+		truncated := size > 2*partBytes
+		output := strings.ToValidUTF8(string(data), "�")
+		if truncated {
+			Throw2(file.ReadAt(data[partBytes:], size-partBytes))
+			output = fmt.Sprintf("%s\n\n[... %d bytes omitted ...]\n\n%s",
+				strings.ToValidUTF8(string(data[:partBytes]), "�"), size-2*partBytes,
+				strings.ToValidUTF8(string(data[partBytes:]), "�"))
+		}
+		Throw(file.Close())
+		if !truncated {
+			Throw(os.Remove(file.Name()))
+		}
 		code := 0
 		if err != nil {
 			code = -1
@@ -822,7 +849,10 @@ func executeTool(ctx context.Context, name, arguments string) any {
 				code = exitErr.ExitCode()
 			}
 		}
-		result := object{"output": output, "truncated": truncated, "exit_code": code}
+		result := object{"output": output, "truncated": truncated, "output_bytes": size, "exit_code": code}
+		if truncated {
+			result["output_file"] = file.Name()
+		}
 		if err != nil {
 			result["error"] = err.Error()
 		}
@@ -909,6 +939,12 @@ func validPrefix(text string, limit int) string {
 }
 
 func command(ctx context.Context, cwd string, limit int, program string, args ...string) (string, bool, error) {
+	out := &cappedBuffer{limit: limit}
+	err := runCommand(ctx, cwd, out, program, args...)
+	return strings.ToValidUTF8(string(out.data), "�"), out.truncated, err
+}
+
+func runCommand(ctx context.Context, cwd string, out io.Writer, program string, args ...string) error {
 	cmd := exec.CommandContext(ctx, program, args...)
 	cmd.Dir = cwd
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
@@ -923,11 +959,10 @@ func command(ctx context.Context, cwd string, limit int, program string, args ..
 		return err
 	}
 	cmd.WaitDelay = time.Second
-	out := &cappedBuffer{limit: limit}
 	cmd.Stdout, cmd.Stderr = out, out
 	err := cmd.Run()
 	if cmd.Process != nil {
 		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 	}
-	return strings.ToValidUTF8(string(out.data), "�"), out.truncated, err
+	return err
 }
