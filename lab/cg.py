@@ -736,7 +736,8 @@ class S3Service:
                 args += ['-listen', addr]
 
             if self.kind == 'repair':
-                args += ['-host', self.host]
+                # what it reads from other hosts goes over gofra
+                args += ['-host', self.host, '-rate', '50M']
 
             if self.metrics:
                 args += ['-metrics', f'127.0.0.1:{self.metrics}']
