@@ -5,11 +5,11 @@ bin/go/lang/25
 {% endblock %}
 
 {% block go_url %}
-https://github.com/pg83/s3/archive/40.tar.gz
+https://github.com/pg83/s3/archive/41.tar.gz
 {% endblock %}
 
 {% block go_sha %}
-6333d33663776f15647e0725d1a084951b0d7da59c66f9907d5011355fe1debd
+eb20d4652f573d1ee47163d632a70743a4350eeb1dd9a174622f4d75f3db53df
 {% endblock %}
 
 {% block go_bins %}
