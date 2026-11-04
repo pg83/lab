@@ -30,9 +30,7 @@ DISABLE_ALL = [
 
 DISABLE = {
     'lab1': DISABLE_ALL,
-    # sdb is dead, and repair cannot place a piece past a dead cell: it
-    # retried the same objects at the line rate of gofra. Off until fixed.
-    'lab2': DISABLE_ALL + ['s3_repair'],
+    'lab2': DISABLE_ALL,
     'lab3': DISABLE_ALL,
 }
 
