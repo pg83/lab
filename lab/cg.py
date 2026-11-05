@@ -602,7 +602,7 @@ mkdir -p $d/load $d/store
 mount -t xfs $load $d/load
 mount -t xfs $store $d/store
 
-exec s3 cell -debug {listen} -metrics 127.0.0.1:{metrics} -load $d/load -store $d/store -hdd $hdd
+exec s3 cell -debug {listen} -metrics 127.0.0.1:{metrics} -load $d/load -store $d/store -hdd $hdd -c {config} -id {id} -rate 50M
 '''
 
 
@@ -610,11 +610,16 @@ class S3Cell:
     # One append-only log per disk; the front puts object pieces here. It
     # listens on loopback for the repair of its own host and on the gofra
     # address for everyone else.
-    def __init__(self, index, ipv4, port, metrics):
+    def __init__(self, index, ipv4, port, metrics, cell_id, config):
         self.index = index
         self.listen = f'-listen 127.0.0.1:{port} -listen {ipv4}:{port}'
         # Prometheus on loopback only; the host's collector scrapes it.
         self.metrics = metrics
+        # The cluster's config and the cell's id in it: queued in etcd
+        # (rebuild/<id>), the cell leaves and writes its log again with
+        # only the live pieces, reading other hosts over gofra.
+        self.cell_id = cell_id
+        self.config = config
 
     def name(self):
         return f's3_cell_{self.index}'
@@ -639,9 +644,13 @@ class S3Cell:
         }
 
     def run(self):
-        with memfd('run.sh') as script:
+        with multi(memfd('run.sh'), memfd('config.json')) as (script, conf):
+            with open(conf, 'w') as f:
+                json.dump(self.config, f)
+
             with open(script, 'w') as f:
-                f.write(S3_CELL_SCRIPT.replace('{listen}', self.listen).replace('{metrics}', str(self.metrics)).replace('{index}', str(self.index)))
+                f.write(S3_CELL_SCRIPT.replace('{listen}', self.listen).replace('{metrics}', str(self.metrics)).replace('{index}', str(self.index))
+                        .replace('{config}', conf).replace('{id}', str(self.cell_id)))
 
             exec_into('/bin/unshare', '-m', '/bin/sh', script, PATH='/bin')
 
@@ -696,6 +705,15 @@ class S3Service:
                 'delay': '1000',
                 # Not host or config: ix templates already mean the platform by host.
                 's3_host': self.host,
+                's3_config': base64.b64encode(conf.encode()).decode(),
+            }
+
+            # The keeper is a job of the cluster cron, run from whichever
+            # host holds the scheduler's lock: every host has it, with its
+            # own cells at loopback. It queues the compaction of a cell
+            # whose disk is three quarters full.
+            yield {
+                'pkg': 'bin/s3/keeper/cron',
                 's3_config': base64.b64encode(conf.encode()).decode(),
             }
 
@@ -3560,14 +3578,17 @@ class ClusterMap:
                 'serv': LogovoWeb(f"127.0.0.1:{p['logovo_web']}", f"http://127.0.0.1:{p['logovo_serve']}", f"http://127.0.0.1:{p['logovo_collect']}"),
             }
 
+            s3_etcd = f"http://127.0.0.1:{p['etcd_2_client']}"
+            s3_cell_ports = [p[f's3_cell_{i}'] for i in range(3)]
+            # the repair's config: the host's own cells at loopback
+            s3_cell_config = S3Service('repair', [], s3_etcd, s3_cell_ports, hn, S3_BUCKETS).config()
+
             for i in range(3):
                 yield {
                     'host': hn,
-                    'serv': S3Cell(i, h['gofra']['ip'], p[f's3_cell_{i}'], p[f's3_cell_{i}_metrics']),
+                    'serv': S3Cell(i, h['gofra']['ip'], p[f's3_cell_{i}'], p[f's3_cell_{i}_metrics'],
+                                   (int(hn[-1]) - 1) * len(s3_cell_ports) + i, s3_cell_config),
                 }
-
-            s3_etcd = f"http://127.0.0.1:{p['etcd_2_client']}"
-            s3_cell_ports = [p[f's3_cell_{i}'] for i in range(3)]
 
             for kind, listen in (
                 ('front', [f"127.0.0.1:{p['s3_front']}", f"{h['gofra']['ip']}:{p['s3_front']}"]),
