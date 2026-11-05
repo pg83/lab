@@ -552,7 +552,10 @@ class SftpD:
                 '--s3-force-path-style',
                 '--s3-skip-tls-verify',
                 '--log-level', 'debug',
-                '--log-file-path', '/dev/stdout',
+                # "." is no file to sftpgo: the log goes straight to stdout.
+                # A real path, /dev/stdout too, gets rotated by renaming it,
+                # and "" turns the log off in portable mode.
+                '--log-file-path', '.',
             ]
 
             exec_into(*args, user=self.users()[1])
