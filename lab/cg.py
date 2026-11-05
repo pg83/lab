@@ -2132,6 +2132,17 @@ class EtcdOnPart(EtcdPrivate):
             'pkg': 'bin/su/exec',
         }
 
+        # The only copy of the keys off the members themselves: every hour
+        # each host keeps a snapshot of its member, zstd, one file on the
+        # same partition.
+        yield {
+            'pkg': 'bin/sched/etcd/snapshot',
+            'delay': '3600',
+            'etcd_name': self.user_name,
+            'etcd_part': self.part,
+            'etcd_port': str(self.port_client),
+        }
+
     def run(self):
         if 'ETCDCTL_ENDPOINTS' in os.environ:
             os.environ.pop('ETCDCTL_ENDPOINTS')
