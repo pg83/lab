@@ -39,7 +39,7 @@ bin/smart/mon/tools
 bin/fixits(delay=10)
 bin/minio/iam/reconcile
 bin/auto/update(user=ix)
-bin/kernel/gengrub(kernel_boot_flags=rootdelay=20)
+bin/kernel/gengrub(kernel_boot_flags=rootwait)
 
 set/fs
 bin/nilfs/tools

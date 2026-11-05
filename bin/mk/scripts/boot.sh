@@ -15,17 +15,16 @@ grub-install --verbose --target=x86_64-efi \
     --removable \
     ${1}
 
-cat << EOF > /mnt/boot/grub/grub.cfg
-set root=hd0,2
+# the root is the second partition of the disk this GRUB was loaded
+# from: other disks are never probed, an xfs on one of them sent GRUB
+# into a boot loop
+cat << 'EOF' > /mnt/boot/grub/grub.cfg
+insmod regexp
+regexp --set=1:disk '^([^,]+),' "$root"
+set root=$disk,gpt2
 configfile /etc/grub.cfg
-set root=hd1,2
-configfile /etc/grub.cfg
-set root=hd2,2
-configfile /etc/grub.cfg
-set root=hd3,2
-configfile /etc/grub.cfg
-set root=hd4,2
-configfile /etc/grub.cfg
+EOF
+
 sync
 
 umount /mnt
