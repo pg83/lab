@@ -47,6 +47,13 @@ HOST_CPUS = {
 
 GORN_N = {h: c // CPUS_PER_SLOT for h, c in HOST_CPUS.items()}
 
+# md5sum heaters per host against the cold: lab2's HDDs are the coldest.
+HEAT = {
+    'lab1': 8,
+    'lab2': 32,
+    'lab3': 16,
+}
+
 # One-time runner nonces for workers which retained stale fixer tasks.
 # Keep each nonce stable after deployment; removing it would restart it again.
 GORN_RESTART_NONCE = {
@@ -3293,7 +3300,7 @@ class ClusterMap:
         for h in self.conf['hosts']:
             hn = h['hostname']
 
-            for i in range(0, 16):
+            for i in range(0, HEAT[hn]):
                 yield {
                     'host': hn,
                     'serv': Heat(i + 1),
