@@ -47,11 +47,12 @@ HOST_CPUS = {
 
 GORN_N = {h: c // CPUS_PER_SLOT for h, c in HOST_CPUS.items()}
 
-# md5sum heaters per host against the cold: lab2's HDDs are the coldest.
+# md5sum heaters per host against the cold. Off: the servers are covered and
+# their own load keeps the HDDs warm; 32 heaters took lab2's CPU past 85 C.
 HEAT = {
-    'lab1': 8,
-    'lab2': 32,
-    'lab3': 16,
+    'lab1': 0,
+    'lab2': 0,
+    'lab3': 0,
 }
 
 # One-time runner nonces for workers which retained stale fixer tasks.
